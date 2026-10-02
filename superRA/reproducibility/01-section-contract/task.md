@@ -39,6 +39,6 @@ The [TreasuryGIV pilot](../08-pilot-treasurygiv/task.md) found the first resolve
 ### Known limits
 
 - Python imports are not tracked; only the Julia `include` closure extends a step's deps.
-- A build blocked by an archived producer's missing file says `external input … is missing` without naming the producer; `task read` and the frontier name it.
+- A build blocked by an archived producer's missing file lists it as `not on disk, and no step produces it` without naming the producer; `task read` and the frontier name it.
 
 Tests: [test_repro.py](../../../skills/task-tree/scripts/test_repro.py) (parser, variables, closure, findings, and `pyyaml` agreement) and [test_task_dependencies.py](../../../skills/task-tree/scripts/test_task_dependencies.py) (readiness, cycles, archived producers, preflight, and parent-owned steps).
