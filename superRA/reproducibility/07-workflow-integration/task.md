@@ -13,7 +13,7 @@ Keep reproduction integrated into planning, implementation, review, protection, 
 
 - **Planning** names each retained artifact and its planned script; the implementer registers the step. Dependency guidance authors only logical `depends_on` prerequisites and uses effective dependencies for invalidation.
 - **Implementation and review** apply the registration, claim, and stale-rule gates; the Skill-Load Manifest loads `reproducibility` for any task that plans, produces, changes, records, or reviews a result computed by code.
-- **Completion and Protect** run the completion gate over every step; Protect decides only which inputs are external.
+- **Completion and Protect** run the completion gate over every step and report every `unverified` step to the researcher; Protect decides only which inputs are external.
 - **Maturation and merges** preserve step identities and evidence when tasks fold or move, and resolve conflicted reproduction records by the stale rule.
 - **Inventories and public docs** (manifest, `CATEGORIES.md`, `CLAUDE.md`, `README.md`, release notes, docs-site sources, harness load contracts) stay consistent with the skill.
 
@@ -27,7 +27,7 @@ The graph replaced the pipeline-file requirement at every phase; no workflow fil
 |---|---|---|
 | PLAN | [build-and-review.md §Artifact Pipeline](../../../skills/superplan/references/build-and-review.md#artifact-pipeline) names each artifact and its planned script in `## Details`; self-review checks they are named. [§Task Dependencies](../../../skills/superplan/references/build-and-review.md#task-dependencies), consolidation, and scope-change invalidation use effective dependencies. | [designing-the-graph.md](../../../skills/reproducibility/references/designing-the-graph.md) |
 | IMPLEMENT | [implement-task](../../../skills/implement-task/SKILL.md) Self-Check 4; [interactive-mode.md](../../../skills/using-superra/references/interactive-mode.md) self-review walks every loaded skill's gates | SKILL.md [§Recording a Result](../../../skills/reproducibility/SKILL.md#recording-a-result) |
-| Review | [review-task](../../../skills/review-task/SKILL.md) checks registration, the claim, and the reason behind any acceptance with read-only `status --upstream` and the committed records | the three gate references |
+| Review | [review-task](../../../skills/review-task/SKILL.md) checks registration, the claim, and the reason behind any acceptance with read-only `status <targets>` and the committed records | the three gate references |
 | Completion | [completion.md](../../../skills/superimplement/references/completion.md), [integrate.md](../../../skills/superintegrate/references/integrate.md), [finish.md](../../../skills/superintegrate/references/finish.md) | [§The completion gate](../../../skills/reproducibility/references/protect-and-completion.md#the-completion-gate) |
 | Protect | [protect.md](../../../skills/superintegrate/references/protect.md) asks which inputs are external and records them in the `integrate(protect)` commit body | [§Reproduction choices at Protect](../../../skills/reproducibility/references/protect-and-completion.md#reproduction-choices-at-protect) |
 | Maturation | [mature-consolidate.md](../../../skills/superintegrate/references/mature-consolidate.md), [consolidation.md](../../../skills/superplan/references/consolidation.md) §Prune, [changing-the-tree.md](../../../skills/superplan/references/changing-the-tree.md) | [§Step lifecycle](../../../skills/reproducibility/references/designing-the-graph.md#step-lifecycle) |
