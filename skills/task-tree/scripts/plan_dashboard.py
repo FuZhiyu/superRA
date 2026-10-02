@@ -47,12 +47,15 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
+import _repro_state
 from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
 from _repro_state import (
     LOCK_FILENAME,
+    SF_DATALESS,
     STATUSES,
     ReproStateError,
     compute_status,
+    is_online_only,
     runner_paths,
     select_steps,
 )
@@ -1582,7 +1585,9 @@ async def serve_file(path: str, request: Request):
 # The step-file hover card and in-page file view.  Answers from one stat plus a
 # bounded head read, so the cost is flat in file size; the entry carries the same
 # ``previewable`` / ``download_only`` policy as a task attachment, and the page
-# loads the file itself from /files/ only when it is previewable.
+# loads the file itself from /files/ only when it is previewable.  An online-only
+# file or folder (Dropbox, Box, iCloud...) answers from the stat alone: reading
+# or listing it would download it.
 
 PEEK_HEAD_BYTES = 4096
 PEEK_DIR_ENTRIES = 1000
@@ -1594,6 +1599,11 @@ def _file_peek(resolved: Path, path: str) -> dict:
         info = resolved.stat()
     except OSError:
         return {"exists": False}
+    if is_online_only(resolved, info):
+        return {"exists": True, "online_only": True, "kind": "directory" if resolved.is_dir() else "file",
+                # A legacy Dropbox placeholder reports size 0, so only SF_DATALESS knows its size.
+                "size": info.st_size if _repro_state.file_flags(info) & SF_DATALESS and not resolved.is_dir() else None,
+                "mtime_ns": info.st_mtime_ns}
     if resolved.is_dir():
         with os.scandir(resolved) as entries:
             count = sum(1 for _, _ in zip(range(PEEK_DIR_ENTRIES + 1), entries))
@@ -1814,6 +1824,7 @@ BUILD_HOSTS_ENV_VAR = "SUPERRA_DASHBOARD_HOSTS"
 # A just-spawned runner has not taken the lock yet; trust its live pid this long.
 BUILD_STARTUP_GRACE = 30.0
 BUILD_LOG_TAIL_LINES = 40
+BUILD_DETAIL_LINES = 12
 _build_start_lock = threading.Lock()
 
 
@@ -1846,9 +1857,9 @@ def _is_trusted_authority(authority: str) -> bool:
         return host == "localhost" or host in _machine_names()
 
 
-def _build_args(target: str, upstream: bool, force: bool) -> list[str]:
+def _build_args(target: str, only: bool, force: bool) -> list[str]:
     """`build` arguments; `--` keeps a target from ever parsing as a flag."""
-    return (["--upstream"] if upstream else []) + (["--force"] if force else []) + ["--", target]
+    return (["--only"] if only else []) + (["--force"] if force else []) + ["--", target]
 
 
 def _validate_build_target(graph, target) -> str:
@@ -1938,12 +1949,12 @@ def _reap_build(proc: subprocess.Popen, paths, job: dict) -> None:
         _write_job(paths, dict(current, returncode=returncode, ended_at=time.time()))
 
 
-def _start_build_sync(state: WorktreeState, target: str, upstream: bool, force: bool) -> dict:
+def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool) -> dict:
     """Spawn one `superra repro build` for the page's worktree; refuse a second."""
     from _repro_state import ensure_state_dir
     project_root = Path(state.project_root)
     paths = runner_paths(project_root)
-    args = _build_args(target, upstream, force)
+    args = _build_args(target, only, force)
     with _build_start_lock:
         holder = lock_holder(paths)
         if holder is not None or _job_alive(_read_job(paths), holder):
@@ -1961,7 +1972,7 @@ def _start_build_sync(state: WorktreeState, target: str, upstream: bool, force: 
         job = {
             "pid": proc.pid,
             "target": target,
-            "upstream": upstream,
+            "only": only,
             "force": force,
             "command": "superra repro build " + " ".join(
                 a if a.startswith("--") else shlex.quote(a) for a in args if a != "--"),
@@ -1973,14 +1984,29 @@ def _start_build_sync(state: WorktreeState, target: str, upstream: bool, force: 
     return job
 
 
-def _build_summary(log_text: str) -> str:
-    """The line of a build log that says how it ended."""
-    lines = [line.strip() for line in log_text.splitlines() if line.strip()]
-    for line in reversed(lines):
-        if (line.startswith(("Error:", "Interrupted", "Nothing to execute", "No steps registered"))
+def _build_summary(log_text: str) -> tuple[str, list[str]]:
+    """The line of a build log that says how it ended, and the lines that explain it.
+
+    After an `Error:` summary, the lines that follow it (the download gate's file
+    list); after a step count, each failed step's block (a step stopped at its
+    start names the files it needs), at most BUILD_DETAIL_LINES.
+    """
+    lines = [line.rstrip() for line in log_text.splitlines() if line.strip()]
+    for at in range(len(lines) - 1, -1, -1):
+        line = lines[at].strip()
+        if line.startswith("Error:"):
+            return line, lines[at + 1:]
+        if (line.startswith(("Interrupted", "Nothing to execute", "No steps registered"))
                 or re.match(r"\d+ step\(s\): ", line)):
-            return line
-    return lines[-1] if lines else ""
+            failed, inside = [], False
+            for row in lines[:at]:
+                inside = row.startswith("✗ ") or (inside and row[:1].isspace())
+                if inside:
+                    failed.append(row)
+            if len(failed) > BUILD_DETAIL_LINES:
+                failed = failed[:BUILD_DETAIL_LINES] + [f"… {len(failed) - BUILD_DETAIL_LINES} more line(s) in the log"]
+            return line, failed
+    return (lines[-1].strip() if lines else ""), []
 
 
 def _build_state_sync(state: WorktreeState) -> dict:
@@ -1993,7 +2019,7 @@ def _build_state_sync(state: WorktreeState) -> dict:
         job["alive"] = _job_alive(job, holder)
         running = running or job["alive"]
         tail = _log_tail(paths.logs_dir / BUILD_LOG_FILENAME, BUILD_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES)
-        job["summary"] = "" if job["alive"] else _build_summary(tail)
+        job["summary"], job["detail"] = ("", []) if job["alive"] else _build_summary(tail)
         job["log_tail"] = tail
     steps = []
     if running and paths.runs_dir.is_dir():
@@ -2029,7 +2055,7 @@ async def repro_build_state(request: Request):
 
 @app.post("/api/repro/build")
 async def repro_build(request: Request):
-    """Start `superra repro build <target> [--upstream] [--force]` in the page's worktree.
+    """Start `superra repro build <target> [--only] [--force]` in the page's worktree.
 
     The route executes the commands the tree declares, so it takes only a
     same-origin JSON request from a ``Host`` naming this machine, and only a
@@ -2045,7 +2071,7 @@ async def repro_build(request: Request):
     target = _validate_build_target(graph, body.get("target"))
     try:
         return await asyncio.to_thread(
-            _start_build_sync, state, target, body.get("upstream") is True, body.get("force") is True)
+            _start_build_sync, state, target, body.get("only") is True, body.get("force") is True)
     except ReproStateError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
 
