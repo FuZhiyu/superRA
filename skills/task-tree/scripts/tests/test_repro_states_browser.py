@@ -168,20 +168,17 @@ def test_graph_cards_carry_the_reported_state_on_the_border_and_their_own_on_the
     page.close()
 
 
-def test_tree_rows_count_states_and_steps_wear_both_channels(browser, states):
+def test_tree_rows_count_states_beside_the_status_badge(browser, states):
     page = open_view(browser, states, '02-panel-model', layout='tree')
-    page.wait_for_selector('#nav-tree .nav-step[data-tree-step="merge"]')
-    rollup = page.locator('#nav-tree .task-node[data-path="02-panel-model"] > .nav-repro-rollup')
-    assert rollup.inner_text().split() == ['◐3', '○1', '✕1']
-    assert 'rp-hatched' in classes(page, '#nav-tree .task-node[data-path="03-vendor-archive"] > .nav-repro-rollup')
-    # The rollup sits on its own line, so the row's slug keeps the width it has without one.
-    widths = page.evaluate('''() => Array.from(document.querySelectorAll('#nav-tree .task-node > .nav-repro-rollup')).map(badge => {
-      const slug = badge.parentElement.querySelector(':scope > .task-row > .task-slug'), before = slug.getBoundingClientRect().width;
-      badge.hidden = true; const after = slug.getBoundingClientRect().width; badge.hidden = false; return [before, after]; })''')
-    assert len(widths) == 3 and all(before == after for before, after in widths)
-    assert {'rp-stale', 'rp-inherited'} <= classes(page, '.nav-step[data-tree-step="merge"]')
-    assert {'rp-stale', 'rp-hatched'} <= classes(page, '.nav-step[data-tree-step="vendor-join"]')
-    assert page.locator('.nav-step[data-tree-step="codebook-check"] .nav-step-state').inner_text() == 'fresh · check'
+    rollup = page.locator('#nav-tree .task-node[data-path="02-panel-model"] > .task-row > .nav-repro-rollup')
+    rollup.wait_for()
+    assert rollup.text_content().split() == ['◐3', '○1', '✕1']
+    assert 'rp-hatched' in classes(page, '#nav-tree .task-node[data-path="03-vendor-archive"] > .task-row > .nav-repro-rollup')
+    # The rollup leads the row's trailing badges and shares their line; steps stay out of the tree.
+    assert page.evaluate('''() => Array.from(document.querySelectorAll('#nav-tree .nav-repro-rollup')).every(badge => {
+      const status = badge.nextElementSibling, a = badge.getBoundingClientRect(), b = status.getBoundingClientRect();
+      return status.classList.contains('badge') && Math.abs((a.top + a.bottom) - (b.top + b.bottom)) < 2; })''')
+    assert page.locator('#nav-tree [data-tree-step]').count() == 0
     page.close()
 
 
@@ -206,7 +203,7 @@ def test_panel_names_the_own_evidence_the_origin_and_each_online_only_file(brows
     online.locator('a').hover()
     page.wait_for_selector('#file-peek :text("Online-only here (2.3 MiB)")')
     page.mouse.move(2, 2)
-    page.locator('#nav-tree .nav-step[data-tree-step="merge"]').click()
+    page.evaluate("revealReproStep('merge')")
     page.wait_for_selector('#repro-detail[data-step="merge"] .repro-own-line')
     assert page.locator('#repro-detail .repro-own-line').inner_text().startswith(
         "Own evidence: fresh. A build reruns it only if a producer's rerun changes its inputs.")

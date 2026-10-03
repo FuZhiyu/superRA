@@ -501,7 +501,6 @@ function applyWorkspaceFilters(changed) {
   document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
     node.style.display=visibility.visible.has(node.dataset.path)?'':'none';
     node.classList.toggle('filter-context',visibility.visible.has(node.dataset.path)&&!visibility.matches.has(node.dataset.path));
-    var steps=node.querySelector(':scope > .task-children > .nav-step-list');if(steps)steps.hidden=!visibility.matches.has(node.dataset.path);
   });
   var nav=document.getElementById('nav-tree'),empty=document.getElementById('navigation-empty');
   if(nav){if(!empty){empty=document.createElement('p');empty.id='navigation-empty';empty.className='repro-hint';nav.prepend(empty);}empty.hidden=visibility.visible.size>0;empty.textContent='No tasks match these filters.';}
@@ -571,19 +570,17 @@ function workspaceSearchRecords() {
   });
   return records;
 }
-function syncTreeSteps() {
+function syncTreeRollups() {
   if(!_reproData)return;
   var byTask={},statuses=reproStatusIndex(_reproData);(_reproData.graph.steps||[]).forEach(function(s){(byTask[s.task]||(byTask[s.task]=[])).push(s);});
   document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
-    var steps=byTask[node.dataset.path]||[],children=node.querySelector(':scope > .task-children'),row=node.querySelector(':scope > .task-row'),badge=node.querySelector(':scope > .nav-repro-rollup');
-    if(!steps.length){var old=children&&children.querySelector(':scope > .nav-step-list');if(old)old.remove();if(badge)badge.remove();return;}
+    var steps=byTask[node.dataset.path]||[],row=node.querySelector(':scope > .task-row'),badge=row&&row.querySelector(':scope > .nav-repro-rollup');
+    if(!steps.length){if(badge)badge.remove();return;}
+    if(!row)return;
     var rollup=reproRollup(steps,statuses);
-    /* Its own line under the row, so the slug and title keep the row's width. */
-    if(row&&!badge){badge=document.createElement('div');row.after(badge);}
-    if(badge){badge.className='nav-repro-rollup'+(rollup.hatched?' rp-hatched':'');badge.innerHTML=rollup.compact;badge.title=steps.length+' steps: '+rollup.text;}
-    if(!children){children=document.createElement('div');children.className='task-children';children.style.display='none';node.appendChild(children);node.dataset.needsLoad='false';var caret=node.querySelector(':scope > .task-row > .task-toggle');if(caret){caret.classList.remove('leaf');caret.textContent='▸';}}
-    var list=children.querySelector(':scope > .nav-step-list');if(!list){list=document.createElement('div');list.className='nav-step-list';children.prepend(list);}
-    list.innerHTML=steps.map(function(s){var ch=reproChannels(statuses[s.name]);return '<button type="button" class="nav-step '+ch.cls+(s.kind==='check'?' is-check':'')+(s.name===_reproSelected?' is-selected':'')+'" data-tree-step="'+escapeAttr(s.name)+'" title="'+escapeAttr(ch.label+(ch.cloud?' · online-only here':''))+'"'+(s.name===_reproSelected?' aria-current="true"':'')+'><span class="repro-glyph" aria-hidden="true">'+ch.glyph+'</span><span class="nav-step-name">'+escapeHtml(s.name)+'</span><span class="nav-step-state">'+escapeHtml(ch.label+(s.kind==='check'?' · check':''))+(ch.cloud?' '+REPRO_CLOUD_HTML:'')+'</span></button>';}).join('');
+    /* Beside the status badge: the title absorbs the width first. */
+    if(!badge){badge=document.createElement('span');row.insertBefore(badge,row.querySelector(':scope > .badge'));}
+    badge.className='nav-repro-rollup'+(rollup.hatched?' rp-hatched':'');badge.innerHTML=rollup.compact;badge.title=steps.length+' steps: '+rollup.text;
   });
 }
 function updateNavigationToggle() {
@@ -617,7 +614,7 @@ function initWorkspaceControls() {
     applyWorkspaceFilters(true);
   });
   dialog.addEventListener('click',function(e){var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
-  loadReproData(false).then(function(){syncTreeSteps();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
+  loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
 }
 
 /* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
@@ -1140,7 +1137,7 @@ function reproReadHash() {
     if(!_reproViewNext)_reproViewport=Object.assign({},history.state.rpViewport);
     var previous=restoring;restoring=true;showView(n.layout==='tree'?'workspace':'reproduction');restoring=previous;
     applyWorkspaceFilters(false);
-    if(n.layout==='tree')loadReproData(false).then(function(){renderReproDetail(_reproSelected);syncTreeSteps();});
+    if(n.layout==='tree')loadReproData(false).then(function(){renderReproDetail(_reproSelected);syncTreeRollups();});
     return true;
   } catch(e){return false;}
 }
@@ -1720,7 +1717,7 @@ function reproTaskDependencies(graph,path) {
 }
 async function reproOpenDeclaration() {
   var selected=_reproSelected;
-  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeSteps();
+  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeRollups();
   if(location.hash!==reproHash())history.pushState({wt:ACTIVE_WT},'',reproHash());
   if(currentView==='reproduction'){
     reproSetReader(true);_reproReaderFull=true;
@@ -2044,7 +2041,7 @@ function selectReproStep(name) {
     p.classList.toggle('is-lit', !!edge&&edge.evidence.some(function(r){return (r.from||r.producer)===name||(r.to||r.consumer)===name;}));
   });
   renderReproDetail(name);
-  syncTreeSteps();
+  syncTreeRollups();
   var reader=document.getElementById('task-preview');if(reader)reader.scrollTop=0;
   var heading=document.querySelector('.repro-detail-title');if(heading)heading.focus({preventScroll:true});
 
@@ -2685,7 +2682,7 @@ function revealReproStep(name, owner) {
     _reproInspectorClosed=false;reproRevealOwner(step.task);
     selectReproStep(name);
     if(currentView==='reproduction'){drawReproView(document.getElementById('view-reproduction'),data);_reproViewport.zoom=1;reproCenter();}
-    syncTreeSteps();
+    syncTreeRollups();
   });
 }
 
@@ -2738,7 +2735,7 @@ function onReproUpdated() {
   _reproData = null;
   _reproExplainCache = {};
   if (currentView === 'reproduction') renderReproView(true);
-  else loadReproData(true).then(function(){refreshReproStepTables();syncTreeSteps();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function() {});
+  else loadReproData(true).then(function(){refreshReproStepTables();syncTreeRollups();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function() {});
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -2837,7 +2834,7 @@ function setActive(path, artifactPath) {
   updateBreadcrumb(path, activeArtifactPath);
   /* The header VS Code button opens the active task's file, so it follows nav. */
   updateWorktreeOpenHref();
-  _lastSidebarUpdate = updateSidebar(path).then(function(){syncTreeSteps();applyWorkspaceFilters(false);});
+  _lastSidebarUpdate = updateSidebar(path).then(function(){syncTreeRollups();applyWorkspaceFilters(false);});
   if (activeArtifactPath) {
     loadActiveArtifact(path, activeArtifactPath);
     var children = document.getElementById('children-dag');
@@ -4266,7 +4263,7 @@ async function loadNavTree() {
     if (!resp.ok) return;
     container.innerHTML = await resp.text();
     markLazyNodes();
-    syncTreeSteps();
+    syncTreeRollups();
     indexNavTitles(container);
     applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
     loadAttachmentBranches(container);
@@ -4318,7 +4315,6 @@ function initSidebarEvents() {
   var container = document.getElementById('nav-tree');
   if (!container) return;
   container.addEventListener('click', function(ev) {
-    var step=ev.target.closest('[data-tree-step]');if(step){ev.stopPropagation();revealReproStep(step.dataset.treeStep);return;}
     var toggle = ev.target.closest('.task-toggle');
     if (toggle && container.contains(toggle) && !toggle.classList.contains('leaf')) {
       ev.stopPropagation();
@@ -4359,7 +4355,7 @@ async function toggleNavCaret(node) {
     node.dataset.needsLoad = 'false';
     await loadNavChildren(node);
   }
-  syncTreeSteps();applyWorkspaceFilters(false);refreshRovingTabindex();
+  syncTreeRollups();applyWorkspaceFilters(false);refreshRovingTabindex();
 }
 
 /* Lazily fetch a node's body-free children into its .task-children container.
@@ -4374,7 +4370,7 @@ async function loadNavChildren(node) {
     if (!resp.ok) return false;
     children.innerHTML = await resp.text();
     markLazyNodes();
-    syncTreeSteps();
+    syncTreeRollups();
     indexNavTitles(children);
     applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
     loadAttachmentBranches(children);
@@ -4482,7 +4478,7 @@ async function updateSidebar(path) {
      naturally expanded one level than as a closed caret the user must re-open
      to see what they just navigated into. Leaf nodes are a no-op (guarded in
      expandNavNode). */
-  syncTreeSteps();
+  syncTreeRollups();
   await expandNavNode(target);
 
   var row = target.querySelector(':scope > .task-row');
@@ -4493,7 +4489,7 @@ async function updateSidebar(path) {
        lands on it. (applyTreeAria also keeps roles current after any lazy load
        the ancestor walk just triggered.) */
     applyTreeAria();
-    syncTreeSteps();applyWorkspaceFilters(false);
+    syncTreeRollups();applyWorkspaceFilters(false);
     requestAnimationFrame(function() {
       row.scrollIntoView({ block: 'nearest' });
     });
@@ -5195,7 +5191,7 @@ async function onFullReload() {
   setActive(target, target === wanted ? activeArtifactPath : '');
   restoring = false;
   if (currentView === 'reproduction') renderReproView(true);
-  else loadReproData(true).then(function(){syncTreeSteps();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
+  else loadReproData(true).then(function(){syncTreeRollups();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
 }
 
 /* Nearest still-present path at or above `path`, by walking up until a nav row

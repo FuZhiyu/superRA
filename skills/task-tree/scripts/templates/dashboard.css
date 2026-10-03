@@ -2612,17 +2612,11 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #workspace-task-options small { display:block;color:var(--text-mute);font-size:11px;overflow-wrap:anywhere; }
 #selection-filter-notice { padding:8px 12px;margin-bottom:12px;border:1px solid var(--border);background:var(--bg-alt);font-size:13px; }
 .filter-context > .task-row { opacity:.55; }
-.nav-step-list { padding:4px 8px 4px 24px; }
-.nav-step-list > .nav-step + .nav-step { margin-top:2px; }
-.nav-step { display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:6px;align-items:baseline;border-width:1px 1px 1px 3px;border-style:solid;border-top-color:transparent;border-right-color:transparent;border-bottom-color:transparent;border-radius:4px;color:var(--text);padding:5px 8px;text-align:left;font:inherit;font-size:12px;width:100%;cursor:pointer; }
-.nav-step.is-check { border-style:dashed;border-left-style:solid;border-top-color:var(--border);border-right-color:var(--border);border-bottom-color:var(--border); }
-.nav-step:hover { box-shadow:var(--shadow-md); }
-.nav-step.is-selected { outline:2px solid var(--accent);outline-offset:1px; }
-.nav-step-name { min-width:0;overflow-wrap:anywhere; }
-.nav-step-state { grid-column:2;font-size:var(--fs-micro);color:var(--rp-ink-2); }
 .nav-repro-rollup > span, .rp-task-summary > span { background:none; }
 .rp-task-summary .repro-glyph { font-size:inherit; }
-.nav-repro-rollup { margin:-3px 0 2px 30px;width:max-content;padding:1px 5px;border-radius:4px;font:var(--fs-micro) var(--font-mono);color:var(--rp-ink-2);white-space:nowrap; }
+.nav-repro-rollup { display:inline-flex;align-items:center;gap:6px;flex-shrink:0;padding:1px 5px;border-radius:3px;font:var(--fs-micro) var(--font-mono);color:var(--rp-ink-2);white-space:nowrap; }
+.nav-repro-rollup > span { display:inline-flex;align-items:center;gap:3px; }
+.nav-repro-rollup .repro-glyph { font-size:0.85em; }
 .workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-spacer,.workspace:not(.dag-mode).tree-sidebar-hidden > .nav-tree,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-resizer,.workspace:not(.dag-mode).tree-sidebar-hidden > .sidebar-rail { display:none; }
 #navigation-toggle { white-space:nowrap; }
 @media(max-width:620px) { .header-controls #btn-find { display:inline-flex;max-width:150px;overflow:hidden;white-space:nowrap; } .workspace-filter-summary { padding:6px 12px;gap:6px; } .workspace-filter { padding:16px; } .workspace-filter label { min-height:40px; } }
