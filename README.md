@@ -6,7 +6,7 @@
 
 **[📖 Documentation](http://fuzhiyu.me/superRA/)** · **[Explore an example project →](http://fuzhiyu.me/superRA/showcase-analysis-tree.html)**
 
-![The superRA dashboard: the live Graph view of an asset-pricing study after an edit to the analysis script. The data step reads fresh; the analysis step reads stale, with a hover card naming the changed file; its downstream check is stale through it. The selected task's results and figures sit beside the graph.](docs/site/02-quickstart/attachments/showcase-graph.webp)
+![The superRA dashboard: the live Graph view of an asset-pricing study after an edit to the analysis script. The data step reads fresh; the analysis step reads stale, with a hover card naming the changed file; its downstream check is stale through it. The selected task's results and figures sit beside the graph.](docs/site/01-quickstart/attachments/showcase-graph.webp)
 
 ## Why superRA?
 
@@ -16,14 +16,14 @@ Frameworks such as [Superpowers](https://github.com/obra/superpowers) target sof
 
 ## What you get
 
-- **[A dashboard for the whole project.](http://fuzhiyu.me/superRA/#/04-utility-skills/01-task-tree)**
+- **[A dashboard for the whole project.](http://fuzhiyu.me/superRA/#/03-utility-skills/01-task-tree)**
   - **Persistent history.** Each task's objective, decisions, results, and reviews are committed files. Any session or coauthor resumes from them; one exported HTML file shares them.
   - **Task management.** A task tree with status, dependencies, and what is ready next. Pin a comment to a task to steer it.
   - **The project's stage at a glance.** Status rolls up the tree: planned, in progress, awaiting your call, done.
-- **[Know which results are current.](http://fuzhiyu.me/superRA/#/04-utility-skills/09-reproducibility)** Each table and figure traces to the script that made it. After an edit, the Graph view marks what went stale and rebuilds only that.
-- **[An agent that works with you.](http://fuzhiyu.me/superRA/#/05-workflows)** It edits the task file with you as a live canvas, pauses for feedback, and asks before spending on a review. Autonomous runs on request.
-- **Discipline as the work goes.** [Domain skills](http://fuzhiyu.me/superRA/#/03-domain-skills) for data analysis, theory, writing, and slides; independent review where it earns its cost; an integration step that lands the work as clean, protected code.
-- **Quality-of-life utilities.** [Utility skills](http://fuzhiyu.me/superRA/#/04-utility-skills) that read and cite papers from Zotero, convert PDFs to Markdown, merge branches by intent, and sync data across worktrees.
+- **[Know which results are current.](http://fuzhiyu.me/superRA/#/03-utility-skills/02-reproducibility)** Each table and figure traces to the script that made it. After an edit, the Graph view marks what went stale and rebuilds only that.
+- **[An agent that works with you.](http://fuzhiyu.me/superRA/#/04-workflows)** It edits the task file with you as a live canvas, pauses for feedback, and asks before spending on a review. Autonomous runs on request.
+- **Discipline as the work goes.** [Domain skills](http://fuzhiyu.me/superRA/#/02-domain-skills) for data analysis, theory, writing, and slides; independent review where it earns its cost; an integration step that lands the work as clean, protected code.
+- **Quality-of-life utilities.** [Utility skills](http://fuzhiyu.me/superRA/#/03-utility-skills) that read and cite papers from Zotero, convert PDFs to Markdown, merge branches by intent, and sync data across worktrees.
 
 ## Get started
 
@@ -42,7 +42,7 @@ Restart Claude Code, then in a project ask:
 Use superRA to onboard this project and show me the dashboard.
 ```
 
-Onboarding builds a task tree and reproduction graph for the work already there, and changes nothing outside `superRA/` until you approve. For new work, the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) runs one study end to end.
+Onboarding builds a task tree and reproduction graph for the work already there, and changes nothing outside `superRA/` until you approve. For new work, the [Quickstart](http://fuzhiyu.me/superRA/#/01-quickstart) runs one study end to end.
 
 To update later:
 

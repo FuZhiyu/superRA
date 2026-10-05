@@ -23,11 +23,11 @@ doc-page authors inherit it via `task read` of any node under this root.
   `## ` section as a plain heading. Do not add `## Results` / `## Review Notes` to doc
   nodes; those are task-workflow sections, not doc content.
 - Ordering: numeric directory prefixes (01-, 02-, ...) set display order; they are
-  display-only (doc nodes carry no real dependencies). The 01- slot is retired: the
-  welcome content lives on this root node, and child numbering starts at 02-.
+  display-only (doc nodes carry no real dependencies). Number each level
+  contiguously from 01-; the welcome content lives on this root node.
 - Cross-page links: hash links #/<path> where <path> is the doc-tree-relative node path,
-  e.g. [the domain skills](#/03-domain-skills); a nested page uses its full directory
-  path, e.g. #/03-domain-skills/01-econ-data-analysis. The export's nav already
+  e.g. [the domain skills](#/02-domain-skills); a nested page uses its full directory
+  path, e.g. #/02-domain-skills/01-econ-data-analysis. The export's nav already
   shows the descent, so link a page to its parent only where the prose hands the reader
   back up, not on every page by rote.
 - Repo-file links: to cite a skill/agent/source file as authority, write a normal
@@ -50,7 +50,7 @@ doc-page authors inherit it via `task read` of any node under this root.
 
 [Explore an example project →](showcase-analysis-tree.html)
 
-![The superRA dashboard: the live Graph view of an asset-pricing study after an edit to the analysis script. The data step reads fresh; the analysis step reads stale, with a hover card naming the changed file; its downstream check is stale through it. The selected task's results and figures sit beside the graph.](02-quickstart/attachments/showcase-graph.webp)
+![The superRA dashboard: the live Graph view of an asset-pricing study after an edit to the analysis script. The data step reads fresh; the analysis step reads stale, with a hover card naming the changed file; its downstream check is stale through it. The selected task's results and figures sit beside the graph.](01-quickstart/attachments/showcase-graph.webp)
 
 ## Why superRA?
 
@@ -60,14 +60,14 @@ Frameworks such as [Superpowers](https://github.com/obra/superpowers) target sof
 
 ## What you get
 
-- **[A dashboard for the whole project.](#/04-utility-skills/01-task-tree)** This site is one.
+- **[A dashboard for the whole project.](#/03-utility-skills/01-task-tree)** This site is one.
   - **Persistent history.** Each task's objective, decisions, results, and reviews are committed files. Any session or coauthor resumes from them; one exported HTML file shares them.
   - **Task management.** A task tree with status, dependencies, and what is ready next. Pin a comment to a task to steer it.
   - **The project's stage at a glance.** Status rolls up the tree: planned, in progress, awaiting your call, done.
-- **[Know which results are current.](#/04-utility-skills/09-reproducibility)** Each table and figure traces to the script that made it. After an edit, the Graph view marks what went stale and rebuilds only that.
-- **[An agent that works with you.](#/05-workflows)** It edits the task file with you as a live canvas, pauses for feedback, and asks before spending on a review. Autonomous runs on request.
-- **Discipline as the work goes.** [Domain skills](#/03-domain-skills) for data analysis, theory, writing, and slides; independent review where it earns its cost; an integration step that lands the work as clean, protected code.
-- **Quality-of-life utilities.** [Utility skills](#/04-utility-skills) that read and cite papers from Zotero, convert PDFs to Markdown, merge branches by intent, and sync data across worktrees.
+- **[Know which results are current.](#/03-utility-skills/02-reproducibility)** Each table and figure traces to the script that made it. After an edit, the Graph view marks what went stale and rebuilds only that.
+- **[An agent that works with you.](#/04-workflows)** It edits the task file with you as a live canvas, pauses for feedback, and asks before spending on a review. Autonomous runs on request.
+- **Discipline as the work goes.** [Domain skills](#/02-domain-skills) for data analysis, theory, writing, and slides; independent review where it earns its cost; an integration step that lands the work as clean, protected code.
+- **Quality-of-life utilities.** [Utility skills](#/03-utility-skills) that read and cite papers from Zotero, convert PDFs to Markdown, merge branches by intent, and sync data across worktrees.
 
 ## How it works
 
@@ -119,9 +119,9 @@ Frameworks such as [Superpowers](https://github.com/obra/superpowers) target sof
 </svg>
 </div>
 
-- **[PLAN](#/05-workflows/01-plan)** — the agent scopes your request into a *task tree*: a directory of small `task.md` files, one per unit of work, that you review before execution starts.
-- **[IMPLEMENT](#/05-workflows/02-implement)** — the agent works each task with you, self-reviews, and asks whether to run an independent review now, later, or not at all. On request, autonomous mode hands the tasks to implementer and reviewer subagents.
-- **[INTEGRATE](#/05-workflows/03-integrate)** — you choose which results enter the permanent record and how they are protected. The agent syncs with your base branch, writes the record, and proposes one refactoring task; once you approve, it executes and ships.
+- **[PLAN](#/04-workflows/01-plan)** — the agent scopes your request into a *task tree*: a directory of small `task.md` files, one per unit of work, that you review before execution starts.
+- **[IMPLEMENT](#/04-workflows/02-implement)** — the agent works each task with you, self-reviews, and asks whether to run an independent review now, later, or not at all. On request, autonomous mode hands the tasks to implementer and reviewer subagents.
+- **[INTEGRATE](#/04-workflows/03-integrate)** — you choose which results enter the permanent record and how they are protected. The agent syncs with your base branch, writes the record, and proposes one refactoring task; once you approve, it executes and ships.
 
 Research is rarely this linear. Each phase also runs alone; a surprise mid-implementation or a later scope change routes back to PLAN; and exploratory work can be recorded as tasks after the fact.
 
@@ -140,15 +140,15 @@ Restart Claude Code, then in a project ask:
 Use superRA to onboard this project and show me the dashboard.
 ```
 
-Onboarding builds a task tree and reproduction graph for the work already there, and changes nothing outside `superRA/` until you approve. For new work, the [Quickstart](#/02-quickstart) runs one study end to end. Codex setup, updating, and upgrading are in the [README](README.md).
+Onboarding builds a task tree and reproduction graph for the work already there, and changes nothing outside `superRA/` until you approve. For new work, the [Quickstart](#/01-quickstart) runs one study end to end. Codex setup, updating, and upgrading are in the [README](README.md).
 
 ## Start here
 
 | You want to | Go to |
 |---|---|
-| Try one analysis end to end, or bring in an existing project | [Quickstart](#/02-quickstart) |
-| Learn the task tree, the dashboard, and the reproduction graph | [task-tree](#/04-utility-skills/01-task-tree) |
-| Know which tables and figures are out of date after an edit | [Reproducibility](#/04-utility-skills/09-reproducibility) |
-| Understand one phase and what you decide in it | [Workflows](#/05-workflows) |
-| Pick the discipline for your work | [Domain Skills](#/03-domain-skills) |
-| See an example task tree | [Showcase](#/07-showcase) |
+| Try one analysis end to end, or bring in an existing project | [Quickstart](#/01-quickstart) |
+| Learn the task tree, the dashboard, and the reproduction graph | [task-tree](#/03-utility-skills/01-task-tree) |
+| Know which tables and figures are out of date after an edit | [Reproducibility](#/03-utility-skills/02-reproducibility) |
+| Understand one phase and what you decide in it | [Workflows](#/04-workflows) |
+| Pick the discipline for your work | [Domain Skills](#/02-domain-skills) |
+| See an example task tree | [Showcase](#/06-showcase) |

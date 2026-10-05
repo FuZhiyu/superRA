@@ -57,7 +57,7 @@ The Codex hook list should include `autoload-superra`, `agent-model-guard`,
 
 ## Hook Coverage
 
-What each hook does, and which run on Codex, is on the [hooks page](site/06-hooks/task.md). Codex uses its own events (`hooks/hooks-codex.json`), with these limits:
+What each hook does, and which run on Codex, is on the [hooks page](site/05-hooks/task.md). Codex uses its own events (`hooks/hooks-codex.json`), with these limits:
 
 - **Skill gates** (`ensure-companion`) are not installed: Codex does not expose skill loads as a `PreToolUse` surface.
 - **`agent-model-guard`** cannot enforce on Codex CLI 0.147.0, which starts `spawn_agent` without emitting `PreToolUse`; manifest tests still cover the hook contract.
