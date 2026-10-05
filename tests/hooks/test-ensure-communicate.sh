@@ -154,7 +154,6 @@ from pathlib import Path
 root = Path(sys.argv[1])
 claude = json.loads((root / "hooks/hooks.json").read_text(encoding="utf-8"))
 codex = json.loads((root / "hooks/hooks-codex.json").read_text(encoding="utf-8"))
-cursor = json.loads((root / "hooks/hooks-cursor.json").read_text(encoding="utf-8"))
 
 def wired(groups, matcher):
     return any(
@@ -165,13 +164,12 @@ def wired(groups, matcher):
 
 assert wired(claude["hooks"]["PreToolUse"], "Edit|Write|Bash")
 assert wired(codex["hooks"]["PreToolUse"], "Edit|Write|Bash|apply_patch")
-assert any("ensure-communicate" in hook["command"] for hook in cursor["hooks"]["preToolUse"])
 PY
 then
-  printf 'PASS  hook registries cover Claude, Codex, and Cursor\n'
+  printf 'PASS  hook registries cover Claude and Codex\n'
   pass=$((pass + 1))
 else
-  printf 'FAIL  hook registries cover Claude, Codex, and Cursor\n'
+  printf 'FAIL  hook registries cover Claude and Codex\n'
   fail=$((fail + 1))
 fi
 

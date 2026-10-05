@@ -209,7 +209,7 @@ check_ledger "V8d ledger is per agent" deny \
   "$(ledger_hook "$ledger_dir" s1 agent-1 superRA:superimplement "$stale")"
 rm -rf "$ledger_dir" "$stale"
 
-# Registry wiring: Claude + Cursor reference ensure-companion; Codex has no
+# Registry wiring: Claude references ensure-companion; Codex has no
 # Skill interception so it must NOT wire the gate.
 if python3 - "$REPO_ROOT" <<'PY'
 import json, sys
@@ -218,7 +218,6 @@ from pathlib import Path
 root = Path(sys.argv[1])
 claude = json.loads((root / "hooks/hooks.json").read_text(encoding="utf-8"))
 codex = json.loads((root / "hooks/hooks-codex.json").read_text(encoding="utf-8"))
-cursor = json.loads((root / "hooks/hooks-cursor.json").read_text(encoding="utf-8"))
 
 claude_skill = [
     hook["command"]
@@ -236,16 +235,12 @@ codex_cmds = [
     for hook in group["hooks"]
 ]
 assert not any("ensure-companion" in cmd or "ensure-using-superra" in cmd for cmd in codex_cmds)
-
-cursor_cmds = [hook["command"] for hook in cursor["hooks"]["preToolUse"]]
-assert any("ensure-companion" in cmd for cmd in cursor_cmds)
-assert not any("ensure-using-superra" in cmd or "ensure-agent-orchestration" in cmd for cmd in cursor_cmds)
 PY
 then
-  printf 'PASS  %-50s\n' "registry wiring (Claude, Codex, Cursor)"
+  printf 'PASS  %-50s\n' "registry wiring (Claude, Codex)"
   pass=$((pass + 1))
 else
-  printf 'FAIL  %-50s\n' "registry wiring (Claude, Codex, Cursor)"
+  printf 'FAIL  %-50s\n' "registry wiring (Claude, Codex)"
   failed_names+=("registry wiring")
   fail=$((fail + 1))
 fi

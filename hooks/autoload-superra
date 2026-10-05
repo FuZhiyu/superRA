@@ -86,9 +86,7 @@ context='The user mentioned superRA. Load superRA:using-superra if you have not 
 # already surrounded by its own quotes — splice it in without wrapping.
 context_json=$(printf '%s' "$context" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
-if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
-  printf '{"additional_context":%s}\n' "$context_json"
-elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
   printf '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":%s}}\n' "$context_json"
 else
   printf '{"additionalContext":%s}\n' "$context_json"

@@ -166,7 +166,5 @@ for name, matcher in (("hooks.json", "Edit|Write|Bash"), ("hooks-codex.json", "E
         and any("guard-task-approval" in hook.get("command", "") for hook in group.get("hooks", []))
         for group in groups
     ), name
-cursor = json.loads((root / "hooks/hooks-cursor.json").read_text())
-assert any("guard-task-approval" in hook["command"] for hook in cursor["hooks"]["preToolUse"])
 PY
-printf 'PASS  hook registries cover Claude, Codex, and Cursor\n'
+printf 'PASS  hook registries cover Claude and Codex\n'

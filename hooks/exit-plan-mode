@@ -30,9 +30,7 @@ fi
 
 context="If this plan will guide later implementation, review, or handoff, materialize it into a superRA/ task tree with superRA:superplan."
 
-if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
-  printf '{"additional_context":"%s"}\n' "$context"
-elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
   printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}\n' "$context"
 else
   printf '{"additionalContext":"%s"}\n' "$context"
