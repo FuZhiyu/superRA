@@ -408,14 +408,19 @@ def _will_run(build: Build) -> tuple[list[str], StatusReport]:
 
 
 def _scope_line(build: Build, report: StatusReport) -> str:
-    """The selection counted by status; only steps not plainly fresh are named."""
+    """The selection counted by status; only steps not plainly fresh are named.
+
+    An interrupted or failed forced run already reads `failed`, so `forced` marks a fresh step `--force` reruns.
+    """
     groups: dict[str, list[str]] = {}
     for name in build.names:
-        status = "forced" if name in build.forced else report.entry(name).status
-        groups.setdefault(status, []).append(name)
+        status = report.entry(name).status
+        groups.setdefault("forced" if status == "fresh" and name in build.forced else status, []).append(name)
     command = build.command("status", "--json")
+    lifted = sum(report.entry(name).local_status != "stale" for name in groups.get("stale", []))
+    label = {"stale": f"stale ({lifted} via upstream)"} if lifted else {}
     parts = [f"{len(groups.pop('fresh'))} fresh"] if "fresh" in groups else []
-    parts += [f"{len(groups[k])} {k}: {capped_join(groups[k], command)}"
+    parts += [f"{len(groups[k])} {label.get(k, k)}: {capped_join(groups[k], command)}"
               for k in ("forced", *STATUSES) if k in groups]
     return f"Execution scope: {len(build.names)} step(s): " + "; ".join(parts)
 

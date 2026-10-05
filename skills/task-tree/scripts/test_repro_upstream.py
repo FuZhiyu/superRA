@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from _repro_state import DOWNLOAD_NOTES, OUTPUT_CAP, read_run_record
+from _repro_state import DOWNLOAD_NOTES, OUTPUT_CAP, read_run_record, write_run_record
 from _task_snapshot import frontier_rows
 from test_repro_online import Offline, _clear_cache
 from test_repro_runner import CHAIN, CONFIG, Project, project  # noqa: F401
@@ -114,20 +114,30 @@ def test_a_default_build_reruns_a_stale_producer_and_skips_fresh_and_unverified_
     out = capsys.readouterr().out
     assert re.search(r"Also building 1 producer\(s\) the targets read:\n  p-stale  \d+\.\ds\n", out)
     assert "p-fresh" not in out  # fresh steps are only counted
-    assert "Execution scope: 4 step(s): 1 fresh; 2 stale: p-stale, use; 1 unverified: p-unv" in out
+    assert "Execution scope: 4 step(s): 1 fresh; 2 stale (1 via upstream): p-stale, use; 1 unverified: p-unv" in out
     assert "4 step(s): 2 executed, 1 unchanged, 1 unverified" in out
 
 
 def test_force_reruns_the_targets_only(fan, capsys):
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
     before = fan.run_times()
-    capsys.readouterr()
     assert fan.run("build", "02-use", "--force") == 0
-    assert "Execution scope: 4 step(s): 2 fresh; 1 forced: use; 1 stale: p-stale" in capsys.readouterr().out
     assert _changed(before, fan.run_times()) == {"p-stale", "use"}  # p-fresh untouched
     before = fan.run_times()
+    capsys.readouterr()
     assert fan.run("build", "02-use", "--force") == 0
     assert _changed(before, fan.run_times()) == {"use"}
+    assert "Execution scope: 4 step(s): 3 fresh; 1 forced: use" in capsys.readouterr().out
+
+
+def test_the_scope_line_names_failed_and_interrupted_steps_and_prints_on_a_dry_run(fan, capsys):
+    fan.write("Code/stale.sh", "exit 1\n")
+    assert fan.run("build", "02-use") == 1
+    write_run_record(fan.paths, "p-fresh", {"outcome": "running", "pid": 0})  # an interrupted run
+    capsys.readouterr()
+    assert fan.run("build", "02-use", "--dry-run") == 0
+    assert ("Execution scope: 4 step(s): 1 fresh; 1 stale (1 via upstream): use; 2 failed: p-fresh, p-stale"
+            in capsys.readouterr().out)
 
 
 @pytest.mark.parametrize("loss", ["online-only", "absent"])
@@ -340,4 +350,4 @@ def test_default_status_and_build_output_stays_within_the_cap(tmp_path, capsys):
     assert chain.run("build", "02-end") == 0  # only s01 reruns; identical copies downstream rerun as inputs change
     out = capsys.readouterr().out
     assert "Also building 1 producer(s)" in out
-    assert f"Execution scope: {length} step(s): {length} stale: s01, " in out  # the cascade lifts every consumer of s01
+    assert f"Execution scope: {length} step(s): {length} stale ({length - 1} via upstream): s01, " in out
