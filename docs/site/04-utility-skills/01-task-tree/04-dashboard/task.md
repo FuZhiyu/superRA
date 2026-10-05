@@ -2,8 +2,6 @@
 title: "The Dashboard"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-17
 ---
 
 ## Objective
@@ -27,7 +25,7 @@ Each step card shows its state (`fresh`, `stale`, `missing`, `failed`, or `unver
 - **Fill: the step's own evidence.**
   - Tinted: its own state, so the tint marks where staleness starts.
   - Empty: inherited from upstream; the step reruns only if rebuilding its producers changes its inputs.
-  - Hatched: some of its files are online-only here (Dropbox, Box, or iCloud, not downloaded), so it reads `unverified`.
+  - Hatched: some of its files are online-only here (for example in Dropbox or iCloud, not downloaded), so it reads `unverified`.
 
 Hover a step that is not fresh to see why; select it for its inputs, outputs, last run, and any acceptance reason.
 
@@ -42,7 +40,7 @@ On the live dashboard, each task and step card has a **Build** button. Its menu 
 
 ## Steer with comments
 
-Pin a note — a correction, question, or constraint — to a block of a task to steer it without editing the objective. It shows on the dashboard and inline in [`task read`](#/04-utility-skills/01-task-tree/02-cli-commands), so the next agent on that task sees it. Resolve it once addressed.
+Pin a note — a correction, question, or constraint — to a block of a task to steer it without editing the objective. It shows on the dashboard and inline in [`task read`](#/04-utility-skills/01-task-tree/02-cli-commands), so the next agent on that task sees it. Resolve it once addressed. Editing the block a comment is pinned to leaves the comment orphaned, shown with its original text.
 
 ## Share a snapshot
 

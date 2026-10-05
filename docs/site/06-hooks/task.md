@@ -2,8 +2,6 @@
 title: "Hooks"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-11
 ---
 
 ## Objective

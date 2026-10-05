@@ -2,8 +2,6 @@
 title: "Showcase: A Real Task Tree"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-11
 ---
 
 ## Objective

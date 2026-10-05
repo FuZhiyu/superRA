@@ -2,13 +2,11 @@
 title: "Status and the Frontier"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-11
 ---
 
 ## Objective
 
-Agents update each task's status as they work; parent statuses and the frontier are computed from those. You read them; the only statuses you set are scope decisions.
+Agents set each leaf task's status as they work; parent statuses and the frontier are computed from those. You mostly read them. You can set a leaf's status by editing its `task.md`, usually to drop or park it; a parent's status is recomputed and any hand edit is overwritten.
 
 ## A leaf task moves through implementation and review
 
@@ -33,11 +31,12 @@ Say "drop this task" or "park this task" and the agent sets `archived` or `postp
 
 Archived and postponed children are left out. The first matching rule wins:
 
-1. All children `approved` → `approved`.
-2. Any child `revise` → `revise`.
-3. All children `implemented` or `approved` → `implemented`.
-4. Any child `in-progress`, `implemented`, or `approved` → `in-progress`.
-5. Otherwise → `not-started`.
+1. Every child archived or postponed → `postponed` if any is postponed, else `archived`.
+2. All children `approved` → `approved`.
+3. Any child `revise` → `revise`.
+4. All children `implemented` or `approved` → `implemented`.
+5. Any child `in-progress`, `implemented`, or `approved` → `in-progress`.
+6. Otherwise → `not-started`.
 
 One leaf flips and every ancestor updates. After bulk or manual edits leave parents out of sync, run `./superRA/superra task status fix`.
 
@@ -45,7 +44,8 @@ One leaf flips and every ancestor updates. After bulk or manual edits leave pare
 
 Ask "what's ready next?", or run `./superRA/superra task frontier`. The frontier lists unfinished leaf tasks whose `depends_on` prerequisites, own or inherited from a parent, are all `implemented`, `approved`, or `revise`.
 
-- **Prerequisites still `not-started`, `in-progress`, or `postponed` block.**
+- **Prerequisites still `not-started`, `in-progress`, or `postponed` block.** A prerequisite sent back to `revise` does not, and an `archived` one is dropped with a warning.
+- **Number prefixes only set display order.** `01-` before `02-` orders the listing; only `depends_on` decides what runs first.
 - **File inputs never block.** A file read from another task's [reproduction step](#/04-utility-skills/09-reproducibility) is listed beside the task when its producer is `stale`, `missing`, or `failed`, and the agent decides whether to rebuild it first.
 - **Ready is not current.** Whether an output is up to date is a separate check, owned by [reproducibility](#/04-utility-skills/09-reproducibility).
 

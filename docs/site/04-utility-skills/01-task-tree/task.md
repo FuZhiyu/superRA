@@ -2,8 +2,6 @@
 title: "task-tree"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-17
 ---
 
 ## Objective
@@ -17,7 +15,7 @@ The task tree keeps your project's state — what is done, what is blocked, what
 | "superra, plan this analysis" | The work broken into a tree of tasks for you to review |
 | "work the ready tasks" | Tasks done in dependency order |
 | "show me the tree" | The whole tree with rolled-up status |
-| "what can I start now?" | The **frontier**: tasks whose prerequisites are met |
+| "what can I start now?" | The **frontier**: unfinished leaf tasks whose prerequisites are met |
 | "what's left on the holdings pipeline?" / "what's blocking the merge?" | An answer read from recorded state, not guessed |
 | "open the dashboard" | A live browser view of the tree and its reproduction graph |
 
@@ -30,7 +28,7 @@ The task tree keeps your project's state — what is done, what is blocked, what
 ## The agent edits; you can too
 
 - **One committed wrapper, `./superRA/superra`, runs every command.** The agent writes it on first use; run the same commands yourself to inspect or steer the tree.
-- **Edit one field directly; restructure with the CLI.** Change a status or fix an objective by editing the `task.md`. Move or rename a task with `task move`, which carries the directory and repairs links and dependencies.
+- **Edit one field directly; restructure with the CLI.** Fix an objective, or drop or park a task, by editing its `task.md`. Move or rename a task with `task move`, which carries the directory and repairs links and dependencies.
 - **Hooks check every edit.** After each agent edit to the tree, a harness hook validates the structure and recomputes rollups; see the [Hooks page](#/06-hooks).
 
 ## Reference pages

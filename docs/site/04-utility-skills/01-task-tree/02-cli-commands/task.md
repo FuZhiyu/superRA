@@ -2,8 +2,6 @@
 title: "The CLI"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-11
 ---
 
 ## Objective
@@ -32,7 +30,7 @@ The agent runs these commands for you; run them yourself through `./superRA/supe
 ./superRA/superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 ```
 
-Use `task move` rather than `mv` to move or rename a task: it repairs links, refuses a move that would break `depends_on`, and warns about edges it must drop when the task changes parent.
+Use `task move` rather than `mv` to move or rename a task: it repairs links and refuses a move that would create a dependency error. Moving to a new parent drops `depends_on` edges that no longer resolve, with a warning; re-add any that should still hold with `task dep add`.
 
 ## Read and resolve comments
 
@@ -52,4 +50,4 @@ Use `task move` rather than `mv` to move or rename a task: it repairs links, ref
 
 - `repro` commands, which rebuild and inspect results: the [reproducibility page](#/04-utility-skills/09-reproducibility).
 - `dashboard` commands: the [dashboard page](#/04-utility-skills/01-task-tree/04-dashboard).
-- Every flag, bulk status operation, and migration tool: [commands.md](skills/task-tree/references/commands.md).
+- Every flag and bulk status operation: [commands.md](skills/task-tree/references/commands.md). Migrating a legacy `PLAN.md`: [internals.md §Migration](skills/task-tree/references/internals.md).

@@ -2,8 +2,6 @@
 title: "slide-design"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-18
 ---
 
 ## Objective

@@ -2,8 +2,6 @@
 title: "Quickstart: Your First Workflow"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-11
 ---
 
 ## Objective
@@ -99,7 +97,7 @@ and is fresh in repro-lock.json.
 
 ### Read results on the dashboard as they land
 
-The dashboard updates as the agents work. When a task is approved, the agent picks up the next task whose dependencies are met; when every task is approved, the whole tree turns `approved` (green), ready for INTEGRATE.
+The dashboard updates as the agents work. As each task lands, the agent picks up the next task whose dependencies are met; when every task is approved, the whole tree turns `approved` (green), ready for INTEGRATE.
 
 - [Open the finished study →](showcase-analysis-tree.html) Click any task to read its objective and the results the reviewer checked.
 - [Read the finished regression task →](showcase-analysis-tree.html#/02-analysis) It opens on its objective math and the results.
@@ -146,7 +144,7 @@ Once the tasks are approved, ask the agent to `superintegrate`. INTEGRATE folds 
 
 ### Change the tree at any point
 
-The phases form a cycle: a discovery mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving finished work untouched. Edit the tree in plain language. Add a task to a running tree:
+The phases form a cycle: a discovery mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, reopening only the tasks the change touches. Edit the tree in plain language. Add a task to a running tree:
 
 ```text
 Using superplan, add a task under showcase-analysis for a robustness check

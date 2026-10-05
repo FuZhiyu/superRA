@@ -2,8 +2,6 @@
 title: "INTEGRATE: Protect, Sync, and Ship"
 status: not-started
 depends_on:  []
-tags: []
-created: 2026-06-17
 ---
 
 ## Objective
@@ -23,7 +21,7 @@ The agent also stops to confirm the base branch if no earlier decision recorded 
 |---|---|---|
 | **Protect** | The agent surveys the provisional findings and proposes what to keep or drop, where the documentation and result files live, how the task tree consolidates, and how each result is guarded. | Choose; the choices land in one decision commit. |
 | **Sync** | The agent merges the base branch's new changes by what they mean, not line by line ([semantic-merge](#/04-utility-skills/02-semantic-merge)). | Answer only if a conflict would change your work's meaning. |
-| **Mature & Consolidate** | One agent writes the agreed documentation and result files and tidies the task tree; a reviewer checks them against your Protect decision and drafts one temporary refactoring task, including what to prune. | — |
+| **Mature & Consolidate** | One agent writes the agreed documentation and result files and consolidates the task tree: update tasks fold into the task they changed, and each task's `## Results` is distilled, sometimes to a one-line pointer; a reviewer checks them against your Protect decision and drafts one temporary refactoring task, including what to prune. | — |
 | **Integrate** | Agents execute the approved refactoring task, and a reviewer checks the final diff. This is the one independent review of all accumulated work. | Approve the record and the task together, before execution. |
 | **Finish** | The agent re-checks that the base has not moved (looping back to Sync if it has), then opens a pull request or fast-forwards into the base, and removes the worktree if the work ran in one. | — |
 
