@@ -2,7 +2,7 @@
    STANDALONE MODE — server-less single-file export.
    ──────────────────────────────────────────────────────────────────────────
    The live dashboard fetches HTML/JSON fragments from the FastAPI server
-   (/nav, /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban,
+   (/nav, /nav/<path>, /node/<path>, /api/children-graph?root=<path>,
    /api/*). A file
    opened via file:// has no server, so generate_dashboard() pre-renders every
    one of those fragments with the SAME Jinja partials the server uses and
@@ -27,7 +27,7 @@ function _standaloneResponse(payload, found) {
 
 /* Resolve a fetch URL against the embedded data instead of the network.
    - Exact fragment hits (/nav, /node/<path>, /api/children-graph?root=<path>,
-     /kanban, /nav/<path>) return their pre-rendered HTML/JSON. The map is
+     /nav/<path>) return their pre-rendered HTML/JSON. The map is
      keyed by the raw (decoded) path, but the children-graph loader builds its
      URL with encodeURIComponent(path), which escapes the '/' in
      multi-segment paths to %2F. We decode before the lookup so an encoded
@@ -267,6 +267,16 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
      ROOT_PREFIX / RESOLVED_ROOT. */
   var repoRootRel = REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : '';
   var repoLinkPrefix = repoRootRel + contentDirRel;
+  /* A project file in the reading pane resolves against its own folder under
+     the project root, and none of its links name a task. */
+  var projectDir = contentBase && contentBase.projectDir;
+  var fileRoot = RESOLVED_ROOT;
+  if (projectDir != null) {
+    contentDirRel = projectDir ? projectDir + '/' : '';
+    rootRel = repoRootRel = '';
+    repoPathPrefix = repoLinkPrefix = contentDirRel;
+    fileRoot = PROJECT_ROOT;
+  }
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -274,8 +284,13 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
      figures, paths outside the tree) keeps the vscode://file rewrite. */
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
+    var stepMatch=href&&href.match(/#step-([A-Za-z0-9][A-Za-z0-9._-]*)$/);
+    if(stepMatch&&isRelativeResource(href)&&projectDir==null){
+      var owner=href.startsWith('#')&&!artifactPath?taskPath:resolveInternalTaskPath(href,taskPath,contentBaseDir);
+      if(owner!==null){a.setAttribute('href','#/'+owner+'?step='+encodeURIComponent(stepMatch[1]));a.classList.add('task-link');a.removeAttribute('target');return;}
+    }
     if (href && isRelativeResource(href) && !href.startsWith('#')) {
-      var internal = resolveInternalTaskPath(href, taskPath, contentBaseDir);
+      var internal = projectDir == null ? resolveInternalTaskPath(href, taskPath, contentBaseDir) : null;
       if (internal !== null) {
         a.setAttribute('href', '#/' + internal);
         a.removeAttribute('target');
@@ -296,6 +311,7 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
             if (window.LOCAL_OPEN) {
               a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));
             }
+            if (!window.STANDALONE) a.setAttribute('data-peek', taskRelOpenPath(taskPath, artifactTarget));
           }
           return;
         }
@@ -321,6 +337,16 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
         }
         if (REPO_FILE_BASE) {
           a.setAttribute('href', repoFileHref(repoLinkPrefix + href));
+        } else if (!window.LOCAL_OPEN && !window.STANDALONE) {
+          /* A browser on another machine has no editor or app to hand the file
+             to, so the link opens it in the reading pane instead. */
+          var fileRel = normalizeProjectPath(rootRel + contentDirRel + decodePathHref(href.replace(/[?#].*$/, '')));
+          a.setAttribute('href', projectFileHash(taskPath, fileRel));
+          a.setAttribute('data-file-page', fileRel);
+          a.setAttribute('data-file-task', taskPath);
+          a.setAttribute('data-peek', fileRel);
+          a.removeAttribute('target');
+          return;
         } else {
           var relHref = href;
           var loc = '';
@@ -329,7 +355,7 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
             loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
             relHref = relHref.slice(0, lm.index);
           }
-          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + contentDirRel + relHref + loc);
+          a.setAttribute('href', 'vscode://file/' + fileRoot + '/' + contentDirRel + relHref + loc);
           /* With the local-open route a plain click hands the file to the
              application this machine uses for its type; the vscode:// href above
              stays for modifier/middle clicks (and carries the line anchor, which
@@ -339,6 +365,9 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
              which nothing decodes. */
           if (window.LOCAL_OPEN) {
             a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));
+          }
+          if (!window.STANDALONE) {
+            a.setAttribute('data-peek', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));
           }
         }
         a.setAttribute('target', '_blank');
@@ -425,18 +454,193 @@ function toggleTheme() {
   localStorage.setItem('dashboard-theme', next);
 }
 
+/* Shared navigation state: layout changes do not change what is selected or filtered. */
+var _workspaceFilters={statuses:[],tasks:null};
+var _treeSidebarHidden=false;
+var _filterExpanded=new Set(['']);
+function normalizeWorkspaceFilters(value) {
+  value=value||{};
+  var selected=Array.isArray(value.tasks)?Array.from(new Set(value.tasks.filter(function(p){return typeof p==='string';}))).sort():null;
+  if(selected===null&&Array.isArray(value.hidden)&&value.hidden.length)selected=workspaceTasks().filter(function(t){return !value.hidden.some(function(p){return typeof p==='string'&&reproWithin(t.path,p);});}).map(function(t){return t.path;});
+  return {statuses:Array.isArray(value.statuses)?Array.from(new Set(value.statuses.filter(function(s){return ['not-started','in-progress','implemented','revise','approved','archived','postponed'].includes(s);}))).sort():[],tasks:selected};
+}
+function workspaceTasks() {
+  var tasks={};
+  (SEARCH_INDEX||[]).forEach(function(t){tasks[t.path]=t;});
+  if(_reproData)(_reproData.graph.dependencies&&_reproData.graph.dependencies.tasks||[]).forEach(function(t){tasks[t.path]=Object.assign({},tasks[t.path],t);});
+  return Object.values(tasks).sort(function(a,b){return a.path.localeCompare(b.path);});
+}
+function workspaceTaskMatches(path, task) {
+  if(_workspaceFilters.tasks!==null&&!_workspaceFilters.tasks.includes(path))return false;
+  if(!_workspaceFilters.statuses.length)return true;
+  task=task||workspaceTasks().find(function(t){return t.path===path;});
+  return !!task&&_workspaceFilters.statuses.includes(task.status);
+}
+function workspaceVisibility() {
+  var tasks=workspaceTasks(),matches=new Set(),visible=new Set();
+  tasks.forEach(function(t){if(workspaceTaskMatches(t.path,t)){matches.add(t.path);visible.add(t.path);var p=t.path;while(p){p=parentPath(p);visible.add(p);}}});
+  return {matches:matches,visible:visible};
+}
+function workspaceGraph(graph) {
+  var archived=graph.dependencies&&graph.dependencies.archived_tasks||[];
+  if(archived.length){var catalog=workspaceTasks(),known=new Set(graph.dependencies.tasks.map(function(t){return t.path;})),extra=catalog.filter(function(t){return archived.includes(t.path)&&!known.has(t.path);});graph=Object.assign({},graph,{dependencies:Object.assign({},graph.dependencies,{tasks:graph.dependencies.tasks.concat(extra)})});}
+  if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length)return graph;
+  var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task);}),names=new Set(steps.map(function(s){return s.name;}));
+  var dependencies=Object.assign({},graph.dependencies);
+  dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
+  dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
+  return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to);})});
+}
+function workspaceWriteHistory() {
+  if(restoring)return;
+  var hash=reproHash();
+  if(location.hash!==hash)history.pushState({wt:ACTIVE_WT},'',hash);
+}
+function applyWorkspaceFilters(changed) {
+  var visibility=workspaceVisibility();
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
+    node.style.display=visibility.visible.has(node.dataset.path)?'':'none';
+    node.classList.toggle('filter-context',visibility.visible.has(node.dataset.path)&&!visibility.matches.has(node.dataset.path));
+  });
+  var nav=document.getElementById('nav-tree'),empty=document.getElementById('navigation-empty');
+  if(nav){if(!empty){empty=document.createElement('p');empty.id='navigation-empty';empty.className='repro-hint';nav.prepend(empty);}empty.hidden=visibility.visible.size>0;empty.textContent='No tasks match these filters.';}
+  updateWorkspaceFilterSummary();refreshRovingTabindex();
+  if(changed){
+    if(_workspaceFilters.statuses.length){var ancestors=Array.from(visibility.visible).filter(function(p){return !visibility.matches.has(p);});restoreExpandedNavPaths(ancestors);ancestors.forEach(function(p){if(!_reproNav.expanded.includes(p))_reproNav.expanded.push(p);});}
+    workspaceWriteHistory();
+    if(currentView==='reproduction'&&_reproData)drawReproView(document.getElementById('view-reproduction'),_reproData);
+    renderReproDetail(_reproSelected);
+  }
+}
+function updateWorkspaceFilterSummary() {
+  var host=document.getElementById('workspace-filter-summary');if(!host)return;
+  var active=_workspaceFilters.statuses.length+(_workspaceFilters.tasks===null?0:1);
+  host.hidden=!active;
+  host.innerHTML=(_workspaceFilters.statuses.length?'<span>Status: '+escapeHtml(_workspaceFilters.statuses.join(', '))+'</span>':'')
+    +(_workspaceFilters.tasks!==null?'<span>'+_workspaceFilters.tasks.length+' of '+workspaceTasks().length+' tasks selected</span>':'')
+    +'<button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>';
+  var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=active?'Filter · '+active:'Filter';trigger.classList.toggle('active',!!active);}
+  var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear filters to show this task in navigation.';}
+  if(typeof reproSizeWorkspace==='function')reproSizeWorkspace();
+}
+function openWorkspaceFilter() {
+  var dialog=document.getElementById('workspace-filter');
+  document.getElementById('workspace-task-query').value='';
+  renderWorkspaceFilter();dialog.showModal();
+  loadReproData(false).then(renderWorkspaceFilter).catch(function(){});
+}
+function closeWorkspaceFilter() {document.getElementById('workspace-filter').close();document.getElementById('filter-trigger').focus();}
+function renderWorkspaceFilter() {
+  var host=document.getElementById('workspace-status-options');if(!host)return;
+  host.innerHTML=['not-started','in-progress','implemented','revise','approved','archived','postponed'].map(function(status){return '<label><input type="checkbox" data-filter-status="'+status+'"'+(_workspaceFilters.statuses.includes(status)?' checked':'')+'> '+status+'</label>';}).join('');
+  renderWorkspaceTaskOptions();
+}
+function renderWorkspaceTaskOptions() {
+  var host=document.getElementById('workspace-task-options');if(!host)return;
+  var q=document.getElementById('workspace-task-query').value.trim().toLowerCase(),tasks=workspaceTasks(),byPath={},children={};
+  tasks.forEach(function(t){byPath[t.path]=t;children[t.path]=[];});
+  tasks.forEach(function(t){if(t.path&&children[parentPath(t.path)])children[parentPath(t.path)].push(t.path);});
+  var matches=new Set(tasks.filter(function(t){return (t.path+' '+t.title).toLowerCase().includes(q);}).map(function(t){return t.path;})),visible=new Set(matches);
+  Array.from(matches).forEach(function(p){while(p){p=parentPath(p);visible.add(p);}});
+  function branch(path){
+    if(!visible.has(path))return '';
+    var task=byPath[path],kids=children[path],descendants=tasks.filter(function(t){return reproWithin(t.path,path);}),selected=descendants.filter(function(t){return _workspaceFilters.tasks===null||_workspaceFilters.tasks.includes(t.path);}).length;
+    var open=q?true:_filterExpanded.has(path),hasKids=kids.length>0;
+    return '<div class="filter-task-branch"><div class="filter-task-row">'
+      +(hasKids?'<button type="button" class="filter-task-fold" data-filter-fold="'+escapeAttr(path)+'" aria-expanded="'+open+'" aria-label="'+(open?'Collapse ':'Expand ')+escapeAttr(task.title||path||'Project root')+'">'+(open?'▾':'▸')+'</button>':'<span class="filter-task-leaf"></span>')
+      +'<label><input type="checkbox" data-filter-task="'+escapeAttr(path)+'"'+(selected===descendants.length?' checked':'')+(selected>0&&selected<descendants.length?' data-partial="true"':'')+'><span>'+escapeHtml(task.title||path||'Project root')+'<small>'+escapeHtml(path||'Project root')+'</small></span></label>'
+      +(hasKids?'<span class="filter-task-count">'+selected+'/'+descendants.length+'</span>':'')+'</div>'
+      +(hasKids?'<div class="filter-task-children"'+(open?'':' hidden')+'>'+kids.map(branch).join('')+'</div>':'')+'</div>';
+  }
+  var roots=tasks.filter(function(t){return !t.path||!byPath[parentPath(t.path)];});
+  host.innerHTML=roots.map(function(t){return branch(t.path);}).join('')||'<p>No tasks match.</p>';
+  host.querySelectorAll('[data-partial]').forEach(function(input){input.indeterminate=true;});
+}
+function selectAllWorkspaceTasks(selected) {
+  _workspaceFilters.tasks=selected?null:[];renderWorkspaceTaskOptions();applyWorkspaceFilters(true);
+}
+function clearWorkspaceFilters() {
+  _workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(true);renderWorkspaceFilter();
+}
+function workspaceSearchRecords() {
+  var records=(SEARCH_INDEX||[]).slice();
+  if(_reproData)(_reproData.graph.steps||[]).forEach(function(s){
+    records.push({kind:'Step',step:s.name,path:s.task,title:s.name,slug:s.name,text:reproTaskTitle(s.task)});
+    (s.outs||[]).forEach(function(out){var file=reproOutLabel(out);records.push({kind:'File',step:s.name,path:s.task,title:file,slug:file,text:s.name+' '+reproTaskTitle(s.task)});});
+  });
+  return records;
+}
+function syncTreeRollups() {
+  if(!_reproData)return;
+  var byTask={},statuses=reproStatusIndex(_reproData);(_reproData.graph.steps||[]).forEach(function(s){(byTask[s.task]||(byTask[s.task]=[])).push(s);});
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node){
+    var steps=byTask[node.dataset.path]||[],row=node.querySelector(':scope > .task-row'),badge=row&&row.querySelector(':scope > .nav-repro-rollup');
+    if(!steps.length){if(badge)badge.remove();return;}
+    if(!row)return;
+    var rollup=reproRollup(steps,statuses);
+    /* Beside the status badge: the title absorbs the width first. */
+    if(!badge){badge=document.createElement('span');row.insertBefore(badge,row.querySelector(':scope > .badge'));}
+    badge.className='nav-repro-rollup'+(rollup.hatched?' rp-hatched':'');badge.innerHTML=rollup.compact;badge.title=steps.length+' steps: '+rollup.text;
+  });
+}
+function updateNavigationToggle() {
+  var button=document.getElementById('navigation-toggle');if(!button)return;
+  var graph=currentView==='reproduction',visible=graph?!_reproReaderClosed:!_treeSidebarHidden;
+  button.textContent=(visible?'Hide ':'Show ')+(graph?'details':'sidebar');
+  button.setAttribute('aria-controls',graph?'task-preview':'sidebar');button.setAttribute('aria-expanded',String(visible));
+  document.getElementById('workspace').classList.toggle('tree-sidebar-hidden',_treeSidebarHidden);
+  var hamburger=document.getElementById('nav-hamburger');if(hamburger)hamburger.hidden=graph;
+}
+function toggleNavigationPane() {
+  if(currentView==='reproduction'){reproSetReader(_reproReaderClosed);updateNavigationToggle();return;}
+  _treeSidebarHidden=!_treeSidebarHidden;
+  try{localStorage.setItem('dashboard-tree-hidden',JSON.stringify(_treeSidebarHidden));}catch(e){}
+  updateNavigationToggle();
+  if(!_treeSidebarHidden&&window.innerWidth<=900)openDrawer();
+}
+function initWorkspaceControls() {
+  try{_treeSidebarHidden=JSON.parse(localStorage.getItem('dashboard-tree-hidden'))===true;}catch(e){}
+  updateNavigationToggle();
+  var dialog=document.getElementById('workspace-filter');
+  dialog.addEventListener('change',function(event){
+    var input=event.target;
+    if(input.dataset.filterStatus){var statuses=new Set(_workspaceFilters.statuses);if(input.checked)statuses.add(input.dataset.filterStatus);else statuses.delete(input.dataset.filterStatus);_workspaceFilters.statuses=Array.from(statuses).sort();}
+    else if(input.hasAttribute('data-filter-task')){
+      var path=input.dataset.filterTask,tasks=workspaceTasks(),selected=new Set(_workspaceFilters.tasks===null?tasks.map(function(t){return t.path;}):_workspaceFilters.tasks);
+      tasks.forEach(function(t){if(reproWithin(t.path,path)){if(input.checked)selected.add(t.path);else selected.delete(t.path);}});
+      _workspaceFilters.tasks=selected.size===tasks.length?null:Array.from(selected).sort();renderWorkspaceTaskOptions();
+      var replacement=Array.from(dialog.querySelectorAll('[data-filter-task]')).find(function(el){return el.dataset.filterTask===path;});if(replacement)replacement.focus({preventScroll:true});
+    }
+    applyWorkspaceFilters(true);
+  });
+  dialog.addEventListener('click',function(e){var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
+  loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
+}
+
 /* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
 var currentView = 'workspace';
 
 function showView(view) {
-  currentView = view;
-  document.querySelectorAll('.header-controls .hc-btn').forEach(function(b) {
-    b.classList.remove('active');
-  });
-  document.getElementById('btn-' + view).classList.add('active');
-  document.getElementById('workspace').classList.toggle('hidden', view !== 'workspace');
-  document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
-  if (view === 'kanban') renderKanbanView();
+  view=view==='reproduction'?'reproduction':'workspace';
+  var reader=document.getElementById('task-preview'), scroll=reader.scrollTop, pageScroll=window.scrollY;
+  var previousView=currentView;currentView=view;
+  ['workspace','reproduction'].forEach(function(v){document.getElementById('btn-'+v).classList.toggle('active',v===view);});
+  var workspace=document.getElementById('workspace');
+  workspace.classList.remove('hidden');workspace.classList.toggle('dag-mode',view==='reproduction');
+  workspace.classList.toggle('dag-reader-closed',_reproReaderClosed);
+  document.getElementById('view-reproduction').classList.toggle('hidden',view!=='reproduction');
+  document.getElementById('dag-reader-controls').classList.toggle('hidden',view!=='reproduction');
+  updateNavigationToggle();
+  if(view==='reproduction') {
+    reproSizeWorkspace();_reproEntered=true;
+    if(!restoring&&previousView==='workspace'&&activePath)reproRevealOwner(_reproSelected?activePath:parentPath(activePath));
+    renderReproView(false);
+  } else {
+    _lastSidebarUpdate=updateSidebar(activePath);
+    renderReproDetail(_reproSelected);
+  }
+  if(!restoring)workspaceWriteHistory();
+  requestAnimationFrame(function(){reader.scrollTop=scroll;if(view==='workspace')window.scrollTo(0,pageScroll);});
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -492,10 +696,10 @@ function searchSnippet(rec, q) {
 function runSearch(query) {
   var q = (query || '').trim().toLowerCase();
   if (!q) return [];
-  var scored = [];
-  for (var i = 0; i < SEARCH_INDEX.length; i++) {
-    var s = scoreSearchRecord(SEARCH_INDEX[i], q);
-    if (s > 0) scored.push({ rec: SEARCH_INDEX[i], score: s });
+  var scored = [], records=workspaceSearchRecords();
+  for (var i = 0; i < records.length; i++) {
+    var s = scoreSearchRecord(records[i], q);
+    if (s > 0) scored.push({ rec: records[i], score: s });
   }
   scored.sort(function(a, b) { return b.score - a.score; });
   return scored.slice(0, SEARCH_MAX_RESULTS).map(function(x) { return x.rec; });
@@ -520,7 +724,7 @@ function renderSearchResults(query) {
   var q = query.trim().toLowerCase();
   list.innerHTML = _searchResults.map(function(rec, idx) {
     var snippet = searchSnippet(rec, q);
-    var pathLabel = rec.path || 'root';
+    var pathLabel = (rec.kind||'Task')+' · '+(rec.path||'root')+(workspaceTaskMatches(rec.path||'')?'':' · Hidden by filters');
     return '<li class="search-result" role="option" data-idx="' + idx + '"'
       + (idx === 0 ? ' aria-selected="true"' : '')
       + ' onmousedown="onSearchResultClick(event, ' + idx + ')">'
@@ -551,7 +755,8 @@ function chooseSearchResult(idx) {
   var rec = _searchResults[idx];
   if (!rec) return;
   closeSearchPalette();
-  setActive(rec.path || '');
+  if(rec.step)revealReproStep(rec.step);
+  else {reproSelectTask(rec.path||'');if(currentView==='reproduction'){reproRevealOwner(parentPath(rec.path||''));drawReproView(document.getElementById('view-reproduction'),_reproData);reproCenter();}}
 }
 
 function onSearchResultClick(event, idx) {
@@ -591,6 +796,7 @@ function openSearchPalette() {
   input.value = '';
   renderSearchResults('');
   input.focus();
+  loadReproData(false).then(function(){if(palette.classList.contains('open'))renderSearchResults(input.value);}).catch(function(){});
 }
 
 function closeSearchPalette() {
@@ -690,6 +896,7 @@ function toggleSection(toggleEl, event) {
         renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
         renderedMd.dataset.rendered = 'true';
       }
+      if (sectionName === REPRO_SECTION) renderReproStepTable(renderedMd, taskPath);
     }
     if (preview) preview.style.display = 'none';
 
@@ -718,34 +925,7 @@ function applyFilters() {
   _filterDebounceTimer = setTimeout(applyFiltersNow, FILTER_DEBOUNCE_MS);
 }
 
-function applyFiltersNow() {
-  var status = document.getElementById('filter-status').value;
-  var search = document.getElementById('search-box').value.toLowerCase();
-  var active = !!status || !!search;
-
-  if (active && preFilterFoldState === null) {
-    preFilterFoldState = snapshotNavFolds();  /* entering filter mode */
-  }
-
-  document.querySelectorAll('#nav-tree > .task-node').forEach(function(el) {
-    applyFiltersToNode(el, status, search);
-  });
-
-  if (active) {
-    /* Matching rows live behind collapsed ancestors (the whole sidebar is
-       folded by default), so `.hidden` removal alone leaves them invisible.
-       Expand the ancestor chain of every still-visible match so matches are
-       actually revealed. Scoped to rows already in the DOM — deep, not-yet
-       lazy-loaded branches are intentionally not eagerly loaded to search. */
-    revealFilterMatches(status, search);
-  } else if (preFilterFoldState !== null) {
-    restoreNavFolds(preFilterFoldState);  /* leaving filter mode */
-    preFilterFoldState = null;
-  }
-
-  /* Visibility of rows changed -> keep exactly one row tab-focusable. */
-  refreshRovingTabindex();
-}
+function applyFiltersNow() { applyWorkspaceFilters(false); }
 
 /* Single post-order pass: each node's own row is evaluated once and combined
    bottom-up with its already-computed children, so no subtree is walked more
@@ -858,24 +1038,1704 @@ function nodeOwnRowMatches(el, status, search) {
    Cards carry data-path (server-escaped) rather than an inline onclick built
    by interpolating the task path — a delegated listener on the container
    reads it back, mirroring onChildCardClick's pattern. */
-function onKanbanCardClick(event) {
-  var card = event.target.closest('.kanban-card');
-  if (card && card.dataset.path !== undefined) revealTask(card.dataset.path);
+/* ════════════════════════════════════════════════════════════════════════
+   Reproduction view — reviewing the build graph the task tree declares
+   ──────────────────────────────────────────────────────────────────────
+   Two payloads back this view: /api/repro/graph (what the `## Reproduction`
+   sections declare) and /api/repro/status (what the committed lock says each
+   step's freshness is, plus its log tail). Both are fetched once and cached
+   here; the node detail panel and the task-page step table read the same cached
+   pair, so opening a task costs no request, and the standalone export embeds
+   one snapshot of each.
+
+   Nodes come from the graph and take their state from the status payload, so
+   the graph still renders when the runner cannot read the lock (Python < 3.11
+   has no tomllib) — every step then reads `unknown` under a banner.
+   ════════════════════════════════════════════════════════════════════════ */
+
+var REPRO_SECTION = 'Reproduction';
+
+/* Every state ships its glyph and its word beside the colour: the palette's
+   own comment names the pairs a red-green reader cannot separate by hue.
+   U+FE0E keeps the cloud a text glyph, not an emoji. */
+var REPRO_CLOUD = '\u2601\uFE0E', REPRO_CLOUD_HTML = '<span class="repro-cloud" aria-hidden="true">' + REPRO_CLOUD + '</span>';
+var REPRO_STATES = [
+  { key: 'fresh',      glyph: '●' },
+  { key: 'stale',      glyph: '◐' },
+  { key: 'missing',    glyph: '○' },
+  { key: 'failed',     glyph: '✕' },
+  { key: 'unverified', glyph: REPRO_CLOUD },
+  { key: 'unknown',    glyph: '?' }
+];
+var REPRO_GLYPHS = {};
+REPRO_STATES.forEach(function(s) { REPRO_GLYPHS[s.key] = s.glyph; });
+
+/* A card's two channels. Border, glyph and label carry the reported state; the
+   fill carries the step's own: its tint when the two agree, empty when the
+   staleness is inherited from upstream, hatched when its files are online-only.
+   `cloud` marks an own-unverified step whose label names another state. */
+/* A task's steps counted per reported state, in REPRO_STATES order; hatched
+   when every step's own state is `unverified`. */
+function reproRollup(steps, statuses) {
+  var counts = {}, unverified = 0;
+  steps.forEach(function(s) { var ch = reproChannels(statuses[s.name]); counts[ch.state] = (counts[ch.state] || 0) + 1; if (ch.own === 'unverified') unverified++; });
+  var present = REPRO_STATES.filter(function(s) { return counts[s.key]; });
+  return { counts: counts, hatched: steps.length > 0 && unverified === steps.length,
+    text: present.map(function(s) { return s.glyph + ' ' + s.key + ' ' + counts[s.key]; }).join(' · '),
+    html: present.map(function(s) { return '<span class="rp-' + s.key + '"><span class="repro-glyph">' + s.glyph + '</span> ' + s.key + ' ' + counts[s.key] + '</span>'; }).join(' · '),
+    compact: present.map(function(s) { return '<span class="rp-' + s.key + '"><span class="repro-glyph">' + s.glyph + '</span>' + counts[s.key] + '</span>'; }).join(' ') };
+}
+function reproChannels(entry) {
+  var state = reproStateOf(entry), own = (entry && entry.local_status) || state;
+  var fill = own === 'unverified' ? ' rp-hatched' : own !== state ? ' rp-inherited' : '';
+  var label = state === 'unverified' ? 'unverified · online-only' : own !== state ? state + ' · upstream' : state;
+  return { state: state, own: own, cls: 'rp-' + state + fill, glyph: REPRO_GLYPHS[state] || '?', label: label,
+    cloud: own === 'unverified' && state !== 'unverified' };
 }
 
-async function renderKanbanView() {
-  var container = document.getElementById('view-kanban');
-  container.onclick = onKanbanCardClick;
+var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
+var _reproSelected = '', _reproLinkOwner = null;
+var _reproNav = { selected: '', expanded: [] };
+var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = false, _reproLegacyReveal = false;
+var _reproNotice = '', _reproLayoutCache = null;
+var _reproViewport = { x: 0, y: 0, zoom: 1 }, _reproWorktrees = {};
+/* How the next draw places the viewport: 'open' (readable scale on the selection), 'fit', or '' (keep). */
+var _reproInspectorClosed = false, _reproViewNext = 'open';
+
+function reproWithin(path, root) { return root === '' || path === root || path.indexOf(root + '/') === 0; }
+/* Step lookup plus each step's incoming and outgoing edges. */
+function reproProject(graph) {
+  var byName = {}, incoming = {}, outgoing = {}, edges = [];
+  (graph.steps || []).forEach(function(s) { byName[s.name] = s; incoming[s.name] = []; outgoing[s.name] = []; });
+  (graph.step_edges || []).forEach(function(e) {
+    if (byName[e.from] && byName[e.to]) { outgoing[e.from].push(e); incoming[e.to].push(e); edges.push(e); }
+  });
+  return { steps: graph.steps || [], edges: edges, incoming: incoming, outgoing: outgoing, byName: byName };
+}
+function reproHash() {
+  var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
+  var f=_workspaceFilters||{};
+  /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
+  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null;
+  var query=(activeArtifactPath?[activeArtifactPath.charAt(0)==='/'?'file='+encodeURIComponent(activeArtifactPath.slice(1)):'attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
+  return '#/'+activePath+(query.length?'?'+query.join('&'):'');
+}
+function reproReadHash() {
+  var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
+  var raw=params.get('repro'), step=params.get('step');
+  if(!raw&&!step){_workspaceFilters={statuses:[],tasks:null};_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
   try {
-    var resp = await fetch(wtUrl('/kanban'));
-    if (resp.ok) {
-      container.innerHTML = await resp.text();
-    } else {
-      container.innerHTML = '<p style="color:var(--text-mute)">Could not load kanban view.</p>';
+    var n=raw?JSON.parse(raw):{};
+    _workspaceFilters=normalizeWorkspaceFilters(n.filters);
+    _reproNav={expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
+      selected:step||(typeof n.selected==='string'?n.selected:'')};
+    _reproSelected=_reproNav.selected;_reproNotice='';
+    _reproLinkOwner=step?parseHash():null;
+    _reproInspectorClosed=false;_reproEntered=true;
+    _reproLegacyReveal=!!step||!!(n.roots||n.mode||n.tier)||!Array.isArray(n.expanded);
+    _reproViewNext=history.state&&history.state.rpViewport?'':'open';
+    if(!_reproViewNext)_reproViewport=Object.assign({},history.state.rpViewport);
+    var previous=restoring;restoring=true;showView(n.layout==='tree'?'workspace':'reproduction');restoring=previous;
+    applyWorkspaceFilters(false);
+    if(n.layout==='tree')loadReproData(false).then(function(){renderReproDetail(_reproSelected);syncTreeRollups();});
+    return true;
+  } catch(e){return false;}
+}
+function reproNavigate(patch, overview) {
+  if(patch.expanded)_reproNav.expanded=patch.expanded;
+  if(typeof patch.selected==='string')_reproNav.selected=patch.selected;
+  _reproSelected=_reproNav.selected;_reproNotice='';
+  if(overview)_reproViewNext='fit';
+  var hash=reproHash();
+  if(location.hash!==hash)history.pushState({wt:ACTIVE_WT},'',hash);
+  if(currentView==='reproduction')drawReproView(document.getElementById('view-reproduction'),_reproData);
+}
+
+/* Coalesce the graph and status requests and ignore superseded loads. */
+async function loadReproData(force) {
+  if (_reproData && !force) return _reproData;
+  if (_reproPending && !force) return _reproPending;
+  var seq = ++_reproLoadSeq;
+  var pending = (async function() {
+    var g = await fetch(wtUrl('/api/repro/graph'));
+    var s = await fetch(wtUrl('/api/repro/status'));
+    if (!g.ok || !s.ok) throw new Error('reproduction data unavailable');
+    var loaded = { graph: await g.json(), status: await s.json() };
+    if (seq === _reproLoadSeq) _reproData = loaded;
+    return loaded;
+  })();
+  _reproPending = pending;
+  try { return await pending; } finally { if (_reproPending === pending) _reproPending = null; }
+}
+
+/* step name -> its status entry, for the states the graph's nodes wear. */
+function reproStatusIndex(data) {
+  var byName = {};
+  (data.status.steps || []).forEach(function(e) { byName[e.name] = e; });
+  return byName;
+}
+
+function reproStateOf(entry) { return entry ? entry.status : 'unknown'; }
+
+function reproTaskTitle(path) {
+  if (path === '') return pathTitles[''] || 'Root';
+  return pathTitles[path] || path.split('/').pop();
+}
+
+function renderReproView(force) {
+  var container = document.getElementById('view-reproduction');
+  if (!container) return;
+  if (!_reproData && !container.firstChild) container.innerHTML = '<div class="repro-empty">Loading the reproduction graph…</div>';
+  var wt = ACTIVE_WT;
+  loadReproData(force).then(function(data) {
+    if (wt === ACTIVE_WT && data === _reproData) {
+      var selected=(data.graph.steps||[]).find(function(s){return s.name===_reproSelected;});
+      var reveal=!!selected&&_reproLegacyReveal;
+      if(_reproLinkOwner!==null&&(!selected||selected.task!==_reproLinkOwner)){
+        _reproNotice='Step '+_reproSelected+' is not declared in '+reproTaskTitle(_reproLinkOwner)+'.';
+        _reproSelected='';_reproNav.selected='';selected=null;reveal=false;
+      }
+      _reproLinkOwner=null;
+      if(reveal)reproRevealOwner(selected.task);
+      _reproLegacyReveal=false;
+      if(selected&&selected.task!==activePath){var was=restoring;restoring=true;setActive(selected.task);restoring=was;}
+      drawReproView(container, data);
+      if(reveal){_reproViewport.zoom=1;reproCenter();}
+      if(reproActionsOn()&&_reproBuild.wt!==ACTIVE_WT)reproPollBuild();
     }
-  } catch(e) {
-    container.innerHTML = '<p style="color:var(--st-rev-t)">Kanban render error: ' + e.message + '</p>';
+  }).catch(function(e) {
+    if (wt === ACTIVE_WT) container.innerHTML = '<div class="repro-empty">Could not load the reproduction graph: '
+      + escapeHtml(e.message) + '</div>';
+  });
+}
+function reproButton(label, action, value, accessibleLabel) {
+  return '<button type="button" class="hc-btn"'+(accessibleLabel?' aria-label="'+escapeAttr(accessibleLabel)+'"':'')+' data-rp-action="' + action + '" data-value="'
+    + escapeAttr(value || '') + '">' + escapeHtml(label) + '</button>';
+}
+function reproTasks(graph) {
+  if (graph.dependencies) return (graph.dependencies.tasks || []).map(function(t) { return t.path; });
+  var paths = new Set();
+  (graph.tasks || []).forEach(function(t) { paths.add(t.path); });
+  (graph.steps || []).forEach(function(s) { var p = s.task; paths.add(p); while (p) { p = parentPath(p); if (p) paths.add(p); } });
+  return Array.from(paths).sort();
+}
+
+/* Strongly connected groups (Tarjan) over `ids`, with `next[id]` the targets
+   of id's edges, in completion order. */
+function reproStronglyConnected(ids, next) {
+  var index = {}, low = {}, stack = [], onStack = new Set(), groups = [], serial = 0;
+  function visit(id) {
+    index[id] = low[id] = serial++;
+    stack.push(id);
+    onStack.add(id);
+    next[id].forEach(function(to) {
+      if (index[to] === undefined) { visit(to); low[id] = Math.min(low[id], low[to]); }
+      else if (onStack.has(to)) low[id] = Math.min(low[id], index[to]);
+    });
+    if (low[id] !== index[id]) return;
+    var group = [], member;
+    do { member = stack.pop(); onStack.delete(member); group.push(member); } while (member !== id);
+    groups.push(group);
   }
+  ids.forEach(function(id) { if (index[id] === undefined) visit(id); });
+  return groups;
+}
+/* Each node on a cycle of `edges`, mapped to a key its cycle's members share. */
+function reproCycleMembers(edges) {
+  var next = {}, member = {};
+  edges.forEach(function(e) { (next[e.from] || (next[e.from] = [])).push(e.to); next[e.to] = next[e.to] || []; });
+  reproStronglyConnected(Object.keys(next).sort(), next).forEach(function(group) {
+    if (group.length > 1 || next[group[0]].indexOf(group[0]) >= 0) group.forEach(function(id) { member[id] = group[0]; });
+  });
+  return member;
+}
+
+/* Project real endpoints through the nearest folded ancestor. Logical edges
+   terminate at task boundaries; file edges retain their exact step evidence.
+   Only step cycles and depends_on cycles are marked: a loop that appears only
+   once file edges are grouped by task is a view, not an error. */
+function reproHierarchy(graph, nav, project) {
+  var tasks = {}, children = {}, own = {}, nodes = [], edges = [], reps = {}, taskReps = {};
+  var paths = reproTasks(graph), expanded = new Set(nav.expanded || []);
+  var logical = graph.dependencies && graph.dependencies.logical || [];
+  var stepCycle = reproCycleMembers(project.edges), taskCycle = reproCycleMembers(logical);
+  var errors = (graph.findings || []).filter(function(f) { return f.severity === 'error' && typeof f.task_path === 'string'; });
+  (graph.dependencies && graph.dependencies.tasks || []).forEach(function(t) { tasks[t.path] = t; });
+  paths.forEach(function(p) { tasks[p] = tasks[p] || {path:p, title:reproTaskTitle(p), status:''}; children[p] = []; own[p] = []; });
+  paths.forEach(function(p) { var parent = parentPath(p); if (p && children[parent]) children[parent].push(p); });
+  project.steps.forEach(function(s) { (own[s.task] || (own[s.task] = [])).push(s); });
+  function stepNode(s, parent) {
+    var kind = stepCycle[s.name] !== undefined ? 'Step cycle' : '';
+    var n = {id:s.name, type:'step', step:s, parent:parent, children:[], cycle:!!kind, cycleKind:kind};
+    nodes.push(n); reps[s.name] = s.name;
+    return n;
+  }
+  /* A folded task shows the cycles and declaration errors inside it. */
+  function taskMarks(p, folded, descendants) {
+    var kind = taskCycle[p] !== undefined ? 'depends_on cycle' : '';
+    if (!kind && folded && descendants.some(function(s) { return stepCycle[s.name] !== undefined; })) kind = 'Step cycle';
+    if (!kind && folded && paths.some(function(t) { return taskCycle[t] !== undefined && reproWithin(t, p); })) kind = 'depends_on cycle';
+    var count = errors.filter(function(f) { return folded ? reproWithin(f.task_path, p) : f.task_path === p; }).length;
+    return {cycle:!!kind, cycleKind:kind, errors:count};
+  }
+  function visit(p, parent) {
+    var id = 'task:' + p, descendants = project.steps.filter(function(s) { return reproWithin(s.task,p); });
+    var kids = children[p] || [], expandable = kids.length > 0 || (own[p] || []).length > 0;
+    var node = Object.assign({id:id, task:p, type:'task', title:tasks[p].title, status:tasks[p].status,
+      parent:parent, steps:descendants, expandable:expandable, expanded:expanded.has(p), children:[]},
+      taskMarks(p, !(expanded.has(p) && expandable), descendants));
+    nodes.push(node); taskReps[p] = id;
+    if (node.expanded && node.expandable) {
+      (own[p] || []).forEach(function(s) { node.children.push(stepNode(s, id)); });
+      kids.forEach(function(c) { node.children.push(visit(c,id)); });
+    } else {
+      descendants.forEach(function(s) {reps[s.name] = id;});
+      paths.forEach(function(c) {if (reproWithin(c,p)) taskReps[c] = id;});
+    }
+    return node;
+  }
+  var roots = paths.filter(function(p) { return p && (parentPath(p) === '' || !tasks[parentPath(p)]); }).sort();
+  (own[''] || []).forEach(function(s) { stepNode(s, null); });
+  if (!roots.length && tasks[''] && !(own[''] || []).length) roots.push('');
+  roots.forEach(function(p) { visit(p,null); });
+  var bundled = {};
+  function edge(from,to,evidence) {
+    if (!from || !to || from === to) return;
+    var key = JSON.stringify([from,to]);
+    if (!bundled[key]) { bundled[key] = {from:from,to:to,evidence:[]}; edges.push(bundled[key]); }
+    bundled[key].evidence.push(evidence);
+  }
+  project.edges.forEach(function(e) { edge(reps[e.from],reps[e.to],e); });
+  logical.forEach(function(e) { edge(taskReps[e.from],taskReps[e.to],e); });
+  function onCycle(r) {
+    var members = r.kind === 'logical' ? taskCycle : stepCycle;
+    return members[r.from] !== undefined && members[r.from] === members[r.to];
+  }
+  edges.forEach(function(e) {
+    e.cycleKind = e.evidence.some(function(r) { return r.kind !== 'logical' && onCycle(r); }) ? 'Step cycle'
+      : e.evidence.some(function(r) { return r.kind === 'logical' && onCycle(r); }) ? 'depends_on cycle' : '';
+    e.cycle = !!e.cycleKind;
+  });
+  return {nodes:nodes,edges:edges,reps:reps,taskReps:taskReps};
+}
+
+function reproCloseGraphDetail() {
+  var host=document.getElementById('repro-edge-detail');if(!host||!host.firstChild)return;
+  host.innerHTML='';var canvas=document.querySelector('.repro-canvas');if(canvas)canvas.focus({preventScroll:true});
+}
+/* Lay out the folded hierarchy. Each expanded task lays out its own children:
+   siblings are ranked left to right along their projected edges, grouped into
+   bands of connected siblings, and sized bottom-up. Edges then route through
+   the gutter beside each card and the track above each band. */
+function reproHierarchyLayout(model) {
+  var HEAD = 108; /* task header height, and a leaf card's minimum height */
+  var pos = {}, byId = {}, nodeParent = {}, levels = {}, routes = [], ports = {};
+  model.nodes.forEach(function(n) { byId[n.id] = n; nodeParent[n.id] = n.parent; });
+
+  /* The ancestor of `id`, or `id` itself, that is a direct child of `parent`. */
+  function direct(id, parent) {
+    while (byId[id] && nodeParent[id] !== parent) id = nodeParent[id];
+    return id;
+  }
+  /* `id` and its ancestors up to, not including, `common`. */
+  function chain(id, common) {
+    var result = [];
+    while (id && id !== common) { result.push(id); id = nodeParent[id]; }
+    return result;
+  }
+
+  /* Rank siblings left to right: groups in topological order, and a group's
+     members on consecutive ranks, highest out-minus-in degree among those left first. */
+  function rankSiblings(ids, next) {
+    var groups = reproStronglyConnected(ids, next), groupOf = {}, rank = {};
+    groups.forEach(function(group, i) { group.forEach(function(id) { groupOf[id] = i; }); });
+    var incoming = groups.map(function() { return 0; });
+    var out = groups.map(function() { return new Set(); });
+    var base = groups.map(function() { return 0; });
+    ids.forEach(function(id) {
+      next[id].forEach(function(to) {
+        var a = groupOf[id], b = groupOf[to];
+        if (a !== b && !out[a].has(b)) { out[a].add(b); incoming[b]++; }
+      });
+    });
+    var queue = groups.map(function(_, i) { return i; }).filter(function(i) { return !incoming[i]; });
+    while (queue.length) {
+      var gi = queue.shift(), remaining = groups[gi].slice(), ordered = [];
+      while (remaining.length) {
+        remaining.sort(function(a, b) {
+          function score(id) {
+            var outgoing = next[id].filter(function(to) { return remaining.indexOf(to) >= 0; }).length;
+            var incomingLeft = remaining.filter(function(from) { return next[from].indexOf(id) >= 0; }).length;
+            return outgoing - incomingLeft;
+          }
+          return score(b) - score(a) || a.localeCompare(b);
+        });
+        ordered.push(remaining.shift());
+      }
+      ordered.forEach(function(id, i) { rank[id] = base[gi] + i; });
+      out[gi].forEach(function(to) {
+        base[to] = Math.max(base[to], base[gi] + ordered.length);
+        if (!--incoming[to]) queue.push(to);
+      });
+    }
+    return rank;
+  }
+
+  /* One band per connected set of siblings, then one band for siblings with no
+     edge at this level. Containment adds no edge. */
+  function bandSiblings(ids, next, parent) {
+    var neighbors = {}, incident = new Set(), visited = new Set(), bands = [], isolated = [];
+    ids.forEach(function(id) { neighbors[id] = new Set(); });
+    ids.forEach(function(id) {
+      next[id].forEach(function(to) { neighbors[id].add(to); neighbors[to].add(id); });
+    });
+    model.edges.forEach(function(e) {
+      [direct(e.from, parent), direct(e.to, parent)].forEach(function(id) {
+        if (neighbors[id]) incident.add(id);
+      });
+    });
+    ids.forEach(function(id) {
+      if (visited.has(id)) return;
+      var pending = [id], members = [];
+      visited.add(id);
+      while (pending.length) {
+        var member = pending.shift();
+        members.push(member);
+        neighbors[member].forEach(function(to) {
+          if (!visited.has(to)) { visited.add(to); pending.push(to); }
+        });
+      }
+      members.sort();
+      if (members.length === 1 && !incident.has(id)) isolated.push(id);
+      else bands.push({ids: members, isolated: false});
+    });
+    if (isolated.length) bands.push({ids: isolated, isolated: true});
+    var connected = bands.filter(function(b) { return !b.isolated; }).length;
+    bands.forEach(function(band, i) {
+      band.tracks = [];
+      band.channels = {left: {}, right: {}};
+      band.showLabel = bands.length > 1 || band.isolated;
+      band.label = band.isolated ? 'No connections in this view'
+        : connected > 1 ? 'Dependency group ' + (i + 1) : 'Connected dependencies';
+    });
+    return bands;
+  }
+
+  /* Rank and band one container's children, then recurse into expanded ones. */
+  function level(items, parent) {
+    var ids = items.map(function(n) { return n.id; }).sort(), next = {}, bandOf = {};
+    ids.forEach(function(id) { next[id] = []; });
+    model.edges.forEach(function(e) {
+      var a = direct(e.from, parent), b = direct(e.to, parent);
+      if (a && b && a !== b && next[a] && next[b] && next[a].indexOf(b) < 0) next[a].push(b);
+    });
+    ids.forEach(function(id) { next[id].sort(); });
+    var rank = rankSiblings(ids, next), bands = bandSiblings(ids, next, parent);
+    bands.forEach(function(band) { band.ids.forEach(function(id) { bandOf[id] = band; }); });
+    levels[parent || ''] = {items: items, parent: parent, rank: rank, bands: bands, bandOf: bandOf,
+      left: {}, right: {}};
+    items.forEach(function(n) { if (n.children.length) level(n.children, n.id); });
+  }
+  level(model.nodes.filter(function(n) { return !n.parent; }), null);
+
+  /* Reserve ports and gutter channels. An edge leaves its source's right side
+     and enters its target's left side. Between adjacent ranks of one container
+     it bends once in the source's gutter; otherwise it runs through the gutter
+     and band track of every container it leaves or enters. */
+  function port(id, side, i) {
+    var key = id + '|' + side;
+    (ports[key] || (ports[key] = [])).push(i);
+  }
+  model.edges.forEach(function(e, i) {
+    var ancestors = chain(nodeParent[e.from], null), common = nodeParent[e.to];
+    while (common && ancestors.indexOf(common) < 0) common = nodeParent[common];
+    var source = chain(e.from, common), target = chain(e.to, common), boundary = levels[common || ''];
+    var directRoute = source.length === 1 && target.length === 1
+      && boundary.rank[e.to] === boundary.rank[e.from] + 1;
+    routes.push({edge: e, index: i, source: source, target: target, direct: directRoute});
+    port(e.from, 'right', i);
+    port(e.to, 'left', i);
+    source.forEach(function(id) {
+      var list = levels[nodeParent[id] || ''].right;
+      (list[id] || (list[id] = [])).push(i);
+    });
+    target.forEach(function(id) {
+      var list = levels[nodeParent[id] || ''].left;
+      (list[id] || (list[id] = [])).push(i);
+    });
+    if (!directRoute) source.concat(target).forEach(function(id) {
+      var tracks = levels[nodeParent[id] || ''].bandOf[id].tracks;
+      if (tracks.indexOf(i) < 0) tracks.push(i);
+    });
+  });
+
+  /* Isolated siblings: a grid of up to three columns. */
+  function placeGrid(band, top, offset) {
+    var columns = Math.min(3, band.ids.length), rowY = 0, x = 24;
+    for (var start = 0; start < band.ids.length; start += columns) {
+      var rowHeight = 0, rowX = 24;
+      band.ids.slice(start, start + columns).forEach(function(id) {
+        var n = byId[id];
+        n.x = rowX;
+        n.y = offset + top + rowY;
+        n.routeLeft = n.x - 10;
+        n.routeRight = n.x + n.width + 10;
+        rowX += n.width + 24;
+        rowHeight = Math.max(rowHeight, n.height);
+      });
+      x = Math.max(x, rowX);
+      rowY += rowHeight + 24;
+    }
+    band.height = top + rowY;
+    band.width = x;
+  }
+  /* Connected siblings: one column per rank, widened by its gutter channels. */
+  function placeRanks(band, info, top, offset) {
+    var widths = {}, heights = {}, xs = {}, x = 24;
+    band.ids.forEach(function(id) {
+      var r = info.rank[id];
+      widths[r] = Math.max(widths[r] || 0, byId[id].width);
+    });
+    Object.keys(widths).map(Number).sort(function(a, b) { return a - b; }).forEach(function(r) {
+      x += 12 + band.channels.left[r].length * 5;
+      xs[r] = x;
+      x += widths[r] + 12 + band.channels.right[r].length * 5 + 24;
+    });
+    band.ids.forEach(function(id) {
+      var n = byId[id], r = info.rank[id];
+      n.x = xs[r];
+      n.y = offset + top + (heights[r] || 0);
+      n.routeRight = xs[r] + widths[r] + 10;
+      n.routeLeft = xs[r] - 10;
+      heights[r] = (heights[r] || 0) + n.height + 28;
+    });
+    band.height = top + Math.max(0, ...Object.values(heights)) + 12;
+    band.width = x;
+  }
+  /* Size bottom-up: a leaf card grows with its ports; a container wraps its bands. */
+  function size(parent) {
+    var info = levels[parent || ''], offset = 0;
+    info.width = 320;
+    info.items.forEach(function(n) {
+      if (n.children.length) size(n.id);
+      else { n.width = 260; n.height = HEAD; }
+      n.height = Math.max(n.height, 80 + 7 * (ports[n.id + '|left'] || []).length,
+        47 + 7 * (ports[n.id + '|right'] || []).length);
+    });
+    info.bands.forEach(function(band) {
+      var top = (band.showLabel ? 48 : 24) + band.tracks.length * 6;
+      band.y = offset;
+      band.trackTop = offset + (band.showLabel ? 36 : 12);
+      ['left', 'right'].forEach(function(side) {
+        band.ids.forEach(function(id) {
+          var r = info.rank[id], channel = band.channels[side][r] || (band.channels[side][r] = []);
+          (info[side][id] || []).forEach(function(i) { channel.push(id + '|' + i); });
+        });
+      });
+      if (band.isolated) placeGrid(band, top, offset);
+      else placeRanks(band, info, top, offset);
+      info.width = Math.max(info.width, band.width);
+      offset += band.height + 36;
+    });
+    info.height = Math.max(48, offset);
+    if (parent) { byId[parent].width = info.width; byId[parent].height = HEAD + info.height; }
+  }
+  size(null);
+  function place(n, x, y) {
+    pos[n.id] = {x: x + n.x, y: y + n.y, width: n.width, height: n.height,
+      routeRight: x + n.routeRight, routeLeft: x + n.routeLeft};
+    n.children.forEach(function(c) { place(c, x + n.x, y + n.y + HEAD); });
+  }
+  model.nodes.filter(function(n) { return !n.parent; }).forEach(function(n) { place(n, 0, 0); });
+
+  /* Route: port y on a card side, gutter x beside a card, track y above its band. */
+  function portY(id, side, i) {
+    return pos[id].y + (side === 'right' ? 28 : 61.5) + 7 * (ports[id + '|' + side].indexOf(i) + 1);
+  }
+  function gutter(id, side, i) {
+    var info = levels[nodeParent[id] || ''], channel = info.bandOf[id].channels[side][info.rank[id]];
+    return pos[id][side === 'right' ? 'routeRight' : 'routeLeft']
+      + (side === 'right' ? 1 : -1) * 5 * channel.indexOf(id + '|' + i);
+  }
+  function track(id, i) {
+    var parent = nodeParent[id], band = levels[parent || ''].bandOf[id];
+    return (parent ? pos[parent].y + HEAD : 0) + band.trackTop + band.tracks.indexOf(i) * 6;
+  }
+  /* Leave `ids[0]` on `side`, then for each container: out to its gutter, then to its track. */
+  function climb(ids, side, i) {
+    var box = pos[ids[0]];
+    var points = [[side === 'right' ? box.x + box.width : box.x, portY(ids[0], side, i)]];
+    ids.forEach(function(id) {
+      var x = gutter(id, side, i);
+      points.push([x, points[points.length - 1][1]]);
+      points.push([x, track(id, i)]);
+    });
+    return points;
+  }
+  var edges = routes.map(function(route) {
+    var e = route.edge, i = route.index, points;
+    if (route.direct) {
+      var x = gutter(e.from, 'right', i), fromY = portY(e.from, 'right', i), toY = portY(e.to, 'left', i);
+      points = [[pos[e.from].x + pos[e.from].width, fromY], [x, fromY], [x, toY], [pos[e.to].x, toY]];
+    } else {
+      points = climb(route.source, 'right', i).concat(climb(route.target, 'left', i).reverse());
+    }
+    points = points.filter(function(p, j) {
+      return !j || p[0] !== points[j - 1][0] || p[1] !== points[j - 1][1];
+    });
+    var d = points.map(function(p, j) { return (j ? 'L' : 'M') + p[0] + ',' + p[1]; }).join(' ');
+    return Object.assign({}, e, {points: points, d: d});
+  });
+  var bands = [];
+  Object.values(levels).forEach(function(info) {
+    var x = info.parent ? pos[info.parent].x : 0, y = info.parent ? pos[info.parent].y + HEAD : 0;
+    info.bands.forEach(function(band) {
+      bands.push({parent: info.parent, ids: band.ids, isolated: band.isolated,
+        label: band.showLabel ? band.label : '', x: x + 24, y: y + band.y,
+        width: band.width - 48, height: band.height});
+    });
+  });
+  return {pos: pos, bands: bands, edges: edges, width: levels[''].width, height: levels[''].height,
+    model: model};
+}
+function reproEdgeLabel(lay,e){
+  function name(id){var n=lay.model.nodes.find(function(n){return n.id===id;});return n&&n.type==='task'?(n.title||reproTaskTitle(n.task)):id;}
+  return name(e.from)+' → '+name(e.to)+(reproLogicalOnly(e)?' · depends_on':'')+(e.cycle?' · '+e.cycleKind:'');
+}
+function reproLogicalOnly(e){return e.evidence.every(function(r){return r.kind==='logical';});}
+function reproHighlightEdge(container,wire){
+  container.querySelectorAll('.is-edge-endpoint,.is-edge-active').forEach(function(el){el.classList.remove('is-edge-endpoint','is-edge-active');});
+  container.classList.toggle('has-edge-focus',!!wire);
+  var label=container.querySelector('#repro-connection-label');if(label)label.textContent=wire?wire.getAttribute('aria-label'):'';
+  if(!wire)return;wire.classList.add('is-edge-active');
+  container.querySelectorAll('[data-node-id]').forEach(function(node){if(node.dataset.nodeId===wire.dataset.from||node.dataset.nodeId===wire.dataset.to)node.classList.add('is-edge-endpoint');});
+}
+function reproBindEdges(container){
+  container.onpointerover=function(e){var wire=e.target.closest('.rp-wire');if(wire)reproHighlightEdge(container,wire);};
+  container.onpointerout=function(e){if(e.target.closest('.rp-wire'))reproHighlightEdge(container,container.querySelector('.rp-wire:focus'));};
+  ['focusin','focusout'].forEach(function(type){container.removeEventListener(type,reproEdgeFocus);container.addEventListener(type,reproEdgeFocus);});
+}
+function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);}
+function reproGraphHTML(lay,statuses) {
+  var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
+  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+(e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;})?' is-lit':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
+  html+=lay.bands.filter(function(b){return b.label;}).map(function(b){return '<div class="rp-component-label" role="heading" aria-level="3" data-component-parent="'+escapeAttr(b.parent||'')+'" data-component-kind="'+(b.isolated?'isolated':'connected')+'" style="left:'+b.x+'px;top:'+b.y+'px;width:'+b.width+'px">'+escapeHtml(b.label)+'</div>';}).join('');
+  html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
+    if(n.type==='step') {var entry=statuses[n.id],ch=reproChannels(entry),st=ch.state,base=ch.label+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
+      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
+        +reproChipHTML(target,'▶','rp-build-chip-step',n.id,'left:'+(p.x+p.width-26)+'px;top:'+(p.y+4)+'px');}
+    var total=0,explain=false;n.steps.forEach(function(s){var e=statuses[s.name];if(e&&e.duration!=null)total+=e.duration;if(reproExplainable(reproStateOf(e)))explain=true;});
+    var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;}),rollup=reproRollup(n.steps,statuses);
+    var tail=total?' · '+reproDuration(total):'',summary=n.steps.length+' steps'+(n.steps.length?' · ':'')+rollup.text+tail;
+    var errorLabel=n.errors+' error'+(n.errors===1?'':'s');
+    return '<section class="rp-task'+(rollup.hatched?' rp-hatched':'')+(n.cycle?' is-cycle':'')+(n.errors?' is-error':'')+(n.expanded&&n.expandable?' rp-expanded':'')+(!_reproSelected&&n.task===activePath?' is-selected':'')+'" data-node-id="'+escapeAttr(n.id)+'" data-task="'+escapeAttr(n.task)+'" style="'+style+'"><div class="rp-task-head">'+(n.expandable?reproButton(n.expanded?'▾':'▸','fold',n.task,(n.expanded?'Fold ':'Expand ')+(n.title||reproTaskTitle(n.task))):'')+'<button class="rp-task-title" title="'+escapeAttr(n.title||reproTaskTitle(n.task))+'" data-rp-action="task" data-value="'+escapeAttr(n.task)+'">'+escapeHtml(n.title||reproTaskTitle(n.task))+'</button>'+(n.steps.length?reproChipHTML(reproTaskTarget(n.task),'▶ Build','',n.title||reproTaskTitle(n.task)):'')+'</div><div class="rp-task-meta"><span class="badge badge-'+escapeAttr(n.status)+'">'+escapeHtml(n.status)+'</span> <span class="rp-task-path" title="'+escapeAttr(n.task)+'">'+escapeHtml(n.task||'Project root')+'</span><span class="rp-task-freshness" title="'+escapeAttr(summary)+'">'+(n.cycle?'<span class="rp-cycle-label" aria-label="'+escapeAttr(n.cycleKind)+'" title="'+escapeAttr(n.cycleKind)+'">↻ Cycle · </span>':'')+(n.errors?'<button class="rp-error-link" data-rp-action="finding" data-value="'+escapeAttr(n.task)+'" title="Show '+errorLabel+'">✕ '+errorLabel+'</button> · ':'')+'<span class="rp-task-summary"'+(containsSelected?' hidden':'')+(explain&&reproActionsOn()?' tabindex="0" data-rp-explain="'+escapeAttr(reproTaskTarget(n.task))+'"':'')+'>'+escapeHtml(n.steps.length+' steps'+(n.steps.length?' · ':''))+rollup.html+escapeHtml(tail)+'</span><span class="rp-selected-inside"'+(containsSelected?'':' hidden')+'>Contains selected step</span></span>'+'</div></section>';
+  }).join('');return html;
+}
+function reproHeadHTML() {
+  return '<div class="repro-head"><div class="repro-heading"><strong>Project graph</strong></div></div>';
+}
+function reproControlsHTML() {
+  return '<div class="repro-controls">'+reproButton('Project overview','overview')+'</div>';
+}
+function drawReproView(container,data) {
+  if(!container||!data)return;
+  (data.graph.dependencies && data.graph.dependencies.tasks || []).forEach(function(t){pathTitles[t.path]=t.title;});
+  var focused=document.activeElement,focusId=focused&&focused.id;
+  var openMenu=container.querySelector('.rp-menu[open]');
+  var menuKey=openMenu&&openMenu.dataset.rpMenu;
+  var visibleGraph=workspaceGraph(data.graph),project=reproProject(visibleGraph),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
+  if(_reproSelected&&!(data.graph.steps||[]).some(function(s){return s.name===_reproSelected;})){_reproNotice='The selected step was removed. Select another step.';_reproSelected='';_reproNav.selected='';}
+  var model=reproHierarchy(visibleGraph,_reproNav,project);
+  var signature=JSON.stringify([model.nodes.map(function(n){return [n.id,n.parent,n.expanded];}),model.edges]);
+  var oldCanvas=container.querySelector('.repro-canvas'),same=_reproLayoutCache&&_reproLayoutCache.signature===signature&&oldCanvas;
+  if(oldCanvas){_reproViewport.x-=oldCanvas.scrollLeft;_reproViewport.y-=oldCanvas.scrollTop;oldCanvas.scrollLeft=0;oldCanvas.scrollTop=0;}
+  var oldLayout=_reproLayoutCache&&_reproLayoutCache.layout, lay=same?_reproLayoutCache.layout:reproHierarchyLayout(model);
+  lay.model=model;
+  var anchor=_reproPreserve||_reproSelected||'task:'+activePath;_reproPreserve='';
+  if(!same&&oldLayout&&oldLayout.pos[anchor]&&lay.pos[anchor]&&!_reproViewNext){_reproViewport.x+=(oldLayout.pos[anchor].x-lay.pos[anchor].x)*_reproViewport.zoom;_reproViewport.y+=(oldLayout.pos[anchor].y-lay.pos[anchor].y)*_reproViewport.zoom;}
+  _reproLayoutCache={signature:signature,layout:lay};
+  var findings=data.graph.findings||[];
+  var notice=!workspaceTaskMatches(activePath)?'Selected task is hidden by filters.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
+  var errors=findings.filter(function(f){return f.severity==='error';}).length;
+  var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
+  container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)
+    +'<div class="repro-summary"><span>'+project.steps.length+' steps'+(window.STANDALONE?' · snapshot':'')+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+reproLegendHTML(project.steps,statuses,data.status)+'</div></details>'
+    +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
+    +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
+    +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
+    +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
+    +(!model.nodes.length?'<p class="repro-empty">'+((_workspaceFilters.tasks!==null||_workspaceFilters.statuses.length)?'No tasks match these filters. Use Clear filters to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
+    +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-connection-label" role="status"></div><div id="repro-edge-detail"></div></div>'
+    +'<div class="repro-footer"><span id="repro-selection" title="'+escapeAttr(_reproSelected||activePath)+'">'+escapeHtml(_reproSelected||reproTaskTitle(activePath))+'</span></div>';
+
+
+  if(same){var fresh=container.querySelector('.repro-canvas');oldCanvas.querySelector('.repro-plot').innerHTML=reproGraphHTML(lay,statuses);fresh.replaceWith(oldCanvas);}
+  container.onclick=onReproClick;
+  reproBindEdges(container);
+  container.onkeydown=function(e){if(e.key==='Escape'){reproCloseFloats(true);container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
+  reproBindHead(container);reproBindViewport(container);reproBindExplain(container);renderReproDetail(_reproSelected);reproReaderControls();reproSizeWorkspace();
+  if(menuKey){var menu=container.querySelector('[data-rp-menu="'+menuKey+'"]');if(menu)menu.open=true;}
+  var place=_reproViewNext;_reproViewNext='';
+  if(place==='fit')reproFit();else if(place==='open')reproOpen();else reproTransform();
+  if(focusId){var target=document.getElementById(focusId);if(target)target.focus({preventScroll:true});}
+}
+var _reproPreserve='';
+function reproEvidenceHTML(evidence){
+  return '<ul>'+evidence.map(function(e){return '<li>'+escapeHtml(e.kind==='logical'?'Logical prerequisite · '+e.declaration:(e.producer||e.from)+' → '+(e.consumer||e.to)+' via '+e.via)+'</li>';}).join('')+'</ul>';
+}
+function reproReaderControls(){
+  var toggle=document.getElementById('navigation-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);toggle.textContent=_reproReaderClosed?'Show details':'Hide details';toggle.title=_reproReaderClosed?'Show details':'Hide details';}
+  var selection=document.getElementById('repro-selection');if(selection){selection.textContent=_reproSelected||reproTaskTitle(activePath);selection.title=_reproSelected||activePath;}
+  updateNavigationToggle();
+  var host=document.getElementById('dag-reader-controls');if(host)host.innerHTML=reproButton('Show in graph','show-selected',activePath)+reproButton((_reproReaderFull||_reproReaderCompact)?'Back to graph':'Read full width','full-reader')+reproButton('Hide details','close-reader');
+  if(host&&_reproData){var edges=reproTaskDependencies(_reproData.graph,activePath);
+    if(edges.length)host.innerHTML+='<details class="rp-task-deps"><summary>Task dependencies ('+edges.length+')</summary>'+edges.map(function(e){var other=e.to===activePath?e.from:e.to;return '<div>'+reproButton((e.to===activePath?'Prerequisite: ':'Dependent: ')+reproTaskTitle(other),'task',other)+reproEvidenceHTML(e.evidence||[])+'</div>';}).join('')+'</details>';
+  }
+  if(host)host.parentElement.style.setProperty('--dag-reader-offset',(host.offsetHeight+12+parseFloat(getComputedStyle(host.parentElement).paddingTop||0))+'px');
+}
+/* The active task's connections to its siblings: each sibling's `depends_on`
+   edges and the step edges between the two subtrees, grouped per sibling. */
+function reproTaskDependencies(graph,path) {
+  if(!path)return [];
+  var parent=parentPath(path),owner={},grouped={},edges=[];
+  (graph.steps||[]).forEach(function(s){owner[s.name]=s.task;});
+  function sibling(task){
+    if(task===parent||!reproWithin(task,parent))return null;
+    var tail=parent?task.slice(parent.length+1):task;
+    return (parent?parent+'/':'')+tail.split('/')[0];
+  }
+  function add(from,to,evidence){
+    var a=sibling(from),b=sibling(to);
+    if(!a||!b||a===b||(a!==path&&b!==path))return;
+    var key=a+'\n'+b;
+    if(!grouped[key]){grouped[key]={from:a,to:b,evidence:[]};edges.push(grouped[key]);}
+    grouped[key].evidence.push(evidence);
+  }
+  (graph.dependencies&&graph.dependencies.logical||[]).forEach(function(e){add(e.from,e.to,e);});
+  (graph.step_edges||[]).forEach(function(e){if(owner[e.from]!==undefined&&owner[e.to]!==undefined)add(owner[e.from],owner[e.to],e);});
+  return edges;
+}
+async function reproOpenDeclaration() {
+  var selected=_reproSelected;
+  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeRollups();
+  if(location.hash!==reproHash())history.pushState({wt:ACTIVE_WT},'',reproHash());
+  if(currentView==='reproduction'){
+    reproSetReader(true);_reproReaderFull=true;
+    document.getElementById('workspace').classList.add('dag-full-reader');reproReaderControls();
+  }
+  var path=activePath;
+  await loadActiveNode(path);
+  if(activePath!==path)return;
+  var section=document.querySelector('#active-node [data-section="Reproduction"]');
+  if(section){var content=section.querySelector('.section-content');if(content&&!content.classList.contains('open'))toggleSection(section.querySelector('.section-toggle'),{stopPropagation:function(){}});section.scrollIntoView({block:'start'});var row=document.getElementById('step-'+selected);if(row)row.classList.add('is-selected');}
+}
+function reproFocus(path) {
+  loadReproData(false).then(function(){
+    reproRevealOwner(parentPath(path));
+    if(currentView!=='reproduction')showView('reproduction');
+    reproSelectTask(path);reproNavigate({},false);_reproViewport.zoom=1;reproCenter();
+  });
+}
+function reproRevealOwner(path){
+  var expanded=new Set(_reproNav.expanded||[]);var p=path;expanded.add(p);while(p){p=parentPath(p);expanded.add(p);}_reproNav.expanded=Array.from(expanded);
+}
+function reproSelectTask(path){
+  _reproNav.selected='';_reproSelected='';_reproInspectorClosed=false;
+  setActive(path);renderReproDetail('');reproReaderControls();
+  var notice=document.getElementById('repro-notice');if(notice)notice.textContent='';
+  document.querySelectorAll('.rp-task').forEach(function(n){
+    n.classList.toggle('is-selected',n.dataset.task===path);
+    var indicator=n.querySelector('.rp-selected-inside'),summary=n.querySelector('.rp-task-summary');
+    if(indicator)indicator.hidden=true;if(summary)summary.hidden=false;
+  });
+}
+
+var _reproReaderPreference=null, _reproReaderSizes={side:420,bottom:300}, _reproReaderPlacement='side', _reproReaderCompact=false;
+function reproPaneBounds(){
+  var ws=document.getElementById('workspace'),width=ws.clientWidth,height=ws.clientHeight,side=width>=1100;
+  var min=side?300:Math.min(220,Math.max(160,height*.3));
+  return {placement:side?'side':'bottom',split:side?height>=320:height>=(width<=620?620:570),automatic:side?height>=420:height>=650,min:Math.round(min),max:Math.round(Math.max(min,side?width-530:height-(width<=620?390:340)-10))};
+}
+function reproPersistReader(){try{localStorage.setItem('dashboard-dag-preview',JSON.stringify({visible:_reproReaderPreference,side:_reproReaderSizes.side,bottom:_reproReaderSizes.bottom}));}catch(e){}}
+function reproSizeWorkspace() {
+  var workspace=document.getElementById('workspace');
+  if(currentView!=='reproduction'||!workspace)return;
+  workspace.style.setProperty('--dag-top',Math.max(0,workspace.getBoundingClientRect().top)+'px');
+  var bounds=reproPaneBounds();_reproReaderPlacement=bounds.placement;
+  _reproReaderClosed=!_reproReaderFull&&(_reproReaderPreference===null?!bounds.automatic:!_reproReaderPreference);
+  _reproReaderCompact=!_reproReaderClosed&&!_reproReaderFull&&!bounds.split;
+  workspace.classList.toggle('dag-full-reader',_reproReaderFull||_reproReaderCompact);
+  workspace.classList.toggle('dag-reader-bottom',bounds.placement==='bottom');
+  workspace.classList.toggle('dag-reader-closed',_reproReaderClosed);
+  var size=Math.max(bounds.min,Math.min(bounds.max,_reproReaderSizes[bounds.placement]));
+  workspace.style.setProperty('--dag-preview-size',size+'px');
+  var divider=document.getElementById('dag-preview-resizer');
+  if(divider){divider.setAttribute('aria-orientation',bounds.placement==='side'?'vertical':'horizontal');divider.setAttribute('aria-label',bounds.placement==='side'?'Resize task preview width':'Resize task preview height');divider.setAttribute('aria-valuemin',String(bounds.min));divider.setAttribute('aria-valuemax',String(bounds.max));divider.setAttribute('aria-valuenow',String(Math.round(size)));}
+  reproReaderControls();
+}
+function initReproReader(){
+  try{var saved=JSON.parse(localStorage.getItem('dashboard-dag-preview'));if(saved){if(typeof saved.visible==='boolean')_reproReaderPreference=saved.visible;['side','bottom'].forEach(function(key){if(Number.isFinite(saved[key])&&saved[key]>=120)_reproReaderSizes[key]=saved[key];});}}catch(e){}
+  var divider=document.getElementById('dag-preview-resizer'),ws=document.getElementById('workspace'),drag=null;
+  if(!divider)return;
+  function update(value){var bounds=reproPaneBounds();_reproReaderSizes[bounds.placement]=Math.max(bounds.min,Math.min(bounds.max,Math.round(value)));reproSizeWorkspace();}
+  function move(e){if(!drag||e.pointerId!==drag.id)return;if(reproPaneBounds().placement!==drag.placement){finish(e);return;}update(drag.size+(drag.placement==='side'?drag.x-e.clientX:drag.y-e.clientY));}
+  function finish(e){if(!drag)return;drag=null;ws.classList.remove('dag-resizing');try{divider.releasePointerCapture(e.pointerId);}catch(error){}window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',finish);window.removeEventListener('pointercancel',finish);reproPersistReader();}
+  divider.addEventListener('pointerdown',function(e){if(e.button!==0)return;e.preventDefault();divider.focus({preventScroll:true});drag={id:e.pointerId,x:e.clientX,y:e.clientY,size:Number(divider.getAttribute('aria-valuenow')),placement:_reproReaderPlacement};ws.classList.add('dag-resizing');try{divider.setPointerCapture(e.pointerId);}catch(error){}window.addEventListener('pointermove',move);window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);});
+  divider.addEventListener('keydown',function(e){var bounds=reproPaneBounds(),step=e.shiftKey?48:16,value=Number(divider.getAttribute('aria-valuenow')),increase=bounds.placement==='side'?'ArrowLeft':'ArrowUp',decrease=bounds.placement==='side'?'ArrowRight':'ArrowDown';if(e.key===increase)value+=step;else if(e.key===decrease)value-=step;else if(e.key==='Home')value=bounds.min;else if(e.key==='End')value=bounds.max;else return;e.preventDefault();update(value);reproPersistReader();});
+}
+window.addEventListener('resize',reproSizeWorkspace);
+new ResizeObserver(reproSizeWorkspace).observe(document.querySelector('.header'));
+document.addEventListener('pointerdown',function(e){
+  if(currentView!=='reproduction')return;
+  document.querySelectorAll('#view-reproduction .rp-menu[open]').forEach(function(menu){if(!menu.contains(e.target))menu.open=false;});
+  if(!e.target.closest('#rp-build-menu, .rp-build-chip'))reproCloseBuildMenu();
+  if(!e.target.closest('#rp-explain-card'))reproCloseExplain(true);
+});
+function reproSetReader(open) {
+  _reproReaderPreference=!!open;_reproReaderClosed=!open;reproPersistReader();
+  var workspace=document.getElementById('workspace');
+  workspace.classList.toggle('dag-reader-closed',!open);
+  if(!open){_reproReaderFull=false;workspace.classList.remove('dag-full-reader');}
+  reproSizeWorkspace();
+  if(!open){var toggle=document.getElementById('navigation-toggle');if(toggle)toggle.focus({preventScroll:true});}
+}
+function reproBindHead(container) {
+  container.querySelectorAll('.rp-menu').forEach(function(menu){menu.ontoggle=function(){if(menu.open)container.querySelectorAll('.rp-menu').forEach(function(other){if(other!==menu)other.open=false;});};});
+}
+function reproTransform() {
+  var plot = document.querySelector('#view-reproduction .repro-plot');
+  if (!plot) return;
+  plot.style.transform = 'translate(' + _reproViewport.x + 'px,' + _reproViewport.y + 'px) scale(' + _reproViewport.zoom + ')';
+  plot.classList.toggle('is-zoomed-out', _reproViewport.zoom < 0.55);
+  if(currentView==='reproduction')history.replaceState(Object.assign({},history.state||{},{rpViewport:Object.assign({},_reproViewport)}),'',location.href);
+  document.getElementById('repro-zoom').textContent = Math.round(_reproViewport.zoom * 100) + '%';
+}
+function reproFit() {
+  var canvas = document.querySelector('#view-reproduction .repro-canvas');
+  if (!canvas || !_reproLayoutCache) return;
+  var lay = _reproLayoutCache.layout;
+  _reproViewport = { x: 12, y: 12, zoom: Math.min(1, (canvas.clientWidth - 24) / lay.width, (canvas.clientHeight - 24) / lay.height) };
+  reproTransform();
+}
+/* Open at a readable scale: the whole graph when it fits at 80% or more,
+   otherwise 80% on the selected step or task (centered when it fits, else from
+   its top-left corner), clamped to the graph's edges. */
+var REPRO_OPEN_ZOOM = 0.8;
+function reproOpen() {
+  var canvas = document.querySelector('#view-reproduction .repro-canvas');
+  if (!canvas || !_reproLayoutCache) return;
+  var lay = _reproLayoutCache.layout, w = canvas.clientWidth, h = canvas.clientHeight;
+  var fit = Math.min(1, (w - 24) / lay.width, (h - 24) / lay.height);
+  if (fit >= REPRO_OPEN_ZOOM) { reproFit(); return; }
+  var zoom = REPRO_OPEN_ZOOM, pos = lay.pos[(_reproSelected && lay.model.reps[_reproSelected]) || lay.model.taskReps[activePath]];
+  var x = 12, y = 12;
+  if (pos) {
+    x = pos.width * zoom <= w - 48 ? w / 2 - (pos.x + pos.width / 2) * zoom : 24 - pos.x * zoom;
+    y = pos.height * zoom <= h - 48 ? h / 2 - (pos.y + pos.height / 2) * zoom : 24 - pos.y * zoom;
+  }
+  _reproViewport = { x: Math.min(12, Math.max(w - 12 - lay.width * zoom, x)),
+    y: Math.min(12, Math.max(h - 12 - lay.height * zoom, y)), zoom: zoom };
+  reproTransform();
+}
+function reproCenter() {
+  var canvas = document.querySelector('#view-reproduction .repro-canvas');
+  var layout=_reproLayoutCache&&_reproLayoutCache.layout;
+  var pos=layout&&layout.pos[(_reproSelected&&layout.model.reps[_reproSelected])||layout.model.taskReps[activePath]||'task:'+activePath];
+  if (!canvas || !pos) return;
+  _reproViewport.x = canvas.clientWidth / 2 - (pos.x + pos.width / 2) * _reproViewport.zoom;
+  _reproViewport.y = canvas.clientHeight / 2 - (pos.y + Math.min(pos.height,108) / 2) * _reproViewport.zoom;
+  reproTransform();
+}
+function reproZoomAt(canvas, zoom, x, y) {
+  zoom=Math.max(0.05,Math.min(3,zoom));
+  var ratio=zoom/_reproViewport.zoom;
+  _reproViewport.x=x-(x-_reproViewport.x)*ratio;
+  _reproViewport.y=y-(y-_reproViewport.y)*ratio;
+  _reproViewport.zoom=zoom;reproTransform();
+}
+function reproBindViewport(container) {
+  var canvas = container.querySelector('.repro-canvas');
+  if (!canvas || canvas._rpBound) return;
+  canvas._rpBound=true;
+  var drag=null, gesture=null;
+  function point(e) {
+    var rect=canvas.getBoundingClientRect();
+    return {x:Number.isFinite(e.clientX)?e.clientX-rect.left:canvas.clientWidth/2,
+      y:Number.isFinite(e.clientY)?e.clientY-rect.top:canvas.clientHeight/2};
+  }
+  canvas.addEventListener('wheel',function(e){
+    e.preventDefault();
+    if(gesture)return;
+    var unit=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
+    if(e.ctrlKey){var at=point(e);reproZoomAt(canvas,_reproViewport.zoom*Math.exp(-e.deltaY*unit*0.01),at.x,at.y);}
+    else{_reproViewport.x-=e.deltaX*unit;_reproViewport.y-=e.deltaY*unit;reproTransform();}
+  },{passive:false});
+  canvas.addEventListener('gesturestart',function(e){
+    e.preventDefault();gesture={zoom:_reproViewport.zoom,scale:e.scale||1};drag=null;
+  },{passive:false});
+  canvas.addEventListener('gesturechange',function(e){
+    e.preventDefault();if(!gesture)return;
+    var at=point(e);reproZoomAt(canvas,gesture.zoom*e.scale/gesture.scale,at.x,at.y);
+  },{passive:false});
+  canvas.addEventListener('gestureend',function(e){e.preventDefault();gesture=null;},{passive:false});
+  canvas.onpointerdown = function(e) {
+    if(e.button!==0||e.target.closest('button, [data-rp-action]'))return;
+    drag={id:e.pointerId,x:e.clientX,y:e.clientY,panX:_reproViewport.x,panY:_reproViewport.y};
+    canvas.setPointerCapture(e.pointerId);canvas.focus({preventScroll:true});canvas.classList.add('is-panning');
+  };
+  canvas.onpointermove=function(e){if(drag&&drag.id===e.pointerId){
+    _reproViewport.x=drag.panX+e.clientX-drag.x;_reproViewport.y=drag.panY+e.clientY-drag.y;reproTransform();
+  }};
+  canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=function(){drag=null;canvas.classList.remove('is-panning');};
+  canvas.onkeydown=function(e){
+    if(e.target!==canvas)return;
+    var offsets={ArrowLeft:[40,0],ArrowRight:[-40,0],ArrowUp:[0,40],ArrowDown:[0,-40]};
+    if(offsets[e.key]){e.preventDefault();_reproViewport.x+=offsets[e.key][0];_reproViewport.y+=offsets[e.key][1];reproTransform();}
+    else if(['+','=','-'].indexOf(e.key)>=0){e.preventDefault();reproZoomAt(canvas,_reproViewport.zoom*(e.key==='-'?0.8:1.25),canvas.clientWidth/2,canvas.clientHeight/2);}
+    else if(e.key==='0'){e.preventDefault();reproFit();}
+    else if(e.key.toLowerCase()==='c'){e.preventDefault();reproCenter();}
+  };
+}
+
+function reproLegendHTML(steps, byName, status) {
+  var counts = {}, checks = 0;
+  steps.forEach(function(s) {
+    var st = reproStateOf(byName[s.name]);
+    counts[st] = (counts[st] || 0) + 1;
+    if (s.kind === 'check') checks++;
+  });
+  var items = REPRO_STATES.filter(function(s) { return s.key !== 'unknown' || counts.unknown; }).map(function(s) {
+    var n = counts[s.key] || 0;
+    return '<span class="repro-legend-item rp-' + s.key + (n ? '' : ' is-off') + '">'
+      + '<span class="repro-glyph">' + s.glyph + '</span>' + s.key
+      + '<span class="repro-count">' + n + '</span></span>';
+  });
+  items.push('<span class="repro-legend-item is-kind' + (checks ? '' : ' is-off') + '">'
+    + '<span class="repro-glyph">✓</span>check step<span class="repro-count">' + checks + '</span></span>');
+  var fills = [['rp-stale', 'tinted', "the step's own state"], ['rp-stale rp-inherited', 'empty', 'inherited from upstream'],
+    ['rp-unverified rp-hatched', 'hatched', 'online-only here']].map(function(f) {
+    return '<span class="repro-legend-item"><span class="repro-fill-swatch ' + f[0] + '"></span><strong>' + f[1] + '</strong> ' + f[2] + '</span>';
+  });
+  var banner = status.unavailable
+    ? '<div class="repro-findings">Runner state is unavailable, so every step reads <code>unknown</code>: '
+      + escapeHtml(status.unavailable) + '</div>'
+    : '';
+  var wires = '<div class="repro-legend">'
+    + '<span class="repro-legend-item"><svg class="repro-legend-wire" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4"/></svg>file dependency</span>'
+    + '<span class="repro-legend-item"><svg class="repro-legend-wire is-logical" width="28" height="8"><line x1="0" y1="4" x2="28" y2="4"/></svg>depends_on only</span></div>';
+  return '<p class="repro-legend-head">State · border, glyph, label</p><div class="repro-legend">' + items.join('') + '</div>'
+    + '<p class="repro-legend-head">Fill · the step\'s own evidence</p><div class="repro-legend">' + fills.join('') + '</div>' + wires + banner;
+}
+
+function reproFindingsHTML(findings) {
+  if (!findings || !findings.length) return '';
+  var rows = findings.map(function(f) {
+    return '<li tabindex="-1"' + (typeof f.task_path === 'string' ? ' data-finding-task="' + escapeAttr(f.task_path) + '"' : '')
+      + '><span class="repro-sev' + (f.severity === 'warning' ? ' is-warning' : '') + '">['
+      + escapeHtml(String(f.severity).toUpperCase()) + ']</span>'
+      + (typeof f.task_path==='string' ? reproButton(f.task_path||'Project root','task',f.task_path) : '')
+      + escapeHtml(f.message) + '</li>';
+  }).join('');
+  var errors = findings.filter(function(f) { return f.severity === 'error'; }).length;
+  var warnings = findings.length - errors;
+  var parts = [];
+  if (errors) parts.push(errors + ' error' + (errors === 1 ? '' : 's')
+    + ' — builds of the steps they touch are blocked. Step cycles keep their parsed steps for inspection; a malformed declaration registers none of its steps');
+  if (warnings) parts.push(warnings + ' warning' + (warnings === 1 ? '' : 's')
+    + ' — valid active steps are drawn; inspect the dependency evidence below');
+  return '<div class="repro-findings">' + escapeHtml(parts.join('; ')) + '.<ul>'
+    + rows + '</ul></div>';
+}
+
+function reproNodeId(name) {
+  return 'repro-node-' + name.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function reproDuration(seconds) {
+  if (seconds == null) return '';
+  if (seconds < 1) return Math.round(seconds * 1000) + 'ms';
+  if (seconds < 60) return seconds.toFixed(1) + 's';
+  return Math.floor(seconds / 60) + 'm' + Math.round(seconds % 60) + 's';
+}
+
+function onReproClick(event) {
+  var control = event.target.closest('[data-rp-action]');
+  if (control) {
+    event.preventDefault();
+    var action = control.dataset.rpAction, value = control.dataset.value;
+    var menu=control.closest('.rp-menu');if(menu)menu.open=false;
+    if(action==='task')reproSelectTask(value);
+    else if(action==='overview'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
+    else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
+    else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
+    else if(action==='close-reader')reproSetReader(false);
+    else if(action==='declaration')reproOpenDeclaration();
+    else if(action==='copy-command')reproCopyCommand(control);
+    else if(action==='build-menu')reproOpenBuildMenu(control);
+    else if(action==='build')reproStartBuild(value,control.dataset.mode||'');
+    else if(action==='build-stop')reproStopBuild();
+    else if(action==='explain-pin')reproPinExplain();
+    else if(action==='explain-close')reproCloseExplain(true);
+    else if(action==='fold'){
+      var expanded=new Set(_reproNav.expanded||[]);_reproPreserve='task:'+value;
+      if(expanded.has(value))expanded.delete(value);else expanded.add(value);
+      reproNavigate({expanded:Array.from(expanded)},false);
+      var toggle=Array.from(document.querySelectorAll('[data-rp-action=fold]')).find(function(b){return b.dataset.value===value;});if(toggle)toggle.focus({preventScroll:true});
+    }
+    else if(action==='edge'){
+      var edge=_reproLayoutCache.layout.edges[Number(value)],host=document.getElementById('repro-edge-detail');
+      host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(reproEdgeLabel(_reproLayoutCache.layout,edge))+'</h3>'+reproEvidenceHTML(edge.evidence);
+    }
+    else if(action==='close-edge')reproCloseGraphDetail();
+    else if(action==='finding')reproShowFinding(value);
+    else if(action==='open'||action==='related')revealReproStep(value);
+    else if(action==='select')selectReproStep(value);
+    else if (action === 'fit') reproFit();
+    else if (action === 'zoom-in' || action === 'zoom-out') {
+      var canvas = document.querySelector('#view-reproduction .repro-canvas');
+      if (canvas) {
+        reproZoomAt(canvas,_reproViewport.zoom*(action==='zoom-in'?1.25:0.8),canvas.clientWidth/2,canvas.clientHeight/2);
+      }
+    } else if (action === 'close-detail') {
+      _reproInspectorClosed = true;
+      renderReproDetail('');
+      var selected = document.getElementById(reproNodeId(_reproSelected));
+      if (selected) selected.focus({ preventScroll: true });
+    }
+    return;
+  }
+  if (event.target.closest('#rp-explain-card')) { reproPinExplain(); return; }
+  var node = event.target.closest('.repro-node');
+  if (node && node.dataset.step) { selectReproStep(node.dataset.step); return; }
+  var link = event.target.closest('.repro-task-link');
+  if (link && link.dataset.path !== undefined) reproSelectTask(link.dataset.path);
+}
+
+/* Open the diagnostics and focus the first finding filed on *path*. */
+function reproShowFinding(path) {
+  var menu=document.querySelector('#view-reproduction .rp-diagnostics');if(!menu)return;
+  menu.open=true;
+  var row=Array.from(menu.querySelectorAll('li[data-finding-task]')).find(function(li){return li.dataset.findingTask===path;});
+  if(row){row.scrollIntoView({block:'nearest'});row.focus({preventScroll:true});}
+}
+function selectReproStep(name) {
+  var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
+  _reproSelected = name;
+  _reproNav.selected = name;
+  var oldRestoring=restoring;restoring=true;setActive(step.task);restoring=oldRestoring;reproReaderControls();
+  _reproInspectorClosed = false;
+  if (location.hash !== reproHash()) history.pushState({ wt: ACTIVE_WT }, '', reproHash());
+  var container = document.getElementById('view-reproduction');
+  if (!container) return;
+  container.querySelectorAll('.repro-node').forEach(function(n) {
+    n.classList.toggle('is-selected', n.dataset.step === name);
+  });
+  container.querySelectorAll('.rp-task').forEach(function(node){
+    node.classList.remove('is-selected');
+    var contains=!node.classList.contains('rp-expanded')&&reproWithin(step.task,node.dataset.task);
+    var indicator=node.querySelector('.rp-selected-inside'),summary=node.querySelector('.rp-task-summary');
+    if(indicator)indicator.hidden=!contains;if(summary)summary.hidden=contains;
+  });
+  container.querySelectorAll('.repro-edges path').forEach(function(p) {
+    var edge=_reproLayoutCache&&_reproLayoutCache.layout.edges[Number(p.dataset.value)];
+    p.classList.toggle('is-lit', !!edge&&edge.evidence.some(function(r){return (r.from||r.producer)===name||(r.to||r.consumer)===name;}));
+  });
+  renderReproDetail(name);
+  syncTreeRollups();
+  var reader=document.getElementById('task-preview');if(reader)reader.scrollTop=0;
+  var heading=document.querySelector('.repro-detail-title');if(heading)heading.focus({preventScroll:true});
+
+}
+
+/* Leads a file list holding online-only files: their count and known size, then where to read before downloading. */
+function reproOnlineSummary(files) {
+  var online = files.filter(function(f) { return f.online; });
+  if (!online.length) return '';
+  var sizes = online.filter(function(f) { return f.online.size != null; }), total = 0;
+  sizes.forEach(function(f) { total += f.online.size; });
+  return '<p class="repro-online-summary">' + REPRO_CLOUD_HTML + ' ' + online.length + ' file' + (online.length === 1 ? '' : 's') + ' online-only here'
+    + (sizes.length ? ' (' + formatArtifactBytes(total) + (sizes.length < online.length ? ' known' : '') + ')' : '')
+    + '. Before downloading, read <code>references/online-only-files.md</code> in the superRA:reproducibility skill.</p>';
+}
+function reproFileList(files, task) {
+  if (!files.length) return '<p class="repro-hint">No files declared.</p>';
+  return '<ul class="repro-files">' + files.map(function(file) {
+    var ref=file.path||file, logical=ref.logical||'', resolved=ref.resolved||logical;
+    var slash=logical.lastIndexOf('/'), leaf=logical.slice(slash+1), dir=logical.slice(0,slash+1);
+    var attrs=REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
+      :(window.LOCAL_OPEN||window.STANDALONE)?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank"'+(window.LOCAL_OPEN?' data-open-path="'+escapeAttr(resolved)+'"':'')
+      :projectFileLinkAttrs(task||'',resolved);
+    var link='<a'+attrs+(!window.STANDALONE?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
+    var cloud=file.online?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only'+(file.online.size!=null?' · '+formatArtifactBytes(file.online.size):'')+'</span>':'';
+    return '<li'+(file.online?' class="is-online-only"':'')+'><div class="repro-file-name">'+link+cloud+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
+      +(file.note?'<div class="repro-file-note">'+escapeHtml(file.note)+'</div>':'')+'</li>';
+  }).join('')+'</ul>';
+}
+/* ── The file hover preview ──
+   One card at a time: /api/file-peek answers kind, size, and a text head; an
+   image or PDF loads from /files/ only under the server's preview limit, and
+   pdf.js is imported on the first PDF hover, never at page load. */
+var FILE_PEEK_DELAY_MS = 250, FILE_PEEK_PDF_BUDGET_MS = 3000, FILE_PEEK_WIDTH = 320;
+var _filePeekTimer = null, _filePeekToken = 0, _filePeekTask = null, _filePeekThumbs = new Map(), _pdfjs = null;
+function filePeekSchedule(anchor) {
+  clearTimeout(_filePeekTimer);
+  var card = document.getElementById('file-peek');
+  if (anchor && card && card._anchor === anchor) return;
+  _filePeekTimer = setTimeout(function() { if (anchor && anchor.isConnected) filePeekShow(anchor); else filePeekClose(); }, anchor ? FILE_PEEK_DELAY_MS : 150);
+}
+function filePeekClose() {
+  clearTimeout(_filePeekTimer);
+  _filePeekToken++;
+  if (_filePeekTask) { _filePeekTask.cancel(); _filePeekTask = null; }
+  var card = document.getElementById('file-peek');
+  if (card) card.remove();
+}
+function filePeekPlace(card, anchor) {
+  var a = anchor.getBoundingClientRect(), w = window.innerWidth, h = window.innerHeight;
+  var left = Math.min(Math.max(8, a.left), Math.max(8, w - card.offsetWidth - 8)), top = a.bottom + 6;
+  if (top + card.offsetHeight > h - 8 && a.top - card.offsetHeight - 6 >= 8) top = a.top - card.offsetHeight - 6;
+  card.style.left = left + 'px';
+  card.style.top = Math.max(8, top) + 'px';
+}
+function filePeekShow(anchor) {
+  filePeekClose();
+  var token = _filePeekToken, path = anchor.dataset.peek;
+  var card = document.createElement('div');
+  card.id = 'file-peek';
+  card.className = 'rp-menu-body file-peek';
+  card.setAttribute('role', 'tooltip');
+  card._anchor = anchor;
+  card.innerHTML = '<p class="rp-float-head"></p><div class="file-peek-body"><p class="repro-hint">Loading…</p></div>';
+  card.firstChild.textContent = path;
+  document.body.appendChild(card);
+  filePeekPlace(card, anchor);
+  fetch(wtUrl('/api/file-peek?path=' + encodeURIComponent(path))).then(function(resp) {
+    if (!resp.ok) throw new Error(resp.status === 403 ? 'Outside the project — no preview.' : 'Preview unavailable (' + resp.status + ').');
+    return resp.json();
+  }).then(function(peek) {
+    if (token !== _filePeekToken) return;
+    filePeekRender(card, path, peek, token);
+    filePeekPlace(card, anchor);
+  }).catch(function(e) {
+    if (token !== _filePeekToken) return;
+    card.lastChild.firstChild.textContent = e.message;
+  });
+}
+/* /api/file-peek answers an online-only file from its stat alone; the page shows
+   this instead of a preview, so nothing reads it. */
+function onlineOnlyNote(peek) {
+  return REPRO_CLOUD + ' Online-only here' + (peek.size != null ? ' (' + formatArtifactBytes(peek.size) + ')' : '')
+    + ': no preview, since reading it would download it. Before downloading, read references/online-only-files.md in the superRA:reproducibility skill.';
+}
+function filePeekRender(card, path, peek, token) {
+  var body = card.lastChild, url = projectFileUrl(path, peek.mtime_ns);
+  body.innerHTML = '';
+  function note(text) { var p = document.createElement('p'); p.className = 'repro-hint'; p.textContent = text; body.appendChild(p); }
+  if (!peek.exists) { note('Not built yet.'); return; }
+  if (peek.online_only) { note(onlineOnlyNote(peek)); return; }
+  note(projectFileMeta(peek) + ' · modified ' + new Date(peek.mtime_ns / 1e6).toLocaleString());
+  if (peek.head != null) {
+    var pre = document.createElement('pre');
+    pre.className = 'repro-log file-peek-text';
+    pre.textContent = peek.head + (peek.truncated ? '\n…' : '');
+    body.appendChild(pre);
+  } else if ((peek.kind === 'image' || peek.kind === 'pdf') && !peek.previewable) {
+    note(artifactUnavailableReason(peek));
+  } else if (peek.kind === 'image') {
+    var img = document.createElement('img');
+    img.alt = path;
+    img.src = url;
+    img.onload = function() { if (card._anchor) filePeekPlace(card, card._anchor); };
+    body.appendChild(img);
+  } else if (peek.kind === 'pdf') {
+    filePeekPdf(card, body, url, token);
+  }
+}
+function filePeekPdf(card, body, url, token) {
+  var cached = _filePeekThumbs.get(url);
+  var img = document.createElement('img');
+  img.alt = 'First page';
+  body.appendChild(img);
+  if (cached) { img.src = cached; return; }
+  img.hidden = true;
+  var status = document.createElement('p');
+  status.className = 'repro-hint';
+  status.textContent = 'Rendering first page…';
+  body.appendChild(status);
+  if (!_pdfjs) _pdfjs = import('/static/pdf.min.mjs').then(function(lib) {
+    lib.GlobalWorkerOptions.workerSrc = '/static/pdf.worker.min.mjs';
+    return lib;
+  });
+  var doc = null, budget = null, task = null;
+  _pdfjs.then(function(lib) {
+    if (token !== _filePeekToken) throw null;
+    return lib.getDocument({ url: url, isEvalSupported: false }).promise;
+  }).then(function(d) {
+    doc = d;
+    if (token !== _filePeekToken) throw null;
+    return doc.getPage(1);
+  }).then(function(page) {
+    if (token !== _filePeekToken) throw null;
+    var scale = FILE_PEEK_WIDTH / page.getViewport({ scale: 1 }).width * (window.devicePixelRatio || 1);
+    var viewport = page.getViewport({ scale: scale }), canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    task = _filePeekTask = page.render({ canvas: canvas, canvasContext: canvas.getContext('2d'), viewport: viewport });
+    budget = setTimeout(function() { task.cancel(); }, FILE_PEEK_PDF_BUDGET_MS);
+    return task.promise.then(function() { return canvas.toDataURL(); });
+  }).then(function(data) {
+    if (_filePeekThumbs.size >= 24) _filePeekThumbs.delete(_filePeekThumbs.keys().next().value);
+    _filePeekThumbs.set(url, data);
+    if (token !== _filePeekToken) return;
+    img.src = data;
+    img.hidden = false;
+    status.remove();
+    if (card._anchor) filePeekPlace(card, card._anchor);
+  }).catch(function(e) {
+    if (token !== _filePeekToken || !e) return;
+    status.textContent = e.name === 'RenderingCancelledException' ? 'Too complex to preview quickly — open the file.' : 'PDF preview failed.';
+  }).finally(function() {
+    clearTimeout(budget);
+    if (_filePeekTask === task) _filePeekTask = null;
+    if (doc) doc.destroy();
+  });
+}
+document.addEventListener('pointerover', function(e) {
+  var anchor = e.pointerType !== 'touch' && e.target.closest && e.target.closest('[data-peek]');
+  if (anchor) filePeekSchedule(anchor);
+});
+document.addEventListener('pointerout', function(e) {
+  var anchor = e.pointerType !== 'touch' && e.target.closest && e.target.closest('[data-peek]');
+  if (anchor && !(e.relatedTarget && anchor.contains(e.relatedTarget))) filePeekSchedule(null);
+});
+/* A plain click on a project-file link opens the in-page file view; the hash
+   href stays for a new tab. */
+function openFilePageLink(e) {
+  var link = e.target.closest && e.target.closest('a[data-file-page]');
+  if (!link || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  filePeekClose();
+  setActive(link.dataset.fileTask || '', '/' + link.dataset.filePage);
+}
+document.addEventListener('click', openFilePageLink);
+document.addEventListener('focusin', function(e) {
+  if (e.target.matches('[data-peek]:focus-visible')) filePeekSchedule(e.target);
+});
+document.addEventListener('focusout', function(e) { if (e.target.matches('[data-peek]')) filePeekSchedule(null); });
+['scroll', 'keydown'].forEach(function(type) {
+  document.addEventListener(type, function(e) { if (type === 'scroll' || e.key === 'Escape') filePeekClose(); }, true);
+});
+
+/* A project file shown in the reading pane — the remote viewer's stand-in for
+   opening it on this machine.  Addressed as `#/<task>?file=<path>`, carried in
+   activeArtifactPath with a leading '/' (an attachment path never has one). */
+function projectFileHash(task, path) {
+  return '#/' + task + '?file=' + encodeURIComponent(path);
+}
+function projectFileLinkAttrs(task, path) {
+  return ' href="'+escapeAttr(projectFileHash(task,path))+'" data-file-page="'+escapeAttr(path)+'" data-file-task="'+escapeAttr(task)+'"';
+}
+/* Collapse `.` and `..` segments; a path that climbs above the project root
+   stays as written, and the server refuses it. */
+function normalizeProjectPath(path) {
+  var out = path.charAt(0) === '/' ? [''] : [];
+  var parts = path.split('/');
+  for (var i = 0; i < parts.length; i++) {
+    if (!parts[i] || parts[i] === '.') continue;
+    if (parts[i] !== '..') out.push(parts[i]);
+    else if (out.length && out[out.length - 1] !== '') out.pop();
+    else return path;
+  }
+  return out.join('/');
+}
+function projectFileUrl(path, mtime) {
+  return wtUrl('/files/' + path.split('/').map(encodeURIComponent).join('/') + (mtime ? '?v=' + mtime : ''));
+}
+function projectFileMeta(peek) {
+  if (peek.kind === 'directory') return 'Directory · ' + peek.entries + (peek.entries_capped ? '+' : '') + ' entries';
+  return peek.size == null ? peek.kind : peek.kind + ' · ' + formatArtifactBytes(peek.size);
+}
+function reproDisclosure(key, label, content, open) {
+  return '<details class="repro-disclosure" data-detail-section="'+key+'"'+(open?' open':'')+'><summary>'+label+'</summary><div class="repro-disclosure-body">'+content+'</div></details>';
+}
+function renderReproDetail(name) {
+  var host=document.getElementById('repro-detail');
+  if(!host)return;
+  var step=_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===name;});
+  var visible=!!step&&!_reproInspectorClosed;
+  document.getElementById('task-preview').classList.toggle('step-reading',visible);
+  if(!visible){host.innerHTML='';host.removeAttribute('data-step');return;}
+  var same=host.dataset.step===name, previousState=host.dataset.state, opened=new Set(Array.from(host.querySelectorAll('details[open]')).map(function(el){return el.dataset.detailSection;}));
+  var entry=reproStatusIndex(_reproData)[name], state=reproStateOf(entry), related=reproProject(_reproData.graph);
+  var external={};(_reproData.graph.external_inputs||[]).filter(function(e){return (e.consumers||[]).indexOf(name)!==-1;}).forEach(function(e){external[e.logical]=e;});
+  var online={};(entry&&entry.files||[]).forEach(function(f){if(f.online_only)online[f.node]=f;});
+  var inputs=(step.deps||[]).map(function(d){
+    var origins=(step.dependency_origins&&step.dependency_origins[d.logical]||[]).map(function(o){return typeof o==='string'?o:({declared:'Declared input',script:'Script',include:'Included source',environment:'Environment'}[o.kind]||o.kind)+(o.via?' via '+o.via:'');});
+    if(external[d.logical])origins.push(online[d.logical]?'External input':external[d.logical].exists?'External input · available':'External input · missing');
+    return {path:d,note:origins.join(' · '),online:online[d.logical]};
+  });
+  var outs=(step.outs||[]).map(function(o){return {path:o.path,note:o.sidecar?'Freshness checked via '+o.sidecar.logical:'',online:online[o.path.logical]};});
+  var connections=['incoming','outgoing'].map(function(direction){
+    var grouped={};(related[direction][name]||[]).forEach(function(e){var other=direction==='incoming'?e.from:e.to;(grouped[other]||(grouped[other]=[])).push(e.via);});
+    return '<section><h4>'+(direction==='incoming'?'Uses':'Used by')+'</h4>'+(Object.keys(grouped).map(function(other){return '<div class="repro-related">'+reproButton(other,'related',other)+(!workspaceTaskMatches(related.byName[other].task)?'<span class="repro-hint">Hidden from navigation</span>':'')+reproPathList(Array.from(new Set(grouped[other])))+'</div>';}).join('')||'<p class="repro-hint">No connected steps.</p>')+'</section>';
+  }).join('');
+  var evidence='',ch=reproChannels(entry),own='';
+  if(ch.own!==state)own='<p class="repro-own-line"><strong>Own evidence: '+escapeHtml(ch.own)+'</strong>'+(ch.own==='unverified'?' — '+escapeHtml(entry.local_reason||''):'')
+    +(ch.own==='unverified'?'. A build runs it only if a producer\'s rerun changes its inputs, and then needs its online-only files here.':'. A build reruns it only if a producer\'s rerun changes its inputs.')+(entry.origin?' Staleness starts at '+reproButton(entry.origin,'related',entry.origin)+'.':'')+'</p>';
+  if(entry&&entry.boundary_inputs&&entry.boundary_inputs.length)evidence+='<h4>Saved inputs</h4>'+reproFileList(entry.boundary_inputs.map(function(b){return {logical:b.logical,resolved:b.resolved,note:b.provenance+' · '+b.producer};}),step.task);
+  if(entry&&entry.acceptance)evidence+='<h4>Reviewed reuse</h4><p>'+escapeHtml(entry.acceptance.reason||'Reviewed unchanged output')+'</p>';
+  if(entry&&entry.last_run)evidence+='<p>Last run: '+escapeHtml(new Date(entry.last_run*1000).toLocaleString())+(entry.duration!=null?' · '+reproDuration(entry.duration):'')+'</p>';
+  else if(entry&&entry.duration!=null)evidence+='<p>Duration: '+reproDuration(entry.duration)+'</p>';
+  if(entry&&entry.log_tail)evidence+='<h4>Run log</h4><pre class="repro-log">'+escapeHtml(entry.log_tail)+'</pre>';
+  var command=step.cmd||step.cmd_logical||'', declared=step.cmd_logical||command;
+  var code=escapeHtml(command);if(window.hljs&&hljs.getLanguage('bash'))code=hljs.highlight(command,{language:'bash',ignoreIllegals:true}).value;
+  var title=name.replace(/[-_]+/g,' ');title=title.charAt(0).toUpperCase()+title.slice(1);
+  host.dataset.step=name;host.dataset.state=state;
+  host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+'</span></div>'
+    +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+escapeHtml(title)+'</h2><code class="repro-detail-name">'+escapeHtml(name)+'</code></header>'
+    +'<div class="repro-status-line"><span class="repro-step-state '+ch.cls+'"><span class="repro-glyph">'+ch.glyph+'</span> '+escapeHtml(ch.label)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'+own
+    +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
+    +'<section class="repro-detail-section"><div class="repro-section-head"><h3>Command</h3>'+reproButton('Copy command','copy-command')+'</div><p class="repro-hint">Run from the project directory.</p><pre class="repro-command"><code class="hljs language-bash">'+code+'</code></pre><span class="repro-copy-status" role="status"></span>'
+    +(declared!==command?reproDisclosure('declared','Declared command','<pre class="repro-command"><code>'+escapeHtml(declared)+'</code></pre>',opened.has('declared')):'')+'</section>'
+    +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproOnlineSummary(outs)+reproFileList(outs.slice(0,3),step.task)+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3),step.task),opened.has('outputs')):'')+'</section>'
+    +reproDisclosure('inputs','Inputs <span>'+inputs.length+'</span>'+(inputs.some(function(i){return i.online;})?' <span class="repro-cloud-tag">'+REPRO_CLOUD_HTML+' online-only</span>':''),reproOnlineSummary(inputs)+reproFileList(inputs,step.task),opened.has('inputs')||(!same&&inputs.some(function(i){return i.online;})))
+    +reproDisclosure('connections','Connected steps <span>'+new Set((related.incoming[name]||[]).map(function(e){return e.from;}).concat((related.outgoing[name]||[]).map(function(e){return e.to;}))).size+'</span>',connections,opened.has('connections'))
+    +(Object.keys(step.params||{}).length?reproDisclosure('params','Parameters','<dl class="repro-params">'+Object.keys(step.params).map(function(key){return reproDetailRow(escapeHtml(key),'<code>'+escapeHtml(JSON.stringify(step.params[key]))+'</code>');}).join('')+'</dl>',opened.has('params')):'')
+    +(evidence?reproDisclosure('evidence','Run & evidence',evidence,opened.has('evidence')||(state==='failed'&&(!same||previousState!=='failed'))):'')+'</article>';
+}
+async function reproCopyCommand(button) {
+  var step=_reproData&&_reproData.graph.steps.find(function(s){return s.name===_reproSelected;});if(!step)return;
+  var message=document.querySelector('#repro-detail .repro-copy-status');
+  try{await navigator.clipboard.writeText(step.cmd||step.cmd_logical||'');button.textContent='Copied';if(message)message.textContent='Command copied.';}
+  catch(e){if(message)message.textContent='Could not copy. Select the command text to copy it.';}
+}
+
+/* ── Graph actions: the Build menu, card timings, and the explain hover card ──
+   A card's Build menu runs `superra repro build` through POST /api/repro/build
+   and polls GET /api/repro/build while it runs. The menu's estimate and the card
+   timings read the payloads already loaded; the hover card fetches
+   /api/repro/explain once per target until the next refresh. */
+var _reproBuild = { running: false, job: null, steps: {}, wt: null, error: '', seen: false };
+var _reproBuildTimer = null, _reproExplainCache = {}, _reproExplainTimer = null, _reproExplainPinned = false;
+var REPRO_BUILD_POLL_MS = 1500, REPRO_EXPLAIN_DELAY_MS = 350, REPRO_BUILD_RECENT_S = 900;
+
+function reproActionsOn() { return !!window.REPRO_ACTIONS && !window.STANDALONE; }
+function reproExplainable(state) { return reproActionsOn() && ['stale', 'missing', 'failed', 'unverified'].indexOf(state) >= 0; }
+function reproStepTarget(step) { return (step.task || '.') + '#' + step.name; }
+function reproTaskTarget(path) { return path || '.'; }
+function reproShellWord(word) { return /^[A-Za-z0-9_.\/-]+$/.test(word) ? word : "'" + word.replace(/'/g, "'\\''") + "'"; }
+function reproBuildCommand(target, mode) {
+  return 'superra repro build ' + reproShellWord(target) + (mode === 'only' ? ' --only' : mode === 'force' ? ' --force' : '');
+}
+function reproIsRunning(name, entry) { return !!_reproBuild.steps[name] || !!(entry && entry.running); }
+function reproNodeMeta(name, entry) {
+  if (reproIsRunning(name, entry)) {
+    var started = (_reproBuild.steps[name] || {}).started_at || (entry && entry.started_at);
+    return ' · building' + (started ? ' ' + reproDuration(Math.max(0, Math.round(Date.now() / 1000 - started))) : '');
+  }
+  return entry && entry.duration != null ? ' · ' + reproDuration(entry.duration) : '';
+}
+function reproChipHTML(target, label, cls, name, style) {
+  if (!reproActionsOn()) return '';
+  var job = _reproBuild.job, building = _reproBuild.running && job && job.alive && job.target === target;
+  return '<button type="button" class="rp-build-chip' + (cls ? ' ' + cls : '') + (building ? ' is-building' : '') + '" data-rp-action="build-menu" data-value="' + escapeAttr(target)
+    + '" data-label="' + escapeAttr(label) + '" aria-haspopup="menu" aria-expanded="false" aria-label="Build options for ' + escapeAttr(name) + '" title="Build options"'
+    + (style ? ' style="' + style + '"' : '') + '>' + escapeHtml(building && !cls ? 'Building…' : label) + '</button>';
+}
+
+/* The steps a build of *target* selects: a task with its descendants, or one
+   step; with producers, also every transitive file producer. */
+function reproBuildScope(graph, target, producers) {
+  var steps = graph.steps || [], names = new Set(), hash = target.indexOf('#');
+  if (hash >= 0) steps.forEach(function(s) { if ((s.task || '.') === target.slice(0, hash) && s.name === target.slice(hash + 1)) names.add(s.name); });
+  else steps.forEach(function(s) { if (reproWithin(s.task, target === '.' ? '' : target)) names.add(s.name); });
+  if (producers) {
+    var from = {};
+    (graph.step_edges || []).forEach(function(e) { (from[e.to] || (from[e.to] = [])).push(e.from); });
+    var queue = Array.from(names);
+    while (queue.length) (from[queue.pop()] || []).forEach(function(p) { if (!names.has(p)) { names.add(p); queue.push(p); } });
+  }
+  return Array.from(names);
+}
+/* What the build would run, costed from each step's last recorded run: the
+   steps whose own state is stale, missing, or failed, plus the forced targets.
+   A step stale only through upstream reruns if its inputs change; an
+   `unverified` one then needs its online-only files, and otherwise never runs.
+   Mirrors the runner's download gate: when a step that will run reads a file
+   not on this machine that no running step writes first, nothing runs. */
+function reproBuildEstimate(target, mode) {
+  var statuses = reproStatusIndex(_reproData), targets = new Set(reproBuildScope(_reproData.graph, target, false));
+  var scope = new Set(reproBuildScope(_reproData.graph, target, mode !== 'only'));
+  var run = [], maybe = 0, needs = 0, online = 0, total = 0, unknown = 0;
+  scope.forEach(function(name) {
+    var entry = statuses[name], ch = reproChannels(entry), upstream = entry && entry.origin && scope.has(entry.origin);
+    if ((mode === 'force' && targets.has(name)) || ['stale', 'missing', 'failed'].indexOf(ch.own) >= 0) run.push(entry);
+    else if (ch.own === 'unverified') { if (upstream) needs++; else online++; }
+    else if (upstream) maybe++;
+  });
+  var gate = reproGatedFiles(run);
+  if (gate.length) {
+    var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0;
+    sized.forEach(function(f) { bytes += f.size; });
+    return 'Would run nothing: ' + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
+      + (sized.length ? ' (' + formatArtifactBytes(bytes) + ')' : '') + ': '
+      + gate.slice(0, 3).map(function(f) { return f.node; }).join(', ') + (gate.length > 3 ? ', +' + (gate.length - 3) + ' more' : '');
+  }
+  var tail = (maybe ? ' · ' + maybe + ' more if their inputs change' : '')
+    + (needs ? ' · ' + needs + ' need online-only files if their inputs change' : '')
+    + (online ? ' · ' + online + ' online-only, not run' : '');
+  if (!run.length) return 'Nothing stale' + tail;
+  run.forEach(function(entry) { if (entry && entry.duration != null) total += entry.duration; else unknown++; });
+  return run.length + ' step' + (run.length === 1 ? '' : 's') + ' would run'
+    + (run.length > unknown ? ' · ~' + reproDuration(total) + ' by last runs' : '')
+    + (unknown ? ' · ' + unknown + ' never ran' : '') + tail;
+}
+/* The inputs the runner's gate stops on: online-only, or absent with no
+   producer (`unknown`), and written first by no step in *run*. */
+function reproGatedFiles(run) {
+  var written = new Set(), gated = {};
+  run.forEach(function(entry) { (entry && entry.files || []).forEach(function(f) { if (f.role === 'output') written.add(f.node); }); });
+  run.forEach(function(entry) {
+    (entry && entry.files || []).forEach(function(f) {
+      if (f.role === 'dependency' && (f.online_only || f.outcome === 'unknown') && !written.has(f.node)) gated[f.node] = f;
+    });
+  });
+  return Object.keys(gated).sort().map(function(node) { return gated[node]; });
+}
+
+/* Place a floating panel in the graph stage below its anchor, or above when it
+   would overflow, kept inside the stage. */
+function reproPlaceFloat(panel, anchor, stage) {
+  var a = anchor.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  var left = Math.min(Math.max(8, a.left - s.left), Math.max(8, s.width - panel.offsetWidth - 8));
+  var top = a.bottom - s.top + 5;
+  if (top + panel.offsetHeight > s.height - 8 && a.top - s.top - panel.offsetHeight - 5 >= 8) top = a.top - s.top - panel.offsetHeight - 5;
+  panel.style.left = left + 'px';
+  panel.style.top = Math.max(8, top) + 'px';
+}
+function reproCloseFloats(focusChip) {
+  reproCloseBuildMenu(focusChip);
+  reproCloseExplain(true);
+}
+
+function reproOpenBuildMenu(chip) {
+  var open = document.getElementById('rp-build-menu');
+  if (open && open.dataset.target === chip.dataset.value) { reproCloseBuildMenu(true); return; }
+  reproCloseFloats(false);
+  var stage = chip.closest('#view-reproduction') && chip.closest('#view-reproduction').querySelector('.repro-stage');
+  if (!stage || !_reproData) return;
+  var target = chip.dataset.value, hash = target.indexOf('#'), busy = _reproBuild.running;
+  var title = hash >= 0 ? target.slice(hash + 1) : reproTaskTitle(target === '.' ? '' : target);
+  var noun = hash >= 0 ? 'step' : 'task';
+  var items = [['', 'Build with producers'], ['only', 'Build only this ' + noun], ['force', 'Force rebuild this ' + noun]];
+  var menu = document.createElement('div');
+  menu.id = 'rp-build-menu';
+  menu.className = 'rp-menu-body rp-float';
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'Build ' + title);
+  menu.dataset.target = target;
+  menu.innerHTML = '<p class="rp-float-head">' + escapeHtml(title) + '</p>' + items.map(function(item) {
+    return (item[0] === 'force' ? '<hr>' : '') + '<button type="button" class="hc-btn rp-build-item" role="menuitem" data-rp-action="build" data-value="' + escapeAttr(target)
+      + '" data-mode="' + item[0] + '"' + (busy ? ' disabled' : '') + '><span class="rp-build-label">' + item[1] + '</span><code>' + escapeHtml(reproBuildCommand(target, item[0]))
+      + '</code><span class="rp-build-est">' + escapeHtml(reproBuildEstimate(target, item[0])) + '</span></button>';
+  }).join('') + (busy ? '<p class="repro-hint">A build is running in this worktree.</p>' : '');
+  menu.onkeydown = function(e) {
+    var items = Array.from(menu.querySelectorAll('button:not([disabled])')), at = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (items.length) items[(at + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+  };
+  stage.appendChild(menu);
+  chip.setAttribute('aria-expanded', 'true');
+  reproPlaceFloat(menu, chip, stage);
+  var first = menu.querySelector('button:not([disabled])');
+  if (first) first.focus({ preventScroll: true });
+}
+function reproCloseBuildMenu(focusChip) {
+  var menu = document.getElementById('rp-build-menu');
+  if (!menu) return;
+  var chip = Array.from(document.querySelectorAll('.rp-build-chip[aria-expanded="true"]'));
+  menu.remove();
+  chip.forEach(function(c) { c.setAttribute('aria-expanded', 'false'); if (focusChip) c.focus({ preventScroll: true }); });
+}
+
+async function reproBuildRequest(url, body) {
+  var response = await fetch(wtUrl(url), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  var payload = await response.json().catch(function() { return {}; });
+  if (!response.ok) throw new Error(payload.detail || ('refused (' + response.status + ')'));
+  return payload;
+}
+async function reproStartBuild(target, mode) {
+  reproCloseBuildMenu(false);
+  _reproBuild.error = '';
+  try {
+    var job = await reproBuildRequest('/api/repro/build', { target: target, only: mode === 'only', force: mode === 'force' });
+    _reproBuild.job = Object.assign({ alive: true }, job);
+    _reproBuild.running = true;
+    _reproBuild.seen = true;
+  } catch (e) { _reproBuild.error = 'Build not started: ' + e.message; }
+  reproPaintBuild();
+  if (_reproBuild.running) reproPollBuild();
+}
+async function reproStopBuild() {
+  try { await reproBuildRequest('/api/repro/build/stop', {}); }
+  catch (e) { _reproBuild.error = 'Could not stop the build: ' + e.message; reproPaintBuild(); }
+  reproPollBuild();
+}
+async function reproPollBuild() {
+  clearTimeout(_reproBuildTimer);
+  _reproBuildTimer = null;
+  if (!reproActionsOn()) return;
+  var wt = ACTIVE_WT, was = _reproBuild.wt === wt && _reproBuild.running, state;
+  try {
+    var response = await fetch(wtUrl('/api/repro/build'));
+    if (!response.ok) return;
+    state = await response.json();
+  } catch (e) { return; }
+  if (wt !== ACTIVE_WT) return;
+  _reproBuild.running = state.running;
+  _reproBuild.job = state.job;
+  _reproBuild.wt = wt;
+  _reproBuild.steps = {};
+  (state.steps || []).forEach(function(s) { _reproBuild.steps[s.name] = s; });
+  if (state.running) { _reproBuild.seen = true; _reproBuildTimer = setTimeout(reproPollBuild, REPRO_BUILD_POLL_MS); }
+  if (was && !state.running) onReproUpdated();
+  else reproPaintBuild();
+}
+
+function reproBuildStatusHTML() {
+  var build = _reproBuild, job = build.job;
+  if (build.wt !== ACTIVE_WT && !build.error) return '';
+  if (build.error) return '<span class="rp-build-error">' + escapeHtml(build.error) + '</span>';
+  if (build.running) {
+    var count = Object.keys(build.steps).length;
+    return '<span class="rp-build-live">▶ Building ' + (job && job.alive ? '<code>' + escapeHtml(job.command) + '</code>' : 'from outside the dashboard')
+      + (count ? ' · ' + count + ' running' : '') + '</span>' + (job && job.alive ? reproButton('Stop', 'build-stop') : '');
+  }
+  var recent = job && job.ended_at && (build.seen || Date.now() / 1000 - job.ended_at < REPRO_BUILD_RECENT_S);
+  if (!recent || !job.summary) return '';
+  return '<span class="rp-build-done' + (job.returncode ? ' is-failed' : '') + '">Last build: ' + escapeHtml(job.summary) + '</span>'
+    + (job.detail && job.detail.length ? '<pre class="rp-build-detail">' + escapeHtml(job.detail.join('\n')) + '</pre>' : '')
+    + (job.log_tail ? '<details class="rp-menu rp-build-log" data-rp-menu="build-log"><summary>Log</summary><div class="rp-menu-body"><p><code>' + escapeHtml(job.command)
+      + '</code></p><pre class="repro-log">' + escapeHtml(job.log_tail) + '</pre></div></details>' : '');
+}
+/* Repaint build state in place, so polling never re-lays out the graph. */
+function reproPaintBuild() {
+  var container = document.getElementById('view-reproduction');
+  if (!container || !_reproData) return;
+  var statuses = reproStatusIndex(_reproData), job = _reproBuild.job;
+  container.querySelectorAll('.repro-node[data-step]').forEach(function(node) {
+    var name = node.dataset.step, entry = statuses[name], state = node.querySelector('.repro-node-label');
+    node.classList.toggle('is-running', reproIsRunning(name, entry));
+    if (state) state.textContent = state.dataset.base + reproNodeMeta(name, entry);
+  });
+  container.querySelectorAll('.rp-build-chip').forEach(function(chip) {
+    var building = _reproBuild.running && job && job.alive && job.target === chip.dataset.value;
+    chip.classList.toggle('is-building', building);
+    if (!chip.classList.contains('rp-build-chip-step')) chip.textContent = building ? 'Building…' : chip.dataset.label;
+  });
+  var host = container.querySelector('#repro-build-status'), html = reproBuildStatusHTML();
+  if (host && host.dataset.html !== html) { host.innerHTML = html; host.dataset.html = html; }
+}
+
+/* ── The explain hover card ── */
+function reproBindExplain(container) {
+  if (container._rpExplainBound) return;
+  container._rpExplainBound = true;
+  function anchorOf(target) { return target && target.closest ? target.closest('[data-rp-explain]') : null; }
+  container.addEventListener('pointerover', function(e) {
+    if (e.target.closest('#rp-explain-card')) { clearTimeout(_reproExplainTimer); return; }
+    var anchor = anchorOf(e.target);
+    if (anchor) reproScheduleExplain(anchor);
+  });
+  container.addEventListener('pointerout', function(e) {
+    var to = e.relatedTarget;
+    if (to && (to.closest('#rp-explain-card') || anchorOf(to) === anchorOf(e.target))) return;
+    if (anchorOf(e.target) || e.target.closest('#rp-explain-card')) reproScheduleExplain(null);
+  });
+  container.addEventListener('focusin', function(e) {
+    var anchor = anchorOf(e.target);
+    if (anchor && e.target.matches(':focus-visible')) reproScheduleExplain(anchor);
+  });
+  container.addEventListener('focusout', function(e) {
+    if (anchorOf(e.target) && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('#rp-explain-card'))) reproScheduleExplain(null);
+  });
+  container.addEventListener('wheel', function() { reproCloseBuildMenu(false); if (!_reproExplainPinned) reproCloseExplain(false); }, { passive: true });
+}
+function reproScheduleExplain(anchor) {
+  clearTimeout(_reproExplainTimer);
+  if (_reproExplainPinned && document.getElementById('rp-explain-card')) return;
+  _reproExplainPinned = false;
+  _reproExplainTimer = setTimeout(function() { if (anchor && anchor.isConnected) reproShowExplain(anchor); else reproCloseExplain(false); }, anchor ? REPRO_EXPLAIN_DELAY_MS : 200);
+}
+function reproExplainFetch(target, diff) {
+  var key = target + (diff ? '\n--diff' : '');
+  if (!_reproExplainCache[key]) {
+    _reproExplainCache[key] = fetch(wtUrl('/api/repro/explain?target=' + encodeURIComponent(target) + (diff ? '&diff=1' : ''))).then(function(response) {
+      return response.json().catch(function() { return {}; }).then(function(body) {
+        if (!response.ok) throw new Error(body.detail || ('explain failed (' + response.status + ')'));
+        return body;
+      });
+    });
+    _reproExplainCache[key].catch(function() { delete _reproExplainCache[key]; });
+  }
+  return _reproExplainCache[key];
+}
+function reproShowExplain(anchor) {
+  var target = anchor.dataset.rpExplain, card = document.getElementById('rp-explain-card');
+  if (card && card.dataset.target === target) return;
+  var stage = anchor.closest('#view-reproduction') && anchor.closest('#view-reproduction').querySelector('.repro-stage');
+  if (!stage || !_reproData) return;
+  reproCloseExplain(false);
+  card = document.createElement('div');
+  card.id = 'rp-explain-card';
+  card.className = 'rp-menu-body rp-float rp-explain';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-label', 'Why ' + target + ' is not fresh');
+  card.dataset.target = target;
+  card._anchor = anchor;
+  stage.appendChild(card);
+  reproRenderExplain(card, null);
+  reproExplainFetch(target, false).then(function(result) { if (card.isConnected) reproRenderExplain(card, result); })
+    .catch(function(e) { if (card.isConnected) reproRenderExplain(card, { error: e.message }); });
+}
+function reproPinExplain() {
+  var card = document.getElementById('rp-explain-card');
+  if (!card || _reproExplainPinned) return;
+  _reproExplainPinned = true;
+  clearTimeout(_reproExplainTimer);
+  card.classList.add('is-pinned');
+  var target = card.dataset.target, task = target.indexOf('#') < 0;
+  reproExplainFetch(target, task).then(function(result) { if (card.isConnected) reproRenderExplain(card, result); })
+    .catch(function(e) { if (card.isConnected) reproRenderExplain(card, { error: e.message }); });
+}
+function reproCloseExplain(force) {
+  if (_reproExplainPinned && !force) return;
+  clearTimeout(_reproExplainTimer);
+  _reproExplainPinned = false;
+  var card = document.getElementById('rp-explain-card');
+  if (card) card.remove();
+}
+function reproExplainRow(row, withStep, pinned) {
+  return '<li><code>' + escapeHtml(row.node) + '</code> <span class="repro-hint">' + escapeHtml(row.kind) + (withStep ? ' · ' + escapeHtml(row.step) : '') + '</span>'
+    + (row.evidence ? '<div class="rp-explain-evidence">' + escapeHtml(row.evidence) + '</div>' : '')
+    + (pinned && row.diff ? '<pre class="repro-log">' + escapeHtml(row.diff) + '</pre>' : pinned && row.diffstat ? '<div class="repro-hint">' + escapeHtml(row.diffstat) + '</div>' : '') + '</li>';
+}
+function reproRenderExplain(card, result) {
+  var target = card.dataset.target, hash = target.indexOf('#'), pinned = _reproExplainPinned, statuses = reproStatusIndex(_reproData), head, body = '';
+  if (hash >= 0) {
+    var entry = statuses[target.slice(hash + 1)], ch = reproChannels(entry);
+    head = '<p class="rp-float-head"><span class="repro-step-state ' + ch.cls + '"><span class="repro-glyph">' + ch.glyph + '</span> ' + escapeHtml(ch.label) + '</span> '
+      + escapeHtml(target.slice(hash + 1)) + '</p><p class="rp-explain-reason">' + escapeHtml(entry ? entry.reason : '') + '</p>';
+  } else {
+    var path = target === '.' ? '' : target, steps = (_reproData.graph.steps || []).filter(function(s) { return reproWithin(s.task, path); });
+    var stale = steps.filter(function(s) { return reproStateOf(statuses[s.name]) !== 'fresh'; });
+    head = '<p class="rp-float-head">' + escapeHtml(reproTaskTitle(path)) + '</p><p class="rp-explain-reason">' + stale.length + ' of ' + steps.length + ' steps not fresh</p>';
+  }
+  if (!result) body = '<p class="repro-hint">Loading why…</p>';
+  else if (result.error) body = '<p class="rp-build-error">' + escapeHtml(result.error) + '</p>';
+  else {
+    body = (result.groups || []).map(function(group) {
+      return '<section><h4>' + escapeHtml(group.hint || group.cause) + '</h4><ul>' + group.rows.map(function(row) { return reproExplainRow(row, hash < 0, pinned); }).join('') + '</ul></section>';
+    }).join('');
+    var bare = (result.steps || []).filter(function(s) { return s.status !== 'fresh' && (!s.rows.length || s.status === 'failed'); });
+    if (hash < 0 && bare.length) body += '<section><h4>Status (no hash to resolve)</h4><ul>' + bare.map(function(s) { return '<li><code>' + escapeHtml(s.name) + '</code> <span class="repro-hint">' + escapeHtml(s.status + ' · ' + s.reason) + '</span></li>'; }).join('') + '</ul></section>';
+    if (result.errors && result.errors.length) body += '<section><h4>Graph errors · build refuses these steps</h4><ul>' + result.errors.map(function(f) { return '<li>' + escapeHtml(f.message) + '</li>'; }).join('') + '</ul></section>';
+    if (!body) body = '<p class="repro-hint">No changed file to trace; the reason above is the whole story.</p>';
+    var diffs = (result.groups || []).some(function(g) { return g.rows.some(function(r) { return r.diff || r.diffstat || hash < 0; }); });
+    body += '<div class="rp-explain-actions">' + (pinned ? reproButton('Close', 'explain-close') : diffs ? reproButton('Show diffs', 'explain-pin') : '') + '</div>';
+  }
+  card.innerHTML = head + '<div class="rp-explain-body">' + body + '</div>';
+  var stage = card.parentElement;
+  if (stage && card._anchor && card._anchor.isConnected) reproPlaceFloat(card, card._anchor, stage);
+}
+
+function reproDetailRow(label, valueHtml) {
+  return '<dt>' + label + '</dt><dd>' + valueHtml + '</dd>';
+}
+
+/* An out's logical path, naming the sidecar when one stands in for it: the
+   runner hashes the sidecar instead, so a large intermediate reading fresh is
+   only explicable with the substitution on screen. */
+function reproOutLabel(out) {
+  return out.path.logical + (out.sidecar ? ' (hashed via ' + out.sidecar.logical + ')' : '');
+}
+
+function reproPathList(paths) {
+  if (!paths.length) return '<span class="repro-path">—</span>';
+  return '<ul>' + paths.map(function(p) {
+    return '<li><span class="repro-path">' + escapeHtml(p) + '</span></li>';
+  }).join('') + '</ul>';
+}
+
+/* Open the Reproduction view on one step — the target of a task-page step row.
+   A step the current scope hides widens the scope rather than landing on
+   a canvas the step is not on. */
+function revealReproStep(name, owner) {
+  var wt=ACTIVE_WT;
+  return loadReproData(false).then(function(data){
+    if(wt!==ACTIVE_WT)return;
+    var step=(data.graph.steps||[]).find(function(s){return s.name===name;});
+    if(!step||(owner!==undefined&&step.task!==owner)){
+      _reproNotice='Step '+name+' is not declared'+(owner!==undefined?' in '+reproTaskTitle(owner):' in this project')+'.';
+      if(currentView!=='reproduction')showView('reproduction');
+      drawReproView(document.getElementById('view-reproduction'),data);return;
+    }
+    _reproInspectorClosed=false;reproRevealOwner(step.task);
+    selectReproStep(name);
+    if(currentView==='reproduction'){drawReproView(document.getElementById('view-reproduction'),data);_reproViewport.zoom=1;reproCenter();}
+    syncTreeRollups();
+  });
+}
+
+/* Each rendered step row provides the canonical Markdown anchor. */
+function renderReproStepTable(renderedMd, taskPath) {
+  loadReproData(false).then(function(data) {
+    if (!renderedMd.isConnected) return;
+    var steps = (data.graph.steps || []).filter(function(s) { return s.task === taskPath; });
+    if (!steps.length) return;
+    var byName = reproStatusIndex(data);
+    var rows = steps.map(function(s) {
+      var entry = byName[s.name];
+      var ch = reproChannels(entry);
+      var outs = (s.outs || []).map(reproOutLabel).join(', ');
+      return '<tr id="step-'+escapeAttr(s.name)+'"><td><button class="repro-step-name" type="button" data-step="'
+        + escapeAttr(s.name) + '">' + escapeHtml(s.name) + '</button>'
+        + (s.kind === 'check' ? ' <span class="repro-check-tag">✓</span>' : '') + '</td>'
+        + '<td><span class="repro-step-state ' + ch.cls + '"><span class="repro-glyph">'
+        + ch.glyph + '</span>' + escapeHtml(ch.label) + '</span></td>'
+        + '<td>' + escapeHtml(entry ? entry.reason : 'runner state unavailable') + '</td>'
+        + '<td class="repro-outs">' + escapeHtml(outs || '—') + '</td></tr>';
+    }).join('');
+    var old = renderedMd.querySelector(':scope > .repro-steps');
+    if (old) old.remove();
+    var host = document.createElement('div');
+    host.className = 'repro-steps';
+    host.innerHTML = '<table><thead><tr><th>Step</th><th>State</th><th>Reason</th><th>Outs</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    host.onclick = function(event) {
+      var btn = event.target.closest('.repro-step-name');
+      if (btn && btn.dataset.step) revealReproStep(btn.dataset.step);
+    };
+    renderedMd.insertBefore(host, renderedMd.firstChild);
+  }).catch(function() { /* no graph payload: the raw YAML block still stands */ });
+}
+
+/* Re-run every step table already on the active card (a build moved the lock). */
+function refreshReproStepTables() {
+  document.querySelectorAll(
+    '#active-node [data-section="' + REPRO_SECTION + '"] .rendered-md[data-rendered]'
+  ).forEach(function(el) {
+    var node = el.closest('.task-node');
+    renderReproStepTable(el, node ? node.dataset.path : '');
+  });
+}
+
+/* A build rewrote the lock: drop the cached payloads and repaint whatever is
+   showing them. */
+function onReproUpdated() {
+  _reproData = null;
+  _reproExplainCache = {};
+  if (currentView === 'reproduction') renderReproView(true);
+  else loadReproData(true).then(function(){refreshReproStepTables();syncTreeRollups();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function() {});
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -945,20 +2805,19 @@ function parseArtifactHash() {
   var query = h.indexOf('?');
   if (query === -1) return '';
   var params = new URLSearchParams(h.slice(query + 1));
-  return params.get('attachment') || '';
+  return params.get('attachment') || (params.get('file') ? '/' + params.get('file') : '');
 }
 
 /* The one navigation entry point. Sets activePath, writes history (unless
    restoring), then refreshes every derived region. */
 function setActive(path, artifactPath) {
   path = path || '';
+  if(!restoring){_reproSelected='';_reproNav.selected='';renderReproDetail('');}
   activePath = path;
   activeArtifactPath = artifactPath || '';
 
   if (!restoring) {
-    var hash = '#/' + path + (activeArtifactPath
-      ? '?attachment=' + encodeURIComponent(activeArtifactPath)
-      : '');
+    var hash = reproHash();
     /* Relative '#/...' keeps location.search (the ?wt=) intact, so a task-path
        navigation never drops the active worktree from the URL. */
     if (location.hash !== hash) history.pushState({ path: path, wt: ACTIVE_WT }, '', hash);
@@ -970,12 +2829,12 @@ function setActive(path, artifactPath) {
   }
 
   /* A node click always means "show me the workspace." */
-  if (currentView !== 'workspace') showView('workspace');
+  if (activeArtifactPath) showView('workspace');
 
   updateBreadcrumb(path, activeArtifactPath);
   /* The header VS Code button opens the active task's file, so it follows nav. */
   updateWorktreeOpenHref();
-  _lastSidebarUpdate = updateSidebar(path);
+  _lastSidebarUpdate = updateSidebar(path).then(function(){syncTreeRollups();applyWorkspaceFilters(false);});
   if (activeArtifactPath) {
     loadActiveArtifact(path, activeArtifactPath);
     var children = document.getElementById('children-dag');
@@ -989,6 +2848,7 @@ function setActive(path, artifactPath) {
      overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
      module below; guard so the router still works if it ever loads first. */
   if (typeof onNavigationChrome === 'function') onNavigationChrome();
+  updateWorkspaceFilterSummary();
 }
 
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
@@ -1041,7 +2901,7 @@ function updateBreadcrumb(path, artifactPath) {
   }
   if (artifactPath) {
     addSep();
-    addCrumb(artifactPath.replace(/^attachments\//, ''), path, true);
+    addCrumb(artifactPath.replace(/^attachments\/|^\//, ''), path, true);
   }
 }
 
@@ -1145,6 +3005,14 @@ function openLocalPath(path, target) {
   });
 }
 
+document.addEventListener('click',function(e){
+  var link=e.target.closest&&e.target.closest('a.task-link');
+  if(!link||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  var href=link.getAttribute('href');if(!href||!href.startsWith('#/'))return;
+  e.preventDefault();var parts=href.slice(2).split('?'),params=new URLSearchParams(parts.slice(1).join('?'));
+  if(params.has('step'))revealReproStep(params.get('step'),parts[0]);else reproSelectTask(parts[0]);
+});
+
 /* One delegated handler for every local-open control: the card-head button, the
    header VS Code button, body file links, attachment links, and the artifact
    pane's Open button all carry data-open-path. A plain left-click opens on the
@@ -1199,7 +3067,9 @@ async function loadActiveNode(path) {
     setTabTitle(path ? title : SITE_TITLE);
     var status = navRowStatus(path);
     /* With the local-open route the button hands task.md to whatever application
-       this machine uses for markdown; without it, today's vscode:// deep link. */
+       this machine uses for markdown; a standalone export keeps the vscode://
+       deep link.  A live page on another machine has nothing to open it with,
+       and the card already shows it, so it gets no button. */
     var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;
     var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub'
       : (openNative ? 'Open task.md in the default application' : 'Open task.md in VS Code');
@@ -1211,8 +3081,8 @@ async function loadActiveNode(path) {
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + ((status && !window.DOC_MODE) ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       /* Open this task's task.md in the configured file target. */
-      + '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
-      + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>'
+      + ((openNative || REPO_FILE_BASE || window.STANDALONE) ? '<a class="open-btn" target="_blank" title="' + fileButtonTitle + '">'
+      + fileButtonIcon + '<span>' + fileButtonLabel + '</span></a>' : '')
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -1270,7 +3140,8 @@ async function loadActiveNode(path) {
     if (path && !pathTitles[path]) patchTabTitleWhenReady(path, token);
   } catch (e) {
     if (token !== loadActiveNode._token) return;
-    region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
+    region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + escapeHtml(e.message) + '</p><button type="button" class="hc-btn" id="retry-task-load">Retry</button>';
+    region.querySelector('#retry-task-load').onclick=function(){loadActiveNode(path);};
     setTabTitle('');   /* same card/tab agreement as the not-ok branch above */
   }
 }
@@ -1622,6 +3493,16 @@ function loadAttachmentBranches(scope) {
 }
 
 function renderActiveArtifactBody(taskPath, entry, body, token) {
+  var languages = { python: 'python', julia: 'julia', r: 'r' };
+  if (!entry.previewable && entry.head != null) {
+    var partial = document.createElement('p');
+    partial.className = 'artifact-state';
+    partial.textContent = 'Showing the first ' + formatArtifactBytes(new Blob([entry.head]).size) + ' of '
+      + formatArtifactBytes(entry.size) + ' — download the file for the rest.';
+    body.appendChild(partial);
+    body.appendChild(renderArtifactCode(entry.head, languages[entry.kind] || ''));
+    return;
+  }
   if (!entry.previewable) {
     var unavailable = document.createElement('p');
     unavailable.className = 'artifact-state artifact-state-unavailable';
@@ -1632,7 +3513,7 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
   if (entry.kind === 'image') {
     var image = document.createElement('img');
     image.className = 'artifact-image-preview';
-    image.src = artifactResourceUrl(taskPath, entry.path);
+    image.src = entry.url || artifactResourceUrl(taskPath, entry.path);
     image.alt = entry.name;
     body.appendChild(image);
     return;
@@ -1642,26 +3523,30 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     frame.className = 'artifact-pdf-preview';
     frame.setAttribute('sandbox', '');
     frame.title = 'PDF preview: ' + entry.name;
-    frame.src = artifactResourceUrl(taskPath, entry.path);
+    frame.src = entry.url || artifactResourceUrl(taskPath, entry.path);
     body.appendChild(frame);
     return;
   }
   body.textContent = 'Loading preview…';
-  readArtifactText(taskPath, entry).then(function(text) {
+  var contentBase = entry.url
+    ? { projectDir: entry.path.slice(1).replace(/\/?[^/]*$/, '') }
+    : { artifactPath: entry.path };
+  var read = entry.url ? fetch(entry.url).then(function(resp) {
+    if (!resp.ok) throw new Error('Preview unavailable (' + resp.status + ').');
+    return resp.text();
+  }) : readArtifactText(taskPath, entry);
+  read.then(function(text) {
     if (token !== _artifactPreviewToken || taskPath !== activePath
         || entry.path !== activeArtifactPath) return;
     body.innerHTML = '';
     if (entry.kind === 'markdown') {
       var markdown = document.createElement('div');
       markdown.className = 'rendered-md artifact-markdown-preview';
-      markdown.innerHTML = renderMarkdown(
-        text, null, taskPath, { artifactPath: entry.path }
-      );
+      markdown.innerHTML = renderMarkdown(text, null, taskPath, contentBase);
       body.appendChild(markdown);
     } else if (entry.kind === 'notebook') {
-      body.appendChild(renderNotebookPreview(text, taskPath, entry.path));
+      body.appendChild(renderNotebookPreview(text, taskPath, contentBase));
     } else {
-      var languages = { python: 'python', julia: 'julia', r: 'r' };
       body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
     }
   }).catch(function(error) {
@@ -1671,11 +3556,97 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
   });
 }
 
+/* The reading-pane header an attachment and a project file share. */
+function buildArtifactPageHead(taskPath, name) {
+  var head = document.createElement('header');
+  head.className = 'active-node-head attachment-active-head';
+  var heading = document.createElement('h2');
+  heading.className = 'active-node-title';
+  heading.tabIndex = -1;
+  heading.textContent = name;
+  /* An attachment is a page in its own right, so the tab names it too. */
+  setTabTitle(name);
+  head.appendChild(heading);
+  var owner = document.createElement('button');
+  owner.type = 'button';
+  owner.className = 'attachment-owner-action';
+  owner.textContent = 'Back to task';
+  owner.onclick = function() { setActive(taskPath); };
+  head.appendChild(owner);
+  return head;
+}
+
+function showArtifactLoadError(region, token, error) {
+  if (token !== _artifactPreviewToken) return;
+  region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
+  region.firstChild.textContent = error.message;
+  /* The pane names no attachment now, so neither may the tab. */
+  setTabTitle('');
+}
+
+function finishArtifactPage(region) {
+  var heading = region.querySelector('.active-node-title');
+  if (_moveFocusOnLoad && heading) {
+    _moveFocusOnLoad = false;
+    heading.focus({ preventScroll: true });
+  }
+}
+
+function loadProjectFile(taskPath, filePath, region, token) {
+  fetch(wtUrl('/api/file-peek?path=' + encodeURIComponent(filePath))).then(function(resp) {
+    if (!resp.ok) throw new Error(resp.status === 403 ? 'This file is outside the project.' : 'File unavailable (' + resp.status + ').');
+    return resp.json();
+  }).then(function(peek) {
+    if (token !== _artifactPreviewToken || taskPath !== activePath
+        || '/' + filePath !== activeArtifactPath) return;
+    var name = filePath.split('/').pop() || filePath, url = projectFileUrl(filePath, peek.mtime_ns);
+    region.innerHTML = '';
+    var head = buildArtifactPageHead(taskPath, name);
+    if (peek.size != null && !peek.online_only) {
+      var actions = document.createElement('div');
+      actions.className = 'artifact-actions';
+      var download = document.createElement('a');
+      download.className = 'artifact-action';
+      download.href = url;
+      download.download = name;
+      download.textContent = 'Download';
+      actions.appendChild(download);
+      head.appendChild(actions);
+    }
+    region.appendChild(head);
+    document.querySelectorAll('.attachment-file-row.nav-active').forEach(function(row) {
+      row.classList.remove('nav-active');
+    });
+    var meta = document.createElement('p');
+    meta.className = 'attachment-active-meta';
+    meta.textContent = filePath + (peek.exists && !peek.online_only ? ' · ' + projectFileMeta(peek) : '');
+    region.appendChild(meta);
+    var body = document.createElement('div');
+    body.className = 'artifact-preview-body attachment-active-body';
+    region.appendChild(body);
+    if (peek.online_only) {
+      var cloud = document.createElement('p');
+      cloud.className = 'artifact-state';
+      cloud.textContent = onlineOnlyNote(peek);
+      body.appendChild(cloud);
+    } else if (peek.exists && peek.size != null) {
+      renderActiveArtifactBody(taskPath, Object.assign({}, peek, { path: '/' + filePath, name: name, url: url }), body, token);
+    } else {
+      var state = document.createElement('p');
+      state.className = 'artifact-state';
+      state.textContent = !peek.exists ? 'Not built yet.' : 'Folders and special files have no preview.';
+      body.appendChild(state);
+    }
+    finishArtifactPage(region);
+  }).catch(function(error) { showArtifactLoadError(region, token, error); });
+}
+
 function loadActiveArtifact(taskPath, artifactPath) {
   var region = document.getElementById('active-node');
   if (!region) return;
   var token = ++_artifactPreviewToken;
-  region.innerHTML = '<p class="artifact-state">Loading attachment…</p>';
+  region.innerHTML = '<p class="artifact-state">Loading ' + (artifactPath.charAt(0) === '/' ? 'file' : 'attachment') + '…</p>';
+  if (artifactPath.charAt(0) === '/') { loadProjectFile(taskPath, artifactPath.slice(1), region, token); return; }
   fetchAttachmentManifest(taskPath).then(function(manifest) {
     if (token !== _artifactPreviewToken || taskPath !== activePath
         || artifactPath !== activeArtifactPath) return;
@@ -1684,21 +3655,7 @@ function loadActiveArtifact(taskPath, artifactPath) {
     var entry = artifactManifestEntry(taskPath, artifactPath);
     if (!entry) throw new Error('This attachment is unavailable.');
     region.innerHTML = '';
-    var head = document.createElement('header');
-    head.className = 'active-node-head attachment-active-head';
-    var heading = document.createElement('h2');
-    heading.className = 'active-node-title';
-    heading.tabIndex = -1;
-    heading.textContent = entry.name;
-    /* An attachment is a page in its own right, so the tab names it too. */
-    setTabTitle(entry.name);
-    head.appendChild(heading);
-    var owner = document.createElement('button');
-    owner.type = 'button';
-    owner.className = 'attachment-owner-action';
-    owner.textContent = 'Back to task';
-    owner.onclick = function() { setActive(taskPath); };
-    head.appendChild(owner);
+    var head = buildArtifactPageHead(taskPath, entry.name);
     var actions = buildArtifactPreviewHead(taskPath, entry)
       .querySelector('.artifact-actions');
     if (actions) head.appendChild(actions);
@@ -1717,17 +3674,8 @@ function loadActiveArtifact(taskPath, artifactPath) {
         row.dataset.artifactOwner === taskPath
         && row.dataset.artifactPath === artifactPath);
     });
-    if (_moveFocusOnLoad) {
-      _moveFocusOnLoad = false;
-      heading.focus({ preventScroll: true });
-    }
-  }).catch(function(error) {
-    if (token !== _artifactPreviewToken) return;
-    region.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
-    region.firstChild.textContent = error.message;
-    /* The pane names no attachment now, so neither may the tab. */
-    setTabTitle('');
-  });
+    finishArtifactPage(region);
+  }).catch(function(error) { showArtifactLoadError(region, token, error); });
 }
 
 function refreshAttachmentManifest(taskPath, manifest) {
@@ -1911,7 +3859,7 @@ function installNotebookAdapter() {
       notebookJoin(value),
       null,
       ctx.taskPath || '',
-      { artifactPath: ctx.artifactPath || '' }
+      ctx.contentBase || {}
     );
   };
   nb.highlighter = function(value, pre, code, language) {
@@ -1948,7 +3896,7 @@ function installNotebookAdapter() {
         attached.text,
         null,
         ctx.taskPath || '',
-        { artifactPath: ctx.artifactPath || '' }
+        ctx.contentBase || {}
       );
       cell.appendChild(markdown);
       attached.warnings.forEach(function(name) {
@@ -1979,7 +3927,7 @@ function installNotebookAdapter() {
   return true;
 }
 
-function renderNotebookPreview(rawText, taskPath, artifactPath) {
+function renderNotebookPreview(rawText, taskPath, contentBase) {
   var outer = document.createElement('div');
   outer.className = 'notebook-preview';
   if (!installNotebookAdapter()) {
@@ -2001,7 +3949,7 @@ function renderNotebookPreview(rawText, taskPath, artifactPath) {
   }
   _notebookRenderContext = {
     taskPath: taskPath,
-    artifactPath: artifactPath,
+    contentBase: contentBase,
     notebook: parsed,
   };
   try {
@@ -2043,6 +3991,7 @@ function revealCardSection(wrapper, taskPath) {
       renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
       renderedMd.dataset.rendered = 'true';
     }
+    if (sectionName === REPRO_SECTION) renderReproStepTable(renderedMd, taskPath);
   }
 }
 
@@ -2089,9 +4038,8 @@ function patchTabTitleWhenReady(path, token) {
    child set (path, slug, title, status) and the inter-child dependency edges
    as JSON — no mermaid source, no text parsing; the root is special-cased
    (empty root would return the global graph, unrelated to this panel).
-   Children with no inter-dependency get a flat grid; children with at least
-   one inter-child dependency get the same cards in a layered topological flow
-   with per-card `↳ after:` footers. Output is cached per (path,
+   Children render as a flat grid; the Graph view draws their dependencies.
+   Output is cached per (path,
    child-status+edge-signature) so navigating back to an unchanged node
    restores the built HTML; a child whose status or sibling deps changed busts
    the cache and re-renders. */
@@ -2111,7 +4059,7 @@ async function loadChildrenDag(path) {
     var rootKids = rootChildrenFromNav();
     var rootSig = childrenSig(rootKids, {});
     renderChildren(region, path, rootSig, function() {
-      return rootKids.length ? buildChildGrid(rootKids) : '';
+      return '<button class="hc-btn" onclick="reproFocus(activePath)">Show in graph</button>' + (rootKids.length ? buildChildGrid(rootKids) : '');
     });
     return;
   }
@@ -2139,9 +4087,7 @@ async function loadChildrenDag(path) {
 
   var sig = childrenSig(info.children, info.edges);
   renderChildren(region, path, sig, function() {
-    return info.hasEdges
-      ? buildChildFlow(info.children, info.edges)
-      : buildChildGrid(info.children);
+    return '<button class="hc-btn" onclick="reproFocus(activePath)">Show in graph</button>' + buildChildGrid(info.children);
   });
 }
 
@@ -2171,8 +4117,8 @@ function renderChildren(region, path, sig, build) {
 }
 
 /* Turn a GET /api/children-graph?root=<path> JSON payload into the
-   direct-children set plus the inter-child dependency edges the flow/grid
-   builders consume. `edges[childPath]` is the list of sibling paths that
+   direct-children set plus the inter-child dependency edges the cache
+   signature reads. `edges[childPath]` is the list of sibling paths that
    child directly depends on, straight off the server payload — no text
    parsing, no separate color->status map to keep in sync. Titles prefer the
    payload's own (non-lossy) title, falling back to the shared pathTitles
@@ -2213,23 +4159,12 @@ function rootChildrenFromNav() {
 }
 
 /* One clickable child card: slug + title + status badge, descending via the
-   delegated onChildCardClick on the enclosing container. `depPaths` (optional)
-   appends a `↳ after: <slug…>` footer naming the card's direct sibling deps. */
-function childCardHTML(c, depPaths) {
-  var deps = '';
-  if (depPaths && depPaths.length) {
-    var slugs = depPaths.map(function(d) {
-      return '<span class="dep-slug">' + escapeHtml(d.split('/').pop()) + '</span>';
-    }).join('<span class="dep-label">, </span>');
-    deps = '<span class="child-card-deps"><span class="dep-arrow">↳</span>'
-      + '<span class="dep-label">after: </span>' + slugs + '</span>';
-  }
-  return '<button class="child-card' + (depPaths && depPaths.length ? ' has-deps' : '')
-    + '" data-path="' + escapeAttr(c.path) + '">'
+   delegated onChildCardClick on the enclosing container. */
+function childCardHTML(c) {
+  return '<button class="child-card" data-path="' + escapeAttr(c.path) + '">'
     + (c.slug ? '<span class="child-card-slug">' + escapeHtml(c.slug) + '</span>' : '')
     + '<span class="child-card-title">' + escapeHtml(c.title) + '</span>'
     + (c.status ? '<span class="badge badge-' + c.status + '">' + c.status + '</span>' : '')
-    + deps
     + '</button>';
 }
 
@@ -2238,52 +4173,12 @@ var SUBTASK_HEADER = '<div class="dag-controls"><strong>Subtasks</strong>'
 
 /* Flat clickable grid for children with no inter-dependency. */
 function buildChildGrid(children) {
-  var cards = children.map(function(c) { return childCardHTML(c, null); }).join('');
+  var cards = children.map(function(c) { return childCardHTML(c); }).join('');
   return SUBTASK_HEADER
     + '<div class="child-grid" onclick="onChildCardClick(event)">' + cards + '</div>';
 }
 
-/* Layered dependency flow: the same cards grouped into topological tiers in
-   execution order (tier 0 = children depending on no sibling; tier k = children
-   whose sibling deps all sit in earlier tiers), stacked top->bottom with a
-   subtle inter-tier flow cue. Each dependent card footers `↳ after:` with its
-   direct sibling deps. Cycle-safe: a pass that places no remaining child drops
-   the leftovers into the final tier instead of looping. */
-function buildChildFlow(children, edges) {
-  var byPath = {};
-  children.forEach(function(c) { byPath[c.path] = c; });
-  /* Keep only deps that point at an actual sibling in this child set. */
-  var deps = {};
-  children.forEach(function(c) {
-    deps[c.path] = (edges[c.path] || []).filter(function(d) { return byPath[d]; });
-  });
-
-  var placed = {};
-  var remaining = children.map(function(c) { return c.path; });
-  var tiers = [];
-  while (remaining.length) {
-    var tier = remaining.filter(function(p) {
-      return deps[p].every(function(d) { return placed[d]; });
-    });
-    if (tier.length === 0) tier = remaining.slice();   /* cycle -> flush rest */
-    tier.forEach(function(p) { placed[p] = true; });
-    tiers.push(tier);
-    remaining = remaining.filter(function(p) { return !placed[p]; });
-  }
-
-  var tierHTML = tiers.map(function(tier, i) {
-    var cards = tier.map(function(p) {
-      return childCardHTML(byPath[p], deps[p]);
-    }).join('');
-    var sep = i < tiers.length - 1 ? '<div class="flow-sep" aria-hidden="true"></div>' : '';
-    return '<div class="flow-tier">' + cards + '</div>' + sep;
-  }).join('');
-
-  return SUBTASK_HEADER
-    + '<div class="child-flow" onclick="onChildCardClick(event)">' + tierHTML + '</div>';
-}
-
-/* Delegated click for both the grid and the flow: descend to the clicked child. */
+/* Delegated click for the grid: descend to the clicked child. */
 function onChildCardClick(event) {
   var card = event.target.closest('.child-card');
   if (card && card.dataset.path !== undefined) setActive(card.dataset.path);
@@ -2310,6 +4205,7 @@ window.addEventListener('popstate', function() {
   restoring = true;
   setActive(parseHash(), parseArtifactHash());
   restoring = false;
+  reproReadHash();
 });
 
 /* hashchange (manual address-bar hash edit): navigate to the new hash without
@@ -2317,10 +4213,14 @@ window.addEventListener('popstate', function() {
    re-fires this event, so no-op when the hash already matches activePath;
    otherwise apply it in restoring mode (no extra pushState/history entry). */
 window.addEventListener('hashchange', function() {
-  if (parseHash() === activePath && parseArtifactHash() === activeArtifactPath) return;
+  if (parseHash() === activePath && parseArtifactHash() === activeArtifactPath) {
+    reproReadHash();
+    return;
+  }
   restoring = true;
   setActive(parseHash(), parseArtifactHash());
   restoring = false;
+  reproReadHash();
 });
 
 /* Resolve the initial hash on load (default the root), normalize it with
@@ -2328,16 +4228,17 @@ window.addEventListener('hashchange', function() {
 function initRouter() {
   var path = parseHash();
   var artifactPath = parseArtifactHash();
+  var routeParams = new URLSearchParams((location.hash || '').split('?').slice(1).join('?'));
+  var reproState = routeParams.get('repro'), stepState=routeParams.get('step');
   restoring = true;
   history.replaceState(
     { path: path, attachment: artifactPath, wt: ACTIVE_WT },
     '',
-    '#/' + path + (artifactPath
-      ? '?attachment=' + encodeURIComponent(artifactPath)
-      : '')
+    '#/'+path+(routeParams.toString()?'?'+routeParams.toString():'')
   );
   setActive(path, artifactPath);
   restoring = false;
+  if (reproState || stepState) reproReadHash();
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -2362,6 +4263,7 @@ async function loadNavTree() {
     if (!resp.ok) return;
     container.innerHTML = await resp.text();
     markLazyNodes();
+    syncTreeRollups();
     indexNavTitles(container);
     applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
     loadAttachmentBranches(container);
@@ -2453,7 +4355,7 @@ async function toggleNavCaret(node) {
     node.dataset.needsLoad = 'false';
     await loadNavChildren(node);
   }
-  refreshRovingTabindex();
+  syncTreeRollups();applyWorkspaceFilters(false);refreshRovingTabindex();
 }
 
 /* Lazily fetch a node's body-free children into its .task-children container.
@@ -2468,6 +4370,7 @@ async function loadNavChildren(node) {
     if (!resp.ok) return false;
     children.innerHTML = await resp.text();
     markLazyNodes();
+    syncTreeRollups();
     indexNavTitles(children);
     applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
     loadAttachmentBranches(children);
@@ -2575,6 +4478,7 @@ async function updateSidebar(path) {
      naturally expanded one level than as a closed caret the user must re-open
      to see what they just navigated into. Leaf nodes are a no-op (guarded in
      expandNavNode). */
+  syncTreeRollups();
   await expandNavNode(target);
 
   var row = target.querySelector(':scope > .task-row');
@@ -2585,6 +4489,7 @@ async function updateSidebar(path) {
        lands on it. (applyTreeAria also keeps roles current after any lazy load
        the ancestor walk just triggered.) */
     applyTreeAria();
+    syncTreeRollups();applyWorkspaceFilters(false);
     requestAnimationFrame(function() {
       row.scrollIntoView({ block: 'nearest' });
     });
@@ -2607,7 +4512,7 @@ function showTreeAndExpand(path) { return revealTask(path); }
    --sidebar-width custom property; the sidebar slides via transform so pin and
    reveal stay smooth. Pin state + chosen width persist in localStorage.
    ════════════════════════════════════════════════════════════════════════ */
-var SB_WIDTH_MIN = 200, SB_WIDTH_MAX = 480, SB_WIDTH_DEFAULT = 280;
+var SB_WIDTH_MIN = 200, SB_WIDTH_DEFAULT = 280;
 var SB_NARROW = 860;                 /* px: below this the sidebar is a drawer */
 /* px: a touch device in landscape needs at least this much width to carry the
    side-by-side pinned layout; below it (or in portrait) touch falls to drawer. */
@@ -2668,9 +4573,9 @@ function renderSidebarWidth(w) {
 function sidebarWidthMax() {
   var ws = workspaceEl();
   if (ws && ws.classList.contains('sb-drawer')) {
-    return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.floor(window.innerWidth * 0.86)));
+    return Math.max(SB_WIDTH_MIN, Math.floor(window.innerWidth * 0.86));
   }
-  return SB_WIDTH_MAX;
+  return Math.max(SB_WIDTH_MIN,window.innerWidth-360);
 }
 
 function clampSidebarWidth(w) {
@@ -2776,7 +4681,7 @@ function initSidebarChrome() {
     var savedPin = localStorage.getItem('dashboard-sidebar-pinned');
     if (savedPin !== null) sbPinned = savedPin === '1';
     var savedW = parseInt(localStorage.getItem('dashboard-sidebar-width'), 10);
-    if (!isNaN(savedW)) sbWidth = clampSidebarWidth(savedW);
+    if (!isNaN(savedW)) sbWidth = Math.max(SB_WIDTH_MIN,savedW);
   } catch (e) {}
   applySidebarWidth(sbWidth);
   applySidebarMode();
@@ -2862,10 +4767,11 @@ function initSidebarResizer() {
   rz.addEventListener('keydown', function(ev) {
     var step = ev.shiftKey ? 48 : 16;
     var next = null;
-    if (ev.key === 'ArrowLeft')       next = sbWidth - step;
-    else if (ev.key === 'ArrowRight') next = sbWidth + step;
+    var shown=Number(rz.getAttribute('aria-valuenow'));
+    if (ev.key === 'ArrowLeft')       next = shown - step;
+    else if (ev.key === 'ArrowRight') next = shown + step;
     else if (ev.key === 'Home')       next = SB_WIDTH_MIN;
-    else if (ev.key === 'End')        next = SB_WIDTH_MAX;
+    else if (ev.key === 'End')        next = sidebarWidthMax();
     if (next === null) return;
     ev.preventDefault();
     revealSidebar();
@@ -2952,115 +4858,6 @@ function drawerKeydown(ev) {
 function onNavigationChrome() {
   hideSidebar(0);
   closeDrawer();
-  closeSearchSheet();
-}
-
-/* ── Phone search/filter sheet ────────────────────────────────────────────
-   On phone the inline #search-box + #filter-status are hidden; the sheet adopts
-   them (so search/filter logic is reused unchanged), shows them at a tappable
-   size, and returns them to the header on close. Backdrop + Esc + focus trap
-   mirror the drawer. The sheet closes on a status selection (a "done filtering"
-   signal); free-text search keeps it open so typing isn't interrupted. */
-var _searchSheetLastFocus = null;
-
-function toggleSearchSheet() {
-  var sheet = document.getElementById('search-sheet');
-  if (sheet && sheet.classList.contains('open')) closeSearchSheet();
-  else openSearchSheet();
-}
-
-function openSearchSheet() {
-  var sheet = document.getElementById('search-sheet');
-  var backdrop = document.getElementById('search-sheet-backdrop');
-  var body = document.getElementById('search-sheet-body');
-  var host = document.getElementById('search-host');
-  var trigger = document.getElementById('search-trigger');
-  if (!sheet || !backdrop || !body || !host) return;
-  if (sheet.classList.contains('open')) return;
-  _searchSheetLastFocus = document.activeElement;
-  body.appendChild(host);              /* adopt the live search/filter elements */
-  backdrop.classList.add('open');
-  sheet.classList.add('open');
-  if (trigger) trigger.setAttribute('aria-expanded', 'true');
-  var search = document.getElementById('search-box');
-  if (search) search.focus();
-  document.addEventListener('keydown', searchSheetKeydown, true);
-}
-
-function closeSearchSheet() {
-  var sheet = document.getElementById('search-sheet');
-  if (!sheet || !sheet.classList.contains('open')) return;
-  var backdrop = document.getElementById('search-sheet-backdrop');
-  var host = document.getElementById('search-host');
-  var controls = document.querySelector('.header-controls');
-  var trigger = document.getElementById('search-trigger');
-  sheet.classList.remove('open');
-  if (backdrop) backdrop.classList.remove('open');
-  /* Return the search/filter host to the header (just after the trigger button)
-     so it is inline again when the viewport widens. */
-  if (host && controls && trigger) controls.insertBefore(host, trigger.nextSibling);
-  else if (host && controls) controls.appendChild(host);
-  if (trigger) trigger.setAttribute('aria-expanded', 'false');
-  document.removeEventListener('keydown', searchSheetKeydown, true);
-  if (_searchSheetLastFocus && document.contains(_searchSheetLastFocus)) _searchSheetLastFocus.focus();
-  else if (trigger) trigger.focus();
-  _searchSheetLastFocus = null;
-}
-
-/* Focusable controls inside the open sheet, for the focus trap. */
-function searchSheetFocusables() {
-  var sheet = document.getElementById('search-sheet');
-  if (!sheet) return [];
-  return Array.prototype.filter.call(
-    sheet.querySelectorAll('button, input, select, [href], [tabindex]:not([tabindex="-1"])'),
-    function(el) { return el.offsetParent !== null || el === document.activeElement; }
-  );
-}
-
-/* Esc closes; Tab/Shift+Tab cycle within the sheet (focus trap). */
-function searchSheetKeydown(ev) {
-  var sheet = document.getElementById('search-sheet');
-  if (!sheet || !sheet.classList.contains('open')) return;
-  if (ev.key === 'Escape') { ev.preventDefault(); closeSearchSheet(); return; }
-  if (ev.key !== 'Tab') return;
-  var f = searchSheetFocusables();
-  if (f.length === 0) return;
-  var first = f[0], last = f[f.length - 1];
-  if (ev.shiftKey && document.activeElement === first) {
-    ev.preventDefault(); last.focus();
-  } else if (!ev.shiftKey && document.activeElement === last) {
-    ev.preventDefault(); first.focus();
-  }
-}
-
-/* Close the sheet when the user commits a status filter (a "done filtering"
-   signal). Wired as a separate listener so applyFilters / the inline onchange
-   stay unchanged; free-text typing in the search box leaves the sheet open.
-   Also close it when the viewport widens past the 620px phone breakpoint while
-   open (e.g. an iPhone rotated to landscape): the inline search returns to the
-   header instead of stranding the adopted host inside the bottom sheet —
-   mirrors the drawer's resize-up drop. */
-function initSearchSheet() {
-  var filter = document.getElementById('filter-status');
-  if (filter) {
-    filter.addEventListener('change', function() {
-      var sheet = document.getElementById('search-sheet');
-      if (sheet && sheet.classList.contains('open')) closeSearchSheet();
-    });
-  }
-  var phoneMQ = window.matchMedia
-    ? window.matchMedia('(max-width: 620px)') : null;
-  if (phoneMQ) {
-    /* Fires when crossing 620px in either direction; act only on widening out
-       of phone width (no longer matches) while the sheet is open. */
-    var onPhoneChange = function() {
-      if (phoneMQ.matches) return;
-      var sheet = document.getElementById('search-sheet');
-      if (sheet && sheet.classList.contains('open')) closeSearchSheet();
-    };
-    if (phoneMQ.addEventListener) phoneMQ.addEventListener('change', onPhoneChange);
-    else if (phoneMQ.addListener) phoneMQ.addListener(onPhoneChange);  /* older Safari */
-  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -3368,7 +5165,7 @@ function onTaskUpdate(path) {
    (applyWorktree), not a server full-reload, so this only fires for in-worktree
    structural edits and never crosses worktrees. */
 async function onFullReload() {
-  var wanted = activePath;
+  var wt = ACTIVE_WT;
   /* Capture the open branches before the rebuild wipes them, so the tree
      reopens where the user left it instead of folding back to the root. */
   var expanded = getExpandedNavPaths();
@@ -3384,7 +5181,8 @@ async function onFullReload() {
   /* Refresh PROJECT_ROOT/selector before re-rendering the active card so the VS
      Code button bakes in the current worktree's root. */
   await fetchWorktrees();
-  var target = resolveSurvivingPath(wanted);
+  if(wt!==ACTIVE_WT)return;
+  var wanted=activePath,target = resolveSurvivingPath(wanted);
   restoring = true;
   if (target !== wanted) {
     /* Relative '#/...' preserves the ?wt= in location.search. */
@@ -3392,6 +5190,8 @@ async function onFullReload() {
   }
   setActive(target, target === wanted ? activeArtifactPath : '');
   restoring = false;
+  if (currentView === 'reproduction') renderReproView(true);
+  else loadReproData(true).then(function(){syncTreeRollups();applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
 }
 
 /* Nearest still-present path at or above `path`, by walking up until a nav row
@@ -3563,17 +5363,14 @@ function populateWorktreeSelector(data) {
 function updateWorktreeOpenHref() {
   var btn = document.getElementById('worktree-open-btn');
   if (!btn) return;
-  if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }
+  /* Only a browser on this machine has an editor to open; elsewhere a vscode://
+     link would name the server's paths on the viewer's disk. */
+  if (REPO_FILE_BASE || !window.LOCAL_OPEN) { btn.style.display = 'none'; return; }
   if (!btn.innerHTML) btn.innerHTML = EDITOR_ICON + '<span>VS Code</span>';
-  if (window.LOCAL_OPEN) {
-    btn.href = taskFileVscodeHref(activePath);
-    btn.setAttribute('data-open-path', taskFileOpenPath(activePath));
-    btn.setAttribute('data-open-target', 'editor');
-    btn.title = "Open this task's file in this worktree's VS Code window";
-  } else {
-    btn.href = vscodeFileUri(PROJECT_ROOT);
-    btn.title = 'Open this worktree in VS Code';
-  }
+  btn.href = taskFileVscodeHref(activePath);
+  btn.setAttribute('data-open-path', taskFileOpenPath(activePath));
+  btn.setAttribute('data-open-target', 'editor');
+  btn.title = "Open this task's file in this worktree's VS Code window";
   btn.style.display = '';
 }
 
@@ -3643,7 +5440,18 @@ function switchWorktree(token) {
    re-render the panels for *path* (or its nearest surviving ancestor). Used by
    the selector and by back/forward across a ?wt= boundary. */
 async function applyWorktree(wtId, path, artifactPath) {
+  _reproWorktrees[ACTIVE_WT]={nav:JSON.parse(JSON.stringify(_reproNav)),viewport:Object.assign({},_reproViewport),entered:_reproEntered,view:currentView,readerFull:_reproReaderFull,inspectorClosed:_reproInspectorClosed,notice:_reproNotice,filters:JSON.parse(JSON.stringify(_workspaceFilters))};
   ACTIVE_WT = wtId || '';
+  var remembered=_reproWorktrees[ACTIVE_WT];
+  _workspaceFilters=normalizeWorkspaceFilters(remembered&&remembered.filters);
+  _reproNav=remembered?remembered.nav:{selected:'',expanded:[]};
+  _reproViewport=remembered?remembered.viewport:{x:0,y:0,zoom:1};
+  _reproReaderFull=!!(remembered&&remembered.readerFull&&_reproReaderPreference!==false);
+  reproSizeWorkspace();
+  document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull||_reproReaderCompact);
+  document.getElementById('workspace').classList.toggle('dag-reader-closed',_reproReaderClosed);
+  _reproEntered=!!remembered;_reproSelected=_reproNav.selected;
+  _reproData=null;_reproPending=null;_reproLoadSeq++;_reproLayoutCache=null;_reproInspectorClosed=!!(remembered&&remembered.inspectorClosed);_reproNotice=remembered?remembered.notice:'';_reproViewNext=remembered?'':'open';
   /* Children panels are per-worktree data — a cache entry from the worktree
      being left must not leak into the newly active one. */
   _childrenDagCache = {};
@@ -3659,6 +5467,9 @@ async function applyWorktree(wtId, path, artifactPath) {
     history.replaceState({ path: target, wt: ACTIVE_WT }, '', location.pathname + location.search + '#/' + target);
   }
   setActive(target, target === (path || '') ? (artifactPath || '') : '');
+  showView(remembered?remembered.view:'workspace');
+  history.replaceState({wt:ACTIVE_WT},'',reproHash());
+  applyWorkspaceFilters(false);
   restoring = false;
 }
 
@@ -3717,6 +5528,14 @@ initWorktreeSelectorRefresh();
 var fullReloadEl = document.getElementById('sse-full-reload');
 if (fullReloadEl) {
   fullReloadEl.addEventListener('htmx:sseBeforeMessage', function() { onFullReload(); });
+}
+
+/* ── SSE repro-updated: a build rewrote the committed lock ──
+   Same hx-swap="none" trigger-only pattern as full-reload; the payload is empty
+   because the client re-fetches both reproduction payloads itself. */
+var reproUpdatedEl = document.getElementById('sse-repro-updated');
+if (reproUpdatedEl) {
+  reproUpdatedEl.addEventListener('htmx:sseBeforeMessage', function() { onReproUpdated(); });
 }
 
 /* ── Comment UI functions ── */
@@ -4155,11 +5974,12 @@ function deleteComment(taskPath, commentId) {
    highlight lands on a real row (deep hashes still lazy-load their ancestors
    inside updateSidebar). Sidebar load is awaited but best-effort. */
 document.addEventListener('DOMContentLoaded', async function() {
+  initReproReader();
   initSidebarChrome();    /* pin/resize/drawer chrome — pure presentation */
   initSidebarEvents();
-  initSearchSheet();       /* phone search/filter sheet close-on-selection wiring */
   initTreeKeyboard();      /* roving-tabindex keyboard nav on #nav-tree */
   await loadNavTree();
   initRouter();
+  initWorkspaceControls();
   updateTreeCommentBadges();
 });

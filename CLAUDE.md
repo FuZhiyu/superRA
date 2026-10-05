@@ -80,6 +80,17 @@ Three tests, applied in order — each asks "what's actually new here?" against 
 
 **Maintenance cost is the tell.** Every restated rule is a place where the two copies can drift. When in doubt, delete the copy furthest from the authoritative source.
 
+### Bounded Agent-Facing Output
+
+Hook feedback and the default output of any CLI command an agent runs land in its context window. Their size must stay fixed however large or messy the task tree gets.
+
+- **Cap by default.** Default text output and hook feedback list at most a fixed number of items per group: `OUTPUT_CAP` in `skills/task-tree/scripts/_task_validate.py`, or a tighter local cap such as `REPRO_REMINDER_CAP`. Full lists are opt-in (`--all`, `--json`).
+- **Count and point.** Elided items collapse to one line giving their count and the exact command that lists them. Never drop silently.
+- **Errors first.** Truncation never hides an error behind advisories.
+- **Scope to the change.** Hooks report on what the tool call touched — the edited task, the changed file. Whole-tree audits are an explicit command.
+- **Remind once.** A reminder fires once per session or status transition (marker files), not on every call.
+- **Every warning has an exit.** An advisory must be clearable by fixing it or recording a decision. A warning the agent is told to "leave" recurs on every run and buries the findings that matter.
+
 ## Terminology
 
 **"Plan" is the verb, not the noun.** "Planning" refers to the superplan process — scoping and decomposing work. Everything in `superRA/` is a **task** — top-level tasks sit directly under `superRA/`, nested tasks are their dispatchable children. `superRA/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `superRA/` artifact, "planning" when referring to the process.
@@ -92,6 +103,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | --- | --- |
 | Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate`; default IMPLEMENT choreography in `using-superra/references/interactive-mode.md` |
 | Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md`; the planning-review **dispatch template** lives in `superplan` SKILL.md §Agent Review, with the design-decision context to provision in `thorough-planning.md` §Planning Review |
+| Onboarding an existing project — stage choreography and stop points, new-user concept explanations, version-control setup, isolated reproduction run and merge back, legacy `PLAN.md` migration offer | `onboarding` |
 | Cross-stage orchestration, generic dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` (the `Stage: planning-review` dispatch is the exception — see the Planning-review row) |
 | Skill-Load Manifest | `using-superra` |
 | Execution modes, the review trigger, and the interactive canvas loop | `using-superra/references/main-agent.md` (§Execution Modes, §Deciding on Review) and `references/interactive-mode.md` |
@@ -99,6 +111,8 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, task-local `## Sync Impact` format (temporary) | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, consolidation toward host conventions, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
+| Reproduction-graph discipline — what earns a step, graph and script design, step retirement, external and saved inputs, check steps, the rerun-or-accept judgment on a stale step, diagnosis, graph review, Protect and completion duties | `reproducibility` |
+| Reproduction-graph mechanics — `## Reproduction` schema and parser, `superra repro` CLI, `task read` / `task check` / dashboard integration, producer reminder hook | `task-tree` (`references/task-file-contract.md` §Reproduction Section) |
 | Universal task read/edit interface — read a task with injected context, edit mechanics, per-role ownership | `using-superra` (§Task Interface) and each role skill's §Self-Check |
 | Human-facing communication — selection, pyramid structure, rewriting, distillation, review, and Markdown mechanics | `communicate`; academic manuscripts compose it with `academic-writing` |
 | Task-local companion-file lifecycle — classify, reproduce, promote, mature | `using-superra/references/task-companion-files.md` |
@@ -127,10 +141,12 @@ What each agent loads in a session. This section documents the architecture for 
 | Phase workflow skill (`superplan` / `superintegrate`) | phase entry | Mandatory |
 | `using-superra/references/interactive-mode.md` | executing a task in the default interactive mode | Typical |
 | `superimplement` | autonomous execution, on researcher request or an accepted recommendation | On demand |
+| `onboarding` | a project with existing work but no `superRA/`, or a legacy `PLAN.md` | On demand |
 | `agent-orchestration` | before writing any dispatch prompt; hook-gated for `superimplement`/`superintegrate` (`superplan` and the interactive loop are ungated — each instructs the load at its own dispatch point) | Mandatory when dispatching |
 | One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |
 | `task-tree` | session-start wrapper + dashboard, tree surgery, migration | Typical |
 | Domain skill(s) per the manifest | when the work touches that domain | Typical |
+| `reproducibility` | manifest durable-artifact rule: planning, writing, changing, or reviewing a retained script or a code-computed result | Typical |
 | `superplan/references/task-tree-design.md` | planning, replan, consolidation screening | Typical |
 | `agent-orchestration/references/parallel-dispatch.md` | only when parallel-dispatching or isolating a worktree | On demand |
 
@@ -142,9 +158,10 @@ What each agent loads in a session. This section documents the architecture for 
 | `using-superra` + `communicate` | role-skill §Before You Start load instruction | Mandatory |
 | Stage reference per the manifest `Stage:` row | manifest | Mandatory when the row lists one |
 | Domain skill(s) per the manifest | manifest | Typical |
+| `reproducibility` | manifest durable-artifact rule | Typical |
 | Helper skills named in the dispatch `Additionally:` line or the task's ancestor chain | dispatch | On demand |
 
-Outside `Stage: maturation`, subagents never load `task-tree`, `task-file-contract.md`, or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role skill, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `agent-orchestration` is never subagent-loaded.
+Outside `Stage: maturation`, subagents never load `task-tree` or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role skill, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `task-file-contract.md` §Reproduction Section is the second exception: `reproducibility` routes there for the section schema, so any subagent registering a step reads that section. `agent-orchestration` is never subagent-loaded.
 
 ## Skill Authoring Guidelines
 
@@ -192,6 +209,7 @@ Before proposing structural changes to skills, workflow phases, or agent orchest
 - Can the mechanism be entered, re-entered, or used standalone where appropriate?
 - Are gates still enforced once a workflow/task is entered?
 - Is the instruction placed where only the agents/stages that need it will load it?
+- Does any new hook message or CLI default output stay bounded (§Bounded Agent-Facing Output)?
 - For every line you added, does removing it change what the agent would *do*, or only what it would *understand*? If only understand, delete it.
 - Is any harness-specific behavior isolated in an adapter reference?
 - Are generated files left untouched or regenerated from their sources?

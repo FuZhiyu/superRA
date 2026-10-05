@@ -24,10 +24,13 @@ def _write_task_md(
     status: str = "not-started",
     results: str = "",
     depends_on: list[str] | None = None,
+    reproduction: str = "",
 ) -> None:
     body = "## Objective\n\nTest objective.\n"
     if results:
         body += f"\n## Results\n\n{results}\n"
+    if reproduction:
+        body += f"\n## Reproduction\n\n```yaml\n{reproduction.strip()}\n```\n"
     deps = depends_on or []
     deps_yaml = "\n" + "".join(f"  - {dep}\n" for dep in deps) if deps else " []"
     path.write_text(
@@ -111,6 +114,68 @@ def test_task_tree_autodetects_legacy_plan_when_superra_absent(
     assert data["title"] == "Legacy"
 
 
+def test_task_read_shows_reproduction_block_for_registered_task(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Root")
+    build = root / "01-build"
+    build.mkdir()
+    _write_task_md(
+        build / "task.md", "Build",
+        reproduction=(
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: sh build.sh\n"
+            "    outs: [output/panel.parquet]\n"
+        ),
+    )
+    monkeypatch.chdir(root)
+
+    cli.main(["task", "read", "01-build", "--json"])
+
+    data = json.loads(capsys.readouterr().out)
+    rep = data["task"]["reproduction"]
+    assert "tier" not in rep
+    assert rep["steps"][0]["name"] == "build-panel"
+    assert rep["steps"][0]["status"] == "missing"
+
+
+def test_task_check_reproduction_category(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Root")
+    dup = root / "01-dup"
+    dup.mkdir()
+    _write_task_md(
+        dup / "task.md", "Dup",
+        reproduction=(
+            "steps:\n"
+            "  - name: a\n"
+            "    cmd: sh a.sh\n"
+            "    outs: [output/x.txt]\n"
+            "  - name: b\n"
+            "    cmd: sh b.sh\n"
+            "    outs: [output/x.txt]\n"
+        ),
+    )
+    monkeypatch.chdir(root)
+
+    with pytest.raises(SystemExit):
+        cli.main(["task", "check", "--category", "reproduction", "--json"])
+
+    data = json.loads(capsys.readouterr().out)
+    assert data["ok"] is False
+    assert any(f["category"] == "reproduction" for f in data["findings"])
+
+
 def test_task_create_uses_autodetected_root_for_legacy_wrapper(
     task_root: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -123,6 +188,36 @@ def test_task_create_uses_autodetected_root_for_legacy_wrapper(
     assert created.exists()
     assert 'title: "Third"' in created.read_text(encoding="utf-8")
     assert not (task_root / "serve").exists()
+
+
+def test_task_create_first_task_in_wrapper_only_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    (root / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    cli.main(["task", "create", "01-data", "--title", "Data"])
+
+    assert (root / "01-data" / "task.md").exists()
+
+
+def test_task_create_prefers_nearer_wrapper_only_root(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = task_root.parent / "work" / "trial"
+    inner = project / "superRA"
+    inner.mkdir(parents=True)
+    (inner / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+    monkeypatch.chdir(project)
+
+    cli.main(["task", "create", "01-data", "--title", "Data"])
+
+    assert (inner / "01-data" / "task.md").exists()
+    assert not (task_root / "01-data").exists()
 
 
 def test_task_comment_list_preserves_json_mode(
@@ -406,6 +501,28 @@ def test_python3_fallback_runs_core_without_third_party_deps(
 
     assert result.returncode == 0, result.stderr
     assert "Root" in result.stdout
+
+
+def _python_3_10() -> str | None:
+    found = shutil.which("python3.10")
+    if found is None and shutil.which("uv") is not None:
+        result = subprocess.run(["uv", "python", "find", "3.10"], capture_output=True, text=True, check=False)
+        found = result.stdout.strip() if result.returncode == 0 else None
+    return found
+
+
+def test_every_script_parses_on_python_3_10() -> None:
+    python = _python_3_10()
+    if python is None:
+        pytest.skip("a Python 3.10 interpreter is required")
+    check = (
+        "import pathlib, sys\n"
+        "for p in sorted(pathlib.Path(sys.argv[1]).glob('*.py')):\n"
+        "    compile(p.read_text(encoding='utf-8'), str(p), 'exec')\n"
+    )
+    result = subprocess.run([python, "-c", check, str(SCRIPTS_DIR)],
+                            capture_output=True, text=True, timeout=60, check=False)
+    assert result.returncode == 0, result.stderr
 
 
 def test_backward_compatible_direct_script_query(

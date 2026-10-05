@@ -1,0 +1,701 @@
+"""Exact-state reviewed reuse and successful receipts; no engine dependency."""
+from __future__ import annotations
+
+import difflib
+import hashlib
+import json
+import os
+import sys
+import tempfile
+import time
+from contextlib import contextmanager
+from pathlib import Path
+
+from _repro_state import (
+    BLOCKING, RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state,
+    directory_dep_nodes, dropbox_ignore, is_online_only,
+    node_state, output_nodes, read_lock, read_run_record, select_steps, spec_hash,
+    spec_node_id, step_nodes, unread, unread_file_lines, unread_phrase, _topological, repro_command,
+)
+
+LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
+LEGACY_LEDGER = 'repro-acceptance.json'
+SNAPSHOT_LIMIT = 128 * 1024
+
+
+def identity(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+_UMASK = os.umask(0)
+os.umask(_UMASK)
+
+
+def atomic_json(path, value):
+    atomic_text(path, json.dumps(value, sort_keys=True, indent=2) + '\n')
+
+
+def atomic_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix='.' + path.name)
+    try:
+        os.fchmod(fd, 0o666 & ~_UMASK)  # mkstemp's 0600 would outlive the rename
+        with os.fdopen(fd, 'w', encoding='utf-8') as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+@contextmanager
+def mutation_lock(paths):
+    """Reject concurrent builds/record changes, releasing even after interruption."""
+    import fcntl
+    paths.state_dir.mkdir(parents=True, exist_ok=True)
+    dropbox_ignore(paths.state_dir)
+    with (paths.state_dir / 'mutation.lock').open('a+') as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ReproStateError('another reproduction build or acceptance mutation is running') from None
+        try:
+            handle.truncate(0)
+            handle.write(str(os.getpid()))
+            handle.flush()
+            yield
+        finally:
+            handle.truncate(0)
+            handle.flush()
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def lock_holder(paths) -> int | None:
+    """The pid holding the mutation lock — 0 when held but unrecorded — or None when
+    free. Never creates state."""
+    import fcntl
+    try:
+        handle = (paths.state_dir / 'mutation.lock').open('r')
+    except OSError:
+        return None
+    with handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        except BlockingIOError:
+            text = handle.read().strip()
+            return int(text) if text.isdigit() else 0
+        fcntl.flock(handle, fcntl.LOCK_UN)
+        return None
+
+
+def read_json(path, default):
+    if not path.exists():
+        return default
+    try:
+        value = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        raise ReproStateError(f'{path}: invalid record: {exc}') from None
+    if not isinstance(value, dict):
+        raise ReproStateError(f'{path}: expected a JSON object')
+    return value
+
+
+_WARNED = set()
+
+
+def _warn(message):
+    if message not in _WARNED:
+        _WARNED.add(message)
+        print(f'warning: {message}', file=sys.stderr)
+
+
+def _normalize(record):
+    """The in-memory record from either committed shape; None when it cannot be trusted."""
+    if (not isinstance(record, dict)
+            or record.get('id') != identity({k: v for k, v in record.items() if k != 'id'})
+            or record.get('basis') != 'reviewed'
+            or not isinstance(record.get('reason'), str)
+            or not isinstance(record.get('reviews'), dict)
+            or not isinstance(record.get('boundary_inputs'), list)
+            or not isinstance(record.get('state'), dict)
+            or not all(isinstance(record['state'].get(key), dict) for key in ('deps', 'products'))):
+        return None
+    if 'baseline' in record:  # written before the reshape: bound the whole lock entry
+        lock = record['baseline'].get('lock') if isinstance(record['baseline'], dict) else None
+        lock = identity(lock) if lock else None
+    else:
+        lock = record.get('lock')
+    if lock is not None and not isinstance(lock, str):
+        return None
+    state = record['state']
+    return {'basis': 'reviewed', 'lock': lock, 'state': dict(state, outputs=state.get('outputs', state['products'])),
+            'boundary_inputs': record['boundary_inputs'], 'reason': record['reason'],
+            'reviews': record['reviews'], 'id': record['id']}
+
+
+def portable_record(record):
+    """The committed form: the reviewed hashes and the decision, sealed by its id."""
+    state = {key: record['state'][key] for key in ('deps', 'products')}
+    if record['state']['outputs'] != state['products']:
+        state['outputs'] = record['state']['outputs']
+    value = {'basis': 'reviewed', 'lock': record['lock'], 'state': state,
+             'boundary_inputs': portable_rows(record['boundary_inputs']),
+             'reason': record['reason'], 'reviews': record['reviews']}
+    value['id'] = identity(value)
+    return value
+
+
+def portable_rows(rows):
+    """Saved-input rows as committed: logical path, producer, and bytes; nothing per checkout."""
+    return [{key: row[key] for key in ('logical', 'producer', 'digest') if key in row} for row in rows]
+
+
+def _read_legacy(paths):
+    path = paths.project_root / LEGACY_LEDGER
+    if not path.is_file():
+        return None
+    try:
+        value = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(value, dict) or value.get('version') != 1 or not isinstance(value.get('steps'), dict):
+            raise ValueError('unsupported or malformed ledger')
+    except (OSError, ValueError) as exc:
+        _warn(f'{LEGACY_LEDGER} is unreadable ({exc}); its acceptances are ignored')
+        return None
+    return value['steps']
+
+
+def read_ledger(paths):
+    """Every trusted acceptance; a malformed or conflicted record is set aside alone, with a warning."""
+    records = dict(_read_legacy(paths) or {})
+    for path in sorted((paths.project_root / LEDGER).glob('*.json')):
+        try:
+            records[path.stem] = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            records[path.stem] = None
+    steps, set_aside = {}, []
+    for name, record in records.items():
+        steps[name] = _normalize(record)
+        if steps[name] is None:
+            del steps[name]
+            set_aside.append(name)
+            _warn(f'the acceptance record for {name} is malformed or conflicted; {name} is not accepted '
+                  f'until `superra repro accept` or `revoke` replaces it')
+    return {'steps': steps, 'set_aside': set_aside}
+
+
+def _convert_legacy(paths):
+    """Before the first record write, move pre-reshape records into per-step files."""
+    legacy = _read_legacy(paths)
+    if legacy is None:
+        return
+    directory = paths.project_root / LEDGER
+    directory.mkdir(exist_ok=True)
+    for name, record in legacy.items():
+        normalized = _normalize(record)
+        if normalized is not None and not (directory / f'{name}.json').exists():
+            atomic_json(directory / f'{name}.json', portable_record(normalized))
+    (paths.project_root / LEGACY_LEDGER).unlink()
+    _warn(f'converted {LEGACY_LEDGER} into {LEDGER}/; commit the removal with the new files')
+
+
+def write_record(paths, name, value):
+    """Write one step's committed record, or remove it when *value* is None; equal content stays."""
+    with RECORD_LOCK:
+        _convert_legacy(paths)
+        path = paths.project_root / LEDGER / f'{name}.json'
+        if value is None:
+            path.unlink(missing_ok=True)
+            return
+        try:
+            if json.loads(path.read_text(encoding='utf-8')) == value:
+                return
+        except (OSError, ValueError):
+            pass
+        atomic_json(path, value)
+
+
+def lock_state(entry):
+    return {'deps': entry.depends_on, 'products': entry.produces} if entry else None
+
+
+def lock_digest(entry):
+    """What a record binds of the preceding successful lock entry: its freshness fields."""
+    return identity(lock_state(entry)) if entry else None
+
+
+def current_state(graph, step, paths, cache=None, *, recorded=True):
+    cache = cache or HashCache()
+    deps, products = step_nodes(step, output_nodes(graph))
+    deps += directory_dep_nodes(graph, step)
+    entry = read_lock(paths.lock_file).get(step.name) if recorded else None
+    prior = entry.depends_on if entry else {}
+    state = {
+        'deps': {node[0]: dependency_state(cache, paths.project_root, node, prior.get(node[0])) for node in deps},
+        'products': {node[0]: node_state(cache, paths.project_root, node) for node in products},
+        'outputs': {out.path.logical: cache.path_state(absolute(paths.project_root, out.path.resolved)) for out in step.outs},
+    }
+    state['deps'][spec_node_id(step.name)] = spec_hash(step)
+    if step.kind == 'check':
+        state['outputs'] = dict(state['products'])
+    return state
+
+
+def receipt_path(paths, name):
+    return paths.state_dir / 'baselines' / f'{name}.json'
+
+
+def source_snapshots(step, paths, state):
+    snapshots = {}
+    remaining = 1024 * 1024
+    for dep in step.deps:
+        path = absolute(paths.project_root, dep.resolved)
+        try:
+            info = path.stat()
+            if info.st_size > min(SNAPSHOT_LIMIT, remaining) or is_online_only(path, info):
+                continue
+            with path.open('rb') as handle:
+                raw = handle.read(min(SNAPSHOT_LIMIT, remaining) + 1)
+            if len(raw) > min(SNAPSHOT_LIMIT, remaining):
+                continue
+            if hashlib.sha256(raw).hexdigest() != state['deps'].get(dep.logical):
+                continue
+            snapshots[dep.logical] = raw.decode('utf-8')
+            remaining -= len(raw)
+        except (OSError, UnicodeError):
+            continue
+    return snapshots
+
+
+def capture_receipt(graph, step, paths, before):
+    state = current_state(graph, step, paths, recorded=False)
+    if state['deps'] != before['deps']:
+        raise ReproStateError(f'{step.name}: dependencies changed during execution; rerun')
+    if any(value is None for group in state.values() for value in group.values()):
+        raise ReproStateError(f'{step.name}: required input or output is missing after execution')
+    unhashed = unread_nodes(state)
+    if unhashed:
+        raise ReproStateError(f'{step.name}: {unhashed[0][0]} cannot be hashed here after execution ({unhashed[0][1]})')
+    receipt = {'state': state, 'snapshots': source_snapshots(step, paths, state),
+               'spec': step.to_dict(), 'recorded_at': time.time(),
+               'run': dict(read_run_record(paths, step.name), outcome='success')}
+    from _repro_scope import boundary_inputs
+    scope = getattr(graph, '_execution_names', {s.name for s in graph.steps})
+    boundary = boundary_inputs(graph, scope, paths, consumers={step.name})
+    old_boundary = before.get('boundary_inputs', [])
+    fingerprints = lambda rows: {(r['logical'], r['resolved']): r['digest'] for r in rows}
+    if fingerprints(boundary) != fingerprints(old_boundary):
+        raise ReproStateError(f'{step.name}: saved inputs changed during execution; rerun')
+    if any(item['digest'] is None for item in boundary):
+        raise ReproStateError(f'{step.name}: saved input is missing or unreadable after execution')
+    receipt['boundary_inputs'] = boundary
+    receipt['execution_scope'] = sorted(scope)
+    receipt['id'] = identity(receipt)
+    atomic_json(receipt_path(paths, step.name), receipt)
+    return receipt
+
+
+def baseline(step, paths, entry, *, required=True):
+    if entry is None:
+        if required:
+            raise ReproStateError(f'{step.name}: never built')
+        return {'lock': None, 'outputs': {}, 'receipt': None, 'snapshots': {}, 'spec': None, 'run': {}}
+    recorded = lock_state(entry)
+    receipt = read_json(receipt_path(paths, step.name), {})
+    if receipt and receipt.get('id') == identity({k: v for k, v in receipt.items() if k != 'id'}):
+        state = receipt.get('state', {})
+        if {key: state.get(key) for key in ('deps', 'products')} == recorded:
+            return {'lock': recorded, 'outputs': state['outputs'], 'receipt': receipt['id'],
+                    'snapshots': receipt.get('snapshots', {}), 'spec': receipt.get('spec'), 'run': receipt.get('run', {}),
+                    'boundary_inputs': receipt.get('boundary_inputs', [])}
+    sidecar = any(out.sidecar for out in step.outs)
+    if sidecar and required:
+        raise ReproStateError(f'{step.name}: no verified output digest for sidecar baseline; rerun this step')
+    return {'lock': recorded, 'outputs': {} if sidecar else dict(entry.produces), 'receipt': None, 'snapshots': {}, 'spec': None, 'run': read_run_record(paths, step.name)}
+
+
+def differences(before, after):
+    return [{'node': key, 'kind': 'spec' if key.endswith('::spec') else 'dependency',
+             'before': before.get(key), 'after': after.get(key)}
+            for key in sorted(before.keys() | after.keys()) if before.get(key) != after.get(key)]
+
+
+def unread_nodes(state):
+    """(node, why) for each value in a `current_state` that cannot be hashed here."""
+    return [(node, unread_phrase(value)) for group in state.values()
+            for node, value in group.items() if unread(value)]
+
+
+def validate_record(graph, step, paths, record, locks, cache=None, unknown=None):
+    """Return the reason reuse is invalid; callers already validate upstream state.
+
+    A file that cannot be hashed here invalidates nothing: it lands in
+    *unknown* as (node, why), and the record reads unverified.
+    """
+    if not record:
+        return 'no acceptance'
+    if record['lock'] != lock_digest(locks.get(step.name)):
+        return 'successful baseline changed'
+    if read_run_record(paths, step.name).get('outcome') in ('failed', 'running', 'pending'):
+        return 'last execution did not succeed'
+    cache = cache or HashCache()
+    unknown = [] if unknown is None else unknown
+    current_paths = {dep.logical: dep.resolved for dep in step.deps}
+    for item in record.get('boundary_inputs', []):
+        resolved = current_paths.get(item['logical'])
+        current = cache.path_state(absolute(paths.project_root, resolved)) if resolved else None
+        if unread(current):
+            unknown.append((item['logical'], unread_phrase(current)))
+        elif resolved is None or current != item['digest']:
+            return 'saved input bytes changed'
+    state = current_state(graph, step, paths, cache)
+    if any(value is None for group in state.values() for value in group.values()):
+        return 'required input or output missing'
+    known = {group: {node: value for node, value in values.items() if not unread(value)}
+             for group, values in state.items()}
+    reviewed = {group: {node: value for node, value in record['state'].get(group, {}).items()
+                        if node in known[group]} for group in state}
+    if known != reviewed or any(set(state[g]) != set(record['state'].get(g, {})) for g in state):
+        return 'reviewed state changed'
+    unknown.extend(node for node in unread_nodes(state) if node not in unknown)
+    return None
+
+
+def supersede(paths, name):
+    write_record(paths, name, None)
+
+
+def apply_to_status(report, paths, cache, ledger=None, lock=None):
+    """Apply exact reviewed state, then propagate selected producer uncertainty."""
+    ledger = read_ledger(paths) if ledger is None else ledger
+    lock = read_lock(paths.lock_file) if lock is None else lock
+    by_name = {entry.step.name: entry for entry in report.entries}
+    parents = {name: [] for name in by_name}
+    for src, dst, _ in report.graph.step_edges:
+        if src in by_name and dst in parents and src not in parents[dst]:
+            parents[dst].append(src)
+    from _repro import step_errors
+    origins = {}  # blocking step -> the furthest-upstream blocking step on its path
+    for name in _topological(by_name, parents):
+        entry = by_name[name]
+        record = ledger['steps'].get(name)
+        blocked = next((p for p in parents[name] if by_name[p].status in BLOCKING), None)
+        unknown = []
+        invalid = validate_record(report.graph, entry.step, paths, record, lock, cache, unknown) if record else None
+        if record and not invalid and not step_errors(report.graph, [name])[0]:
+            entry.status, entry.reason, entry.acceptance = 'fresh', 'reviewed baseline', record
+            if unknown:
+                entry.status = 'unverified'
+                entry.reason = f'reviewed baseline; {unknown[0][0]} is {unknown[0][1]}' + (
+                    f' (and {len(unknown) - 1} more)' if len(unknown) > 1 else '')
+            entry.changes = []
+        elif record and invalid and entry.status == 'fresh' and baseline(
+                entry.step, paths, lock.get(name), required=False)['outputs'] == current_state(
+                    report.graph, entry.step, paths, cache)['outputs']:
+            # Bytes that match the successful build stand on their own; a sidecar
+            # lock alone does not verify them.
+            entry.acceptance_invalid = invalid
+            ref = f"{entry.step.task_path or '.'}#{name}"
+            entry.reason = f"up to date with the lock; acceptance no longer valid ({invalid}), clear it with `superra repro revoke '{ref}'`"
+        elif record and invalid:
+            entry.acceptance_invalid = invalid
+            state = current_state(report.graph, entry.step, paths, cache)
+            entry.changes = [Change(c['node'], c['kind'], 'missing' if c['after'] is None else 'changed')
+                             for c in state_differences(record['state'], state) if not unread(c['after'])] + [
+                                 c for c in entry.changes if c.kind == 'boundary']
+            if entry.status == 'fresh' or (entry.status == 'missing' and all(
+                    v is not None for group in state.values() for v in group.values())):
+                entry.status, entry.reason = 'stale', invalid
+            if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
+                entry.status, entry.reason = 'failed', 'last execution did not succeed'
+        entry.local_status, entry.local_reason = entry.status, entry.reason
+        if blocked and entry.status in ('fresh', 'unverified'):
+            entry.origin = origins.get(blocked, blocked)  # a cycle can order a producer later
+            origin = by_name[entry.origin]
+            entry.status, entry.reason = 'stale', f'upstream step {entry.origin!r} is {origin.local_status}'
+        if entry.status in BLOCKING:
+            origins[name] = origins.get(blocked, blocked) if blocked else name
+
+
+def state_differences(before, after):
+    """Input/output hashes, plus distinct engine metadata such as sidecars."""
+    changes = []
+    for group, kind in (('deps', 'dependency'), ('outputs', 'output'), ('products', 'output')):
+        for row in differences(before.get(group, {}), after[group]):
+            if group == 'products':
+                if any(c['node'] == row['node'] and c['before'] == row['before']
+                       and c['after'] == row['after'] for c in changes):
+                    continue
+                row['node'] += '::product'
+            row['kind'] = 'spec' if row['node'].endswith('::spec') else kind
+            changes.append(row)
+    return changes
+
+
+def inspect_baseline(graph, step, paths):
+    accepted = read_ledger(paths)['steps'].get(step.name)
+    reviewed = None
+    if accepted:
+        diffs = [dict(row, diff=None, history='unavailable')
+                 for row in state_differences(accepted['state'], current_state(graph, step, paths))]
+        reviewed = {'available': True, 'basis': 'reviewed', 'receipt': None, 'diffs': diffs}
+    entry = read_lock(paths.lock_file).get(step.name)
+    try:
+        before = baseline(step, paths, entry)
+    except ReproStateError as exc:
+        return reviewed or {'available': False, 'reason': str(exc), 'diffs': []}
+    now = current_state(graph, step, paths)
+    diffs = []
+    by_logical = {d.logical: d for d in step.deps}
+    for change in differences(before['lock']['deps'], now['deps']):
+        row = dict(change, diff=None, history='unavailable')
+        old = before.get('snapshots', {}).get(change['node'])
+        dep = by_logical.get(change['node'])
+        if old is not None and hashlib.sha256(old.encode()).hexdigest() == change['before'] and dep:
+            try:
+                path = absolute(paths.project_root, dep.resolved)
+                if is_online_only(path, path.stat()):
+                    raise OSError('online-only here')
+                with path.open('rb') as handle:
+                    raw = handle.read(SNAPSHOT_LIMIT + 1)
+                if len(raw) <= SNAPSHOT_LIMIT and hashlib.sha256(raw).hexdigest() == change['after']:
+                    row.update(history='verified snapshot', diff=''.join(difflib.unified_diff(old.splitlines(True), raw.decode().splitlines(True), fromfile='successful/' + dep.logical, tofile='current/' + dep.logical)))
+            except (OSError, UnicodeError):
+                pass
+        if change['kind'] == 'spec' and before['spec']:
+            row.update(history='verified receipt', before_spec=before['spec'], after_spec=step.to_dict())
+        diffs.append(row)
+    return {'available': True, 'receipt': before['receipt'], 'diffs': diffs, 'reviewed': reviewed}
+
+
+def preview(graph, paths, targets, reason, reviews):
+    from _repro import step_errors
+    names, unknown = select_steps(graph, targets, include_ancestors=False)
+    if unknown or not names or not targets:
+        raise ReproStateError('select exact step or task targets: ' + ', '.join(unknown))
+    if step_errors(graph, names)[0]:
+        raise ReproStateError('invalid graph; acceptance is unavailable')
+    ledger = read_ledger(paths)
+    lock = read_lock(paths.lock_file)
+    parents = {s.name: [] for s in graph.steps}
+    for src, dst, _ in graph.step_edges:
+        parents[dst].append(src)
+    rows = []
+    for name in _topological({s.name: s for s in graph.steps}, parents):
+        if name not in names:
+            continue
+        step = graph.step(name)
+        if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
+            raise ReproStateError(f'{name}: last execution did not succeed')
+        before = baseline(step, paths, lock.get(name), required=step.kind == 'check')
+        state = current_state(graph, step, paths)
+        if any(v is None for group in state.values() for v in group.values()):
+            raise ReproStateError(f'{name}: required input or output is missing')
+        unhashed = {node: (node, unread_phrase(value), value.size) for group in state.values()
+                     for node, value in group.items() if unread(value)}
+        if unhashed:
+            ref = f"{step.task_path or '.'}#{name}"
+            raise ReproStateError('\n'.join([f'{name}: cannot record {len(unhashed)} file(s) this machine cannot hash:',
+                                             *unread_file_lines(list(unhashed.values()),
+                                                                repro_command('status', [ref], '--json'))]))
+        if step.kind == 'check' and state['products'] != before['lock']['products']:
+            raise ReproStateError(f'{name}: check stamp differs from successful baseline; run the check')
+        previous_record = ledger['steps'].get(name)
+        previous_state = previous_record['state'] if previous_record else {
+            'deps': (before['lock'] or {}).get('deps', {}),
+            'products': (before['lock'] or {}).get('products', {}), 'outputs': before['outputs']}
+        changes = state_differences(previous_state, state)
+        from _repro_scope import boundary_inputs
+        boundary = boundary_inputs(graph, {name}, paths, consumers={name})
+        previous_boundary = {item['logical']: item for item in
+                             (previous_record or before).get('boundary_inputs', [])}
+        for item in boundary:
+            previous = previous_boundary.get(item['logical'])
+            if previous and previous['digest'] != item['digest']:
+                changes.append({'node': item['logical'] + '::boundary', 'kind': 'boundary',
+                                'before': previous['digest'], 'after': item['digest']})
+        # A step its own status reads fresh keeps its evidence; anything that
+        # status reports, such as an unverified saved input, is a change.
+        local = compute_status(graph, paths, targets=[f"{step.task_path or '.'}#{name}"]).entry(name)
+        digests = {item['logical']: item['digest'] for item in boundary}
+        for change in local.changes:
+            node = change.node + '::boundary'
+            if change.kind == 'boundary' and all(c['node'] != node for c in changes):
+                changes.append({'node': node, 'kind': 'boundary', 'before': None, 'after': digests.get(change.node)})
+        unchanged = local.local_status == 'fresh' and not local.acceptance_invalid and name not in ledger['set_aside']
+        coverage = {change['node']: reviews[change['node']] for change in changes if change['node'] in reviews}
+        record = None if unchanged else portable_record(
+            {'lock': lock_digest(lock.get(name)), 'state': state, 'boundary_inputs': boundary,
+             'reason': reason, 'reviews': coverage})
+        rows.append({'step': name, 'changes': changes, 'record': record,
+                     'baseline_details': inspect_baseline(graph, step, paths)})
+    return {'steps': rows, 'reason': reason, 'ready': bool(reason.strip())}
+
+
+def accept(graph, paths, targets, reason, reviews, *, dry_run=False):
+    """Record the reviewed current state in one call; *dry_run* previews and writes nothing."""
+    with mutation_lock(paths):
+        check_sources(graph)
+        result = preview(graph, paths, targets, reason, reviews)
+        if dry_run:
+            return result
+        if not result['ready']:
+            raise ReproStateError('acceptance requires --reason describing the reviewed current results')
+        # Re-read hashes immediately before writing.
+        check_sources(graph)
+        if preview(graph, paths, targets, reason, reviews) != result:
+            raise ReproStateError('state changed during acceptance; inspect a new preview')
+        for row in result['steps']:
+            if row['record'] is not None:
+                write_record(paths, row['step'], row['record'])
+        return dict(result, applied=True)
+
+
+def revoke(graph, paths, targets):
+    names, unknown = select_steps(graph, targets, include_ancestors=False)
+    with mutation_lock(paths):
+        ledger = read_ledger(paths)
+        stored = set(ledger['steps']) | set(ledger['set_aside'])
+        names += [name for name in unknown if name in stored]
+        unknown = [name for name in unknown if name not in stored]
+        if unknown or not targets:
+            raise ReproStateError('select known step, task, or stored record names: ' + ', '.join(unknown))
+        removed = [name for name in names if name in stored]
+        for name in removed:
+            write_record(paths, name, None)
+    return {'revoked': removed}
+
+
+def _config_origins(graph, step) -> list[dict]:
+    """What in `config.yaml` the step's definition draws on: its runner, variables, and `env_deps`."""
+    from _repro import VAR_REF_RE
+    origins = [{'kind': 'config', 'via': f'runner {step.runner}'}] if step.runner else []
+    texts = [step.cmd_logical] + [d.logical for d in step.deps] + [
+        ref.logical for out in step.outs for ref in (out.path, out.sidecar) if ref is not None]
+    names = sorted({name for text in texts for name in VAR_REF_RE.findall(text)})
+    origins += [{'kind': 'config', 'via': f'variable {name}'} for name in names]
+    if graph.config.env_deps:
+        origins.append({'kind': 'config', 'via': 'env_deps'})
+    return origins
+
+
+def impact(graph, paths, files, scope=(), config_file=None):
+    """Steps a change to *files* would make stale: direct readers, their descendants, and recorded durations."""
+    from _repro import CONFIG_FILENAME
+    from _repro_signals import downstream_steps, step_durations
+    selected, unknown = select_steps(graph, scope, include_ancestors=False)
+    if unknown:
+        raise ReproStateError('unknown scope: ' + ', '.join(unknown))
+    resolved = {p: str(absolute(paths.project_root, p).resolve()) for p in files}
+    config_file = str(Path(config_file or paths.project_root / 'superRA' / CONFIG_FILENAME).resolve())
+    configs = [p for p, path in resolved.items() if path == config_file]
+    direct = []
+    for step in graph.steps:
+        reasons = []
+        for dep in step.deps:
+            path = str(absolute(paths.project_root, dep.resolved).resolve())
+            if dep.logical in files or any(path == p or path.startswith(p + '/') or p.startswith(path + '/')
+                                           for p in resolved.values()):
+                reasons.append({'path': dep.logical, 'origins': step.dependency_origins.get(dep.logical, [])})
+        origins = _config_origins(graph, step) if configs else []
+        if origins:
+            reasons.append({'path': configs[0], 'origins': origins})
+        if reasons:
+            direct.append({'step': step.name, 'task': step.task_path, 'reasons': reasons,
+                           'in_scope': not scope or step.name in selected})
+    names = downstream_steps(graph, [r['step'] for r in direct])
+    durations = step_durations(paths.project_root, names)
+    affected = set(names)
+    return {'paths': list(files), 'direct': direct,
+            'affected': [{'step': name, 'task': graph.step(name).task_path, 'in_scope': not scope or name in selected,
+                          'duration': durations[name]} for name in names],
+            'edges': [edge for edge in graph.step_edges if edge[0] in affected],
+            'findings': [f.to_dict() for f in graph.findings],
+            'prediction': 'conservative invalidation; unchanged output bytes can stop a cascade'}
+
+
+def format_impact(result) -> str:
+    """One line per affected step: why it is affected and what its last run cost."""
+    affected = result['affected']
+    known = [row['duration'] for row in affected if row['duration']]
+    unknown = len(affected) - len(known)
+    lines = [f"{', '.join(result['paths'])}: {len(affected)} step(s) affected"
+             + (f", {sum(known):.1f}s recorded" if known else '')
+             + (f" ({unknown} with no recorded duration)" if unknown else '')]
+    direct = {row['step']: row for row in result['direct']}
+    via = {}
+    for src, dst, path in result['edges']:
+        via.setdefault(dst, f'{path} from {src}')
+    width = max((len(row['step']) for row in affected), default=0)
+    for row in affected:
+        if row['step'] in direct:
+            why = '; '.join(f"{reason['path']} ({', '.join(_origin_text(o) for o in reason['origins']) or 'declared'})"
+                            for reason in direct[row['step']]['reasons'])
+        else:
+            why = f"reads {via.get(row['step'], 'an affected output')}"
+        cost = f"{row['duration']:.1f}s" if row['duration'] else 'no recorded duration'
+        scope = '' if row['in_scope'] else '  [outside scope]'
+        lines.append(f"  {row['step']:<{width}}  {cost:>8}  {why}{scope}")
+    errors = sum(f['severity'] == 'error' for f in result['findings'])
+    if errors:
+        lines.append(f"{errors} graph error(s); run `superra task check`.")
+    lines.append(f"Prediction: {result['prediction']}.")
+    return '\n'.join(lines)
+
+
+def _origin_text(origin) -> str:
+    if origin['kind'] == 'config':
+        return origin['via']
+    return origin['kind'] + (f" via {origin['via']}" if origin.get('via') else '')
+
+
+def source_signature(root, cache=None):
+    """Graph declarations only: human prose and active status rollups are independent."""
+    from _task_io import VALID_STATUSES, iter_task_markdown_files, parse_body_sections, parse_task
+    from _repro import extract_repro_block, load_project_config, parse_yaml_subset
+    cache = {} if cache is None else cache
+    hashes = cache.setdefault('_hashes', HashCache())
+    result = {}
+    for path in iter_task_markdown_files(root) + [root / 'config.yaml']:
+        key = str(path.relative_to(root))
+        digest = hashes.file_hash(path)
+        digest = f'unread:{digest.why}' if unread(digest) else digest
+        cached = cache.get(key)
+        if cached and cached[0] == digest:
+            result[key] = cached[1]
+            continue
+        try:
+            if key == 'config.yaml':
+                declaration = load_project_config(root)
+            else:
+                task = parse_task(path, root)
+                section = parse_body_sections(task.body).get('Reproduction')
+                declaration = {
+                    'title_valid': bool(task.title),
+                    'status': ('archived' if task.status == 'archived' else
+                               'active' if task.status in VALID_STATUSES else task.status),
+                    'depends_on': sorted(map(str, task.depends_on)),
+                    'reproduction': (parse_yaml_subset(extract_repro_block(section))
+                                     if section is not None else None),
+                }
+        except (OSError, ValueError) as exc:
+            declaration = {'error': str(exc), 'digest': digest}
+        value = identity(declaration)
+        cache[key] = (digest, value)
+        result[key] = value
+    return result
+
+
+def bind_sources(graph, root, signature=None):
+    graph._acceptance_sources = (root, signature if signature is not None else source_signature(root), {})
+
+
+def check_sources(graph):
+    build_guard = getattr(graph, '_build_guard', None)
+    if build_guard is not None:
+        build_guard.check()
+        return
+    guard = getattr(graph, '_acceptance_sources', None)
+    if guard is not None and source_signature(guard[0], guard[2]) != guard[1]:
+        raise ReproStateError('task declarations or configuration changed during this operation; retry')

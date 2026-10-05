@@ -10,7 +10,7 @@ Artifacts planned inside a task directory follow `skills/using-superra/reference
 
 **Walk the project guidance docs, then point to or distill each relevant convention into scoped objective context** per `task-tree-design.md` §Context Distillation.
 
-**Pipeline file (required for multi-artifact work):** one committed entry point that reproduces every output from source — scripts in dependency order, failing fast (`set -e` or equivalent), updated whenever a script is added.
+**Name each mapped artifact and its planned script in the producing task's `## Details`;** its implementer registers the `## Reproduction` step. Draw the script boundaries with the graph in mind, so expensive computation and the exhibits it feeds start in separate scripts: `reproducibility/references/designing-the-graph.md`.
 
 ## Task Structure
 
@@ -30,7 +30,7 @@ Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree
 
 ## Task Dependencies
 
-`depends_on:` frontmatter lists sibling directory names; semantics in `task-tree/references/task-file-contract.md` §Task Anatomy and `task-tree-design.md` §Parent and sibling context.
+**Declare additional logical prerequisites**, including ordering needed before step inputs are known; do not copy file-derived edges into `depends_on`. Use the [effective graph](../../task-tree/references/task-file-contract.md#effective-dependencies) as declarations become available.
 
 Mark independent branches for parallel dispatch (`agent-orchestration` §Workload Balancing). Siblings sharing an edit surface are not a dependency case — merge them (`task-tree-design.md` §Splitting Tasks).
 
@@ -49,12 +49,12 @@ After writing the complete task tree:
 
 1. **Domain survey coverage.** Domain skill produced a planning survey: every item in it has task coverage.
 2. **Placeholder scan.** Vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria — fixed.
-3. **Pipeline consistency.** Artifact names in the pipeline file match each task's artifacts, in dependency order.
+3. **Reproduction coverage.** Every artifact mapped in §Artifact Pipeline is named on the task that produces it.
 4. **Validation coverage.** Every transformative task has a validation criterion in its objective.
 5. **Objective/details split.** Contract in `## Objective`; planning findings and suggested route in `## Details` (`task-tree-design.md` §Writing Objectives and Details).
 6. **Handoff test.** A new agent reading any leaf's ancestor chain could continue from here.
 7. **Verification coverage.** The tree covers the active domain skill's verification / robustness requirements.
-8. **Dependency sanity.** Every task declares `depends_on:`; no cycles, no nonexistent siblings; terminal task(s) produce the top-line results.
+8. **Dependency sanity.** `superra task check --category dependency` passes on the effective graph; planned prerequisites not yet inferable are covered; terminal task(s) produce the top-line results.
 9. **Granularity, both directions.** No task hides sub-steps that should be subtasks. No two siblings share an edit surface or would be written by one agent in one pass — merge those (`task-tree-design.md` §Splitting Tasks, "Do not split when").
 
 Fix issues inline and move on; no re-review.

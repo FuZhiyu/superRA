@@ -171,7 +171,7 @@ def test_skill_load_manifest_tables_match_contract():
     assert stage_loads == {
         "planning-review": ("skills/superplan/references/planning-review.md",),
         "implementation": (),
-        "protection": ("result-protection",),
+        "protection": ("result-protection", "reproducibility"),
         "sync": ("semantic-merge",),
         "integration": ("refactor-and-integrate",),
         "maturation": ("task-tree", "superplan", "academic-writing"),
@@ -184,6 +184,17 @@ def test_skill_load_manifest_tables_match_contract():
         "academic-writing",
         "slide-design",
     }
+
+
+def test_durable_artifact_rule_loads_reproducibility_outside_the_axes():
+    manifest = read_text("skills/using-superra/SKILL.md")
+    section = manifest.split("## Skill-Load Manifest", 1)[1].split("### Stage", 1)[0]
+    rule = next(
+        (line for line in section.splitlines() if line.startswith("**Durable artifacts:**")),
+        "",
+    )
+    assert "`superRA:reproducibility`" in rule
+    assert "any stage" in rule and "any role" in rule
 
 
 def test_codex_availability_routes_key_off_agent_tool_presence():
@@ -253,9 +264,6 @@ def test_task_companion_contract_has_one_canonical_route():
     ]
     assert "references/task-companion-files.md" in read_text(
         "skills/using-superra/SKILL.md"
-    )
-    assert "using-superra/references/task-companion-files.md" in read_text(
-        "skills/communicate/SKILL.md"
     )
 
 

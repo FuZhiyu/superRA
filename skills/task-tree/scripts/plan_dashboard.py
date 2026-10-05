@@ -23,8 +23,10 @@ import hashlib
 import importlib.resources as resources
 import ipaddress
 import json
+import mimetypes
 import os
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -35,7 +37,7 @@ import time
 import webbrowser
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import AsyncGenerator
 from urllib.parse import quote
 
@@ -45,9 +47,23 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).parent))
 
 import _artifacts as artifacts
+import _repro_state
+from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
+from _repro_state import (
+    LOCK_FILENAME,
+    SF_DATALESS,
+    STATUSES,
+    ReproStateError,
+    compute_status,
+    is_online_only,
+    runner_paths,
+    select_steps,
+)
+from _repro_acceptance import lock_holder
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
+    parse_body_sections,
     _walk_children,
     collect_all_tasks,
     has_symlink_task_component,
@@ -89,13 +105,6 @@ PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 # chrome suppressed).  Strictly opt-in via `serve --doc-mode`; default off so the
 # served dashboard is unchanged.  Read by the index route at render time.
 DOC_MODE: bool = False
-
-# The host the server bound, recorded by ``serve()`` (the single in-process serve
-# path).  ``/api/open`` acts only on a loopback bind: off loopback the browser may
-# be on another machine, so an open would put a window on a host nobody is at.
-# Defaults to ``serve()``'s own default so an in-process ASGI host sees the same
-# policy a plain ``serve()`` would.
-BOUND_HOST: str = "127.0.0.1"
 
 # Executable used for a ``target: "editor"`` open, overridable for a VS Code fork
 # (``cursor``, ``code-insiders``, ``codium``).
@@ -408,10 +417,23 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     structural_parent_paths: set[str] = set()
     changed_paths: set[str] = set()
     artifact_changed_paths: set[str] = set()
+    repro_lock_changed = False
+    repro_graph_changed = False
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
         name = fp.name
+
+        # A build rewrote the committed lock, so every step's freshness moved.
+        if name == LOCK_FILENAME:
+            repro_lock_changed = True
+            continue
+
+        # The project's reproduction config (variables, runners, env deps)
+        # shapes every step, so an edit moves the whole graph.
+        if name == CONFIG_FILENAME and fp.parent == state.plan_root:
+            repro_graph_changed = True
+            continue
 
         artifact_owner = artifacts.artifact_owner_for_change(
             state.plan_root, state.task_index, fp
@@ -465,7 +487,17 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         any_children_changed = False
 
         for task_path in content_paths:
+            # Whether this edit can move the reproduction graph, decided before
+            # and after the reparse so both adding and removing a section
+            # counts. An edit to a task with no section on either side leaves
+            # the graph alone, and the view is not asked to refetch.
+            previous = _find_task(state, task_path)
+            before = _declares_reproduction(previous)
+            dependency_before = (previous.status, tuple(previous.depends_on), previous.parse_error) if previous else None
             updated, children_changed = rebuild_state_task(state, task_path)
+            dependency_after = (updated.status, tuple(updated.depends_on), updated.parse_error) if updated else None
+            if before or _declares_reproduction(updated) or dependency_before != dependency_after:
+                repro_graph_changed = True
             if children_changed:
                 # A task.md edit that changes this task's own child set is
                 # structural too — let the client rebuild the sidebar.
@@ -485,6 +517,9 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         if content_paths and state.root_task is not None:
             summary_html = _render_summary(state.root_task)
             await _broadcast("summary-updated", summary_html, state.wt_id)
+
+    if repro_lock_changed or repro_graph_changed or structural_parent_paths:
+        await _broadcast("repro-updated", "{}", state.wt_id)
 
     # Companion changes never rebuild the task tree or active card. Emit one
     # bounded, current manifest for each owner so a Files view can refresh only
@@ -550,11 +585,72 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     if state is None:
         return
 
-    async for changes in watchfiles.awatch(state.plan_root, stop_event=stop_event):
-        # watchfiles already debounces (default 1600ms); the sleep adds a
-        # short extra window so rapid back-to-back writes coalesce.
-        await asyncio.sleep(0.2)
-        await _rebuild_and_broadcast(state, changes)
+    # The committed reproduction lock sits at the project root, outside the
+    # watched plan root, so a build would otherwise be invisible here. Watch the
+    # file itself — cheap and non-recursive — but it does not exist until the
+    # project's first build, and a watch set is fixed for the life of an
+    # ``awatch``. So while the lock is absent, ask ``awatch`` to yield on its
+    # timeout as well: that tick is what notices the first build, announces it,
+    # and re-enters with the lock in the set. Once the lock is watched the tick
+    # is off and the loop is event-driven again. A build replaces the lock by
+    # rename, so a change to it also re-enters: a watch on the old file would
+    # not see the next build on an inode-based backend. Closing that watch drops
+    # a write that lands before the next one opens, so the reopened watch ticks
+    # once and compares the lock with what the last refresh read.
+    lock_file = Path(state.project_root) / LOCK_FILENAME
+
+    def _lock_signature():
+        try:
+            stat = lock_file.stat()
+        except OSError:
+            return None
+        return (stat.st_ino, stat.st_mtime_ns, stat.st_size)
+
+    refreshed = None  # the lock's signature when a lock change last re-armed the watch
+    while not stop_event.is_set():
+        watching_lock = lock_file.is_file()
+        watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
+        rearm = False
+        first_only = watching_lock and refreshed is not None  # the timeout yield serves only the first check
+        watcher = watchfiles.awatch(
+            *watch_paths, stop_event=stop_event,
+            yield_on_timeout=not watching_lock or refreshed is not None,
+        )
+        try:
+            async for changes in watcher:
+                if refreshed is not None:
+                    if _lock_signature() != refreshed:
+                        changes = set(changes) | {(watchfiles.Change.modified, str(lock_file))}
+                    refreshed = None
+                if first_only and not changes:
+                    rearm = True  # re-arm without the timeout yield
+                    break
+                first_only = False
+                if changes:
+                    # watchfiles already debounces (default 1600ms); the sleep
+                    # adds a short extra window so rapid back-to-back writes
+                    # coalesce.
+                    await asyncio.sleep(0.2)
+                    lock_read = _lock_signature()
+                    await _rebuild_and_broadcast(state, changes)
+                    if watching_lock and any(Path(path).name == LOCK_FILENAME for _, path in changes):
+                        refreshed = lock_read
+                        rearm = True
+                        break
+                if not watching_lock and lock_file.is_file():
+                    # The first build just wrote the lock. Its write is not in
+                    # this watch set, so announce it here rather than waiting
+                    # for the second build.
+                    await _broadcast("repro-updated", "{}", state.wt_id)
+                    rearm = True
+                    break
+        finally:
+            # Close the generator explicitly: breaking out of the `async for`
+            # only suspends it, and leaving it to the garbage collector is what
+            # orphans the native fsevents thread (see this function's docstring).
+            await watcher.aclose()
+        if not rearm:
+            return
 
 
 # ---------------------------------------------------------------------------
@@ -913,14 +1009,13 @@ def _render_node_body(task: Task, project_root: str) -> str:
     return template.render(task=task, project_root=project_root)
 
 
-def _children_graph_payload(root_task: Task) -> dict:
+def _children_graph_payload(root_task: Task, graph) -> dict:
     """Direct-children graph for *root_task*: nodes (path, slug, title, status)
-    plus sibling dependency edges. Feeds the children dependency panel — GET
-    /api/children-graph and its matching standalone fragment — straight from
-    Task data, with no mermaid source and no client-side text parsing."""
-    children = list(root_task.children)
+    plus the shared snapshot's edges between them. Feeds the children dependency
+    panel — GET /api/children-graph and its matching standalone fragment — with
+    no mermaid source and no client-side text parsing."""
+    children = [c for c in root_task.children if c.path not in graph.dependencies.archived]
     child_paths = {c.path for c in children}
-    prefix = f"{root_task.path}/" if root_task.path else ""
     nodes = [
         {
             "path": c.path,
@@ -931,10 +1026,9 @@ def _children_graph_payload(root_task: Task) -> dict:
         for c in children
     ]
     edges: dict[str, list[str]] = {}
-    for c in children:
-        deps = [prefix + dep for dep in c.depends_on if prefix + dep in child_paths]
-        if deps:
-            edges[c.path] = deps
+    for edge in graph.dependencies.edges:
+        if edge["from"] in child_paths and edge["to"] in child_paths:
+            edges.setdefault(edge["to"], []).append(edge["from"])
     return {"children": nodes, "edges": edges}
 
 
@@ -1115,7 +1209,8 @@ async def index(request: Request):
         root_prefix=Path(resolved_root).name,
         wt_id=wt_id,
         doc_mode=DOC_MODE,
-        local_open=_local_open_enabled(),
+        local_open=_is_local_viewer(request),
+        repro_actions=_repro_actions_enabled(),
         search_index=_build_search_index(state.root_task, all_tasks),
     )
     return HTMLResponse(content=html)
@@ -1173,6 +1268,8 @@ _VENDOR_ASSET_TYPES = {
     "languages/julia.min.js": "text/javascript; charset=utf-8",
     "notebook.min.js": "text/javascript; charset=utf-8",
     "purify.min.js": "text/javascript; charset=utf-8",
+    "pdf.min.mjs": "text/javascript; charset=utf-8",
+    "pdf.worker.min.mjs": "text/javascript; charset=utf-8",
     **{f"fonts/{p.name}": "font/woff2" for p in sorted(_VENDOR_DIR.glob("fonts/*.woff2"))},
 }
 
@@ -1284,22 +1381,6 @@ async def sse_events(request: Request):
     )
 
 
-# --- Route: GET /dag ---------------------------------------------------------
-
-@app.get("/dag", response_class=HTMLResponse)
-async def dag_view(request: Request):
-    """Render the DAG mermaid diagram — the global view over the whole tree,
-    clustered by subtree. The children dependency panel no longer scopes this
-    route to a subtree; it fetches GET /api/children-graph instead."""
-    state = await resolve_worktree(request)
-    if state.root_task is None:
-        raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    template = env.get_template("dag.html")
-    all_tasks = collect_all_tasks(state.root_task)
-    return HTMLResponse(content=template.render(root_task=state.root_task, all_tasks=all_tasks))
-
-
 # --- Route: GET /api/children-graph ------------------------------------------
 
 @app.get("/api/children-graph")
@@ -1312,40 +1393,248 @@ async def children_graph(request: Request, root: str):
     sub_root = _find_task(state, root)
     if sub_root is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {root}")
-    return _children_graph_payload(sub_root)
+    graph = await asyncio.to_thread(_repro_graph, state)
+    return _children_graph_payload(sub_root, graph)
 
 
-# --- Route: GET /kanban ------------------------------------------------------
+# --- Routes: GET /api/repro/graph, GET /api/repro/status --------------------
+#
+# Two read-only payloads behind the Reproduction view: the graph the tasks
+# declare (`_repro.graph_to_dict`) and the freshness the committed lock records
+# (`_repro_state.compute_status(...).to_dict()`).  Neither creates
+# `.superra-repro/` — only `ensure_state_dir`, which the runner owns, does that,
+# so a project that has never built stays untouched.  Both run off the event
+# loop: building the graph resolves `${VAR}`, which runs any `shell:` var the
+# project configured, and computing status hashes files.
+#
+# The status payload carries each step's log tail so the node detail panel needs
+# no third route and the standalone export's snapshot of these two is complete.
 
-@app.get("/kanban", response_class=HTMLResponse)
-async def kanban_view(request: Request):
-    """Render the kanban board partial."""
+REPRO_LOG_TAIL_LINES = 20
+REPRO_LOG_TAIL_BYTES = 64 * 1024
+
+# How long one build may serve later requests. The view opens with two requests
+# milliseconds apart and each build resolves `reproduction.vars`, which the
+# project may point at a shell probe; the window is short so a var that reads
+# the environment is still re-resolved on the next repaint.
+REPRO_GRAPH_TTL = 2.0
+
+# worktree id -> (built at, tree signature, Graph)
+_repro_graph_cache: dict[str, tuple[float, tuple, object]] = {}
+
+
+def _declares_reproduction(task: Task | None) -> bool:
+    """True when *task*'s body carries a ``## Reproduction`` section."""
+    if task is None or not task.body:
+        return False
+    return REPRO_SECTION in parse_body_sections(task.body)
+
+
+def _repro_tree_signature(state: WorktreeState) -> tuple:
+    """Fingerprint of every file `build_graph` reads out of the tree."""
+    def _mtime(path: Path) -> int:
+        try:
+            return path.stat().st_mtime_ns
+        except OSError:
+            return -1
+
+    root = state.root_task
+    tasks = [root, *collect_all_tasks(root)] if root is not None else []
+    return (
+        str(state.plan_root),
+        _mtime(state.plan_root / "config.yaml"),
+        tuple((t.path, _mtime(t.dir_path / "task.md")) for t in tasks),
+    )
+
+
+def _repro_graph(state: WorktreeState):
+    """Build the graph over the worktree's already-walked tree, or reuse a
+    build made in the last `REPRO_GRAPH_TTL` seconds from the same files."""
+    signature = _repro_tree_signature(state)
+    cached = _repro_graph_cache.get(state.wt_id)
+    if (
+        cached is not None
+        and cached[1] == signature
+        and time.monotonic() - cached[0] < REPRO_GRAPH_TTL
+    ):
+        return cached[2]
+    graph = build_graph(
+        state.plan_root,
+        project_root=Path(state.project_root),
+        root=state.root_task,
+    )
+    _repro_graph_cache[state.wt_id] = (time.monotonic(), signature, graph)
+    return graph
+
+
+def _repro_graph_payload(state: WorktreeState) -> dict:
+    return graph_to_dict(_repro_graph(state))
+
+
+def _repro_status_payload(state: WorktreeState) -> dict:
+    """Runner state for every declared step, each with its log tail.
+
+    Degrades instead of failing when the lock cannot be read (Python < 3.11 has
+    no ``tomllib``): the payload keeps its shape with no step entries, names the
+    reason in ``unavailable``, and leaves the view to read every step as
+    ``unknown`` off the graph.
+    """
+    project_root = Path(state.project_root)
+    graph = _repro_graph(state)
+    paths = runner_paths(project_root)
+    try:
+        report = compute_status(graph, paths, upstream=True, live_build=lock_holder(paths))
+        report.selected = {e.step.name for e in report.entries}
+    except ReproStateError as exc:
+        summary = {name: 0 for name in STATUSES}
+        summary["total"] = 0
+        return {
+            "root": str(project_root),
+            "ok": False,
+            "summary": summary,
+            "steps": [],
+            "external_inputs": [],
+            "unavailable": str(exc),
+        }
+    payload = report.to_dict()
+    del payload["findings"]  # the graph payload carries them
+    for entry in payload["steps"]:
+        # Address the log by step name rather than by the path the on-disk run
+        # record carries, so nothing this route reads decides what it opens.
+        entry["log_tail"] = _log_tail(
+            paths.log_file(entry["name"]), REPRO_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES
+        )
+    return payload
+
+
+@app.get("/api/repro/graph")
+async def repro_graph(request: Request):
+    """The reproduction graph the tree's `## Reproduction` sections declare."""
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    env = _get_jinja_env()
-    template = env.get_template("kanban.html")
-    all_tasks = collect_all_tasks(state.root_task)
-    return HTMLResponse(content=template.render(all_tasks=all_tasks))
+    return await asyncio.to_thread(_repro_graph_payload, state)
+
+
+@app.get("/api/repro/status")
+async def repro_status(request: Request):
+    """Per-step freshness of every registered step."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_status_payload, state)
 
 
 # --- Route: GET /files/{path} ----------------------------------------------
+
+FILES_SANDBOX = "sandbox allow-scripts allow-popups allow-forms allow-modals allow-downloads"
+
+
+def _project_path(state: WorktreeState, path: str) -> Path:
+    """The real file behind *path*, when the dashboard may serve or open it.
+
+    Readable: anything reached by walking down the project tree, following the
+    symlinks in it (a symlinked data folder is the researcher's own inclusion),
+    or a path the reproduction graph declares, and anything inside one.  ``..``
+    is refused outright: written out it can climb back through a symlinked
+    folder that the OS resolves somewhere else.
+    """
+    if "\0" in path:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if ".." in PurePosixPath(path).parts:
+        raise HTTPException(status_code=403, detail="Access denied")
+    root = Path(state.project_root)
+    target = Path(os.path.normpath(root / path))
+    if not (target.is_relative_to(root) or any(
+        target == declared or target.is_relative_to(declared)
+        for declared in _declared_repro_paths(state)
+    )):
+        raise HTTPException(status_code=403, detail="Access denied")
+    return target.resolve()
+
+
+def _declared_repro_paths(state: WorktreeState) -> set[Path]:
+    """Absolute paths the reproduction graph names outside the project root."""
+    try:
+        graph = _repro_graph(state)
+    except Exception:
+        return set()
+    refs = [ref for step in graph.steps for ref in (
+        *step.deps, *(o.path for o in step.outs), *(o.sidecar for o in step.outs if o.sidecar),
+    )]
+    return {Path(os.path.normpath(ref.resolved)) for ref in refs if os.path.isabs(ref.resolved)}
+
 
 @app.get("/files/{path:path}")
 async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
     state = await resolve_worktree(request)
-    file_path = Path(state.project_root) / path
-    resolved = file_path.resolve()
-    project_resolved = Path(state.project_root).resolve()
-
-    # Security: prevent path traversal outside project root
-    if not resolved.is_relative_to(project_resolved):
-        raise HTTPException(status_code=403, detail="Access denied")
+    resolved = await asyncio.to_thread(_project_path, state, path)
     if not resolved.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(str(resolved))
+    # A project page that runs scripts gets an opaque origin, so it cannot pass
+    # the same-origin gate of the routes that start processes or write files.
+    media_type = mimetypes.guess_type(resolved.name)[0] or ""
+    renders = media_type == "text/html" or media_type.endswith("xml")  # HTML, SVG, XHTML, any XML
+    return FileResponse(str(resolved), headers={"Content-Security-Policy": FILES_SANDBOX} if renders else None)
+
+
+# --- Route: GET /api/file-peek ---------------------------------------------
+#
+# The step-file hover card and in-page file view.  Answers from one stat plus a
+# bounded head read, so the cost is flat in file size; the entry carries the same
+# ``previewable`` / ``download_only`` policy as a task attachment, and the page
+# loads the file itself from /files/ only when it is previewable.  An online-only
+# file or folder (Dropbox, Box, iCloud...) answers from the stat alone: reading
+# or listing it would download it.
+
+PEEK_HEAD_BYTES = 4096
+PEEK_DIR_ENTRIES = 1000
+_PEEK_TEXT_KINDS = {"text", "markdown", "python", "julia", "r"}
+
+
+def _file_peek(resolved: Path, path: str) -> dict:
+    try:
+        info = resolved.stat()
+    except OSError:
+        return {"exists": False}
+    if is_online_only(resolved, info):
+        return {"exists": True, "online_only": True, "kind": "directory" if resolved.is_dir() else "file",
+                # A legacy Dropbox placeholder reports size 0, so only SF_DATALESS knows its size.
+                "size": info.st_size if _repro_state.file_flags(info) & SF_DATALESS and not resolved.is_dir() else None,
+                "mtime_ns": info.st_mtime_ns}
+    if resolved.is_dir():
+        with os.scandir(resolved) as entries:
+            count = sum(1 for _, _ in zip(range(PEEK_DIR_ENTRIES + 1), entries))
+        return {"exists": True, "kind": "directory", "entries": min(count, PEEK_DIR_ENTRIES),
+                "entries_capped": count > PEEK_DIR_ENTRIES, "mtime_ns": info.st_mtime_ns}
+    if not resolved.is_file():
+        return {"exists": True, "kind": "special", "mtime_ns": info.st_mtime_ns}
+    try:
+        entry = artifacts.describe_resolved(resolved, path)
+    except FileNotFoundError:
+        return {"exists": False}
+    peek = {"exists": True, **entry.as_dict(),
+            "max_preview_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes}
+    if peek["kind"] in _PEEK_TEXT_KINDS:
+        try:
+            with open(resolved, "rb") as fh:
+                head = fh.read(PEEK_HEAD_BYTES)
+        except OSError:
+            return peek
+        if b"\0" not in head:
+            peek["head"] = head.decode("utf-8", errors="replace")
+            peek["truncated"] = info.st_size > len(head)
+    return peek
+
+
+@app.get("/api/file-peek")
+async def file_peek(request: Request, path: str = ""):
+    """One project file as an attachment-shaped entry plus its opening bytes."""
+    state = await resolve_worktree(request)
+    resolved = await asyncio.to_thread(_project_path, state, path)
+    return await asyncio.to_thread(_file_peek, resolved, path)
 
 
 # --- Route: POST /api/open -------------------------------------------------
@@ -1367,33 +1656,73 @@ def _is_loopback_host(host: str) -> bool:
         return False
 
 
-def _is_loopback_authority(authority: str) -> bool:
-    """True when a ``Host`` header names the local machine.
-
-    Strips the port and an IPv6 literal's brackets, then applies the same loopback
-    test as the bind check.  A loopback-bound route requiring a loopback authority
-    is what closes DNS rebinding: an attacker page on ``evil.example.com`` that
-    rebinds the name to 127.0.0.1 is same-origin to the browser (so the content-type
-    and ``Sec-Fetch-Site`` checks both pass), but it still sends its own name in
-    ``Host``.
-    """
+def _authority_host(authority: str) -> str:
+    """The host of a ``Host`` header, without its port or an IPv6 literal's brackets."""
     host = (authority or "").strip()
     if host.startswith("["):
         host = host.partition("]")[0].lstrip("[")
     elif host.count(":") == 1:
         host = host.rpartition(":")[0]
-    return _is_loopback_host(host)
+    return host
 
 
-def _local_open_enabled() -> bool:
-    """True when this server may open files on its own host.
+async def _same_origin_json(request: Request, trusted_authority) -> dict:
+    """The JSON object body of a same-origin request, or the refusal.
 
-    Loopback-bound only (see ``BOUND_HOST``) and never in doc-mode, where the page
-    is a published documentation site rather than a working tracker.  Also the
-    render-time flag the page reads to decide between the open route and its
-    ``vscode://`` links.
+    Requiring ``application/json`` forces a preflight on any cross-origin
+    ``fetch``, which fails because no CORS middleware is installed; the
+    ``Sec-Fetch-Site`` check closes the simple-form-POST path that skips the
+    preflight; *trusted_authority* on the ``Host`` header closes DNS rebinding,
+    which defeats both by making the attacker page genuinely same-origin.
     """
-    return _is_loopback_host(BOUND_HOST) and not DOC_MODE
+    if not trusted_authority(request.headers.get("host", "")):
+        raise HTTPException(status_code=403, detail="Untrusted Host header")
+    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if content_type != "application/json":
+        raise HTTPException(status_code=415, detail="Expected application/json")
+    fetch_site = request.headers.get("sec-fetch-site")
+    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request refused")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Malformed JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Expected a JSON object")
+    return body
+
+
+def _is_local_viewer(request: Request) -> bool:
+    """True when the browser runs on this server's machine, so a file opened here
+    lands in front of the person who clicked.
+
+    Decided per request, not by the bind: an off-loopback ``--host`` serves a phone
+    and the researcher's own desktop at once.  The peer must be loopback or the
+    address the connection arrived on, which a remote peer cannot forge over TCP,
+    and ``Host`` must name one of those addresses, which a rebinding page (its own
+    domain) and a reverse proxy (the public name) both fail.  Never in doc-mode,
+    where the page is a published documentation site.  Also the render-time flag
+    the page reads to choose between the open route and its in-page file view.
+    """
+    if DOC_MODE or request.client is None:
+        return False
+    return (_names_this_machine(request, request.client.host)
+            and _names_this_machine(request, _authority_host(request.headers.get("host", ""))))
+
+
+def _names_this_machine(request: Request, host: str) -> bool:
+    """True when *host* is loopback or the address this connection arrived on.
+    A dual-stack bind reports an IPv4 peer as ``::ffff:a.b.c.d``; both sides
+    compare unmapped."""
+    def unmapped(h: str) -> str:
+        try:
+            ip = ipaddress.ip_address(h)
+        except ValueError:
+            return h
+        return str(getattr(ip, "ipv4_mapped", None) or ip)
+
+    host = unmapped(host)
+    return _is_loopback_host(host) or host == unmapped((request.scope.get("server") or ("",))[0])
 
 
 def _editor_executable() -> str | None:
@@ -1443,35 +1772,18 @@ async def open_local_path(request: Request):
     percent-encoding (a markdown href arrives encoded) before sending it, since a
     JSON body passes through no decoding layer the way a URL path does.
 
-    CSRF: the route starts processes, so it accepts only same-origin JSON from a
-    loopback authority.  Requiring ``application/json`` forces a preflight on any
-    cross-origin ``fetch`` — no CORS middleware is installed, so that preflight
-    fails — the ``Sec-Fetch-Site`` check closes the simple-form-POST path that
-    would otherwise skip the preflight, and the ``Host`` check closes DNS
-    rebinding, which defeats both of those by making the attacker page genuinely
-    same-origin.  No check needs a token.  The gate is scoped to this route rather
-    than app-wide because a legitimate off-loopback ``--host`` bind must keep
-    serving the read and comment routes, and this route is already off in that
-    case.
+    CSRF: the route starts processes, so it accepts only same-origin JSON
+    (``_same_origin_json``) from a browser on this machine (``_is_local_viewer``).
+    No check needs a token.  The gate is scoped to this route rather than app-wide
+    because a legitimate off-loopback ``--host`` bind must keep serving the read
+    and comment routes to other machines.
     """
-    if not _local_open_enabled():
-        raise HTTPException(status_code=403, detail="Local open is disabled on this server")
+    if not _is_local_viewer(request):
+        raise HTTPException(status_code=403, detail="Opening files here is only for a browser on this machine")
 
-    if not _is_loopback_authority(request.headers.get("host", "")):
-        raise HTTPException(status_code=403, detail="Untrusted Host header")
-    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    if content_type != "application/json":
-        raise HTTPException(status_code=415, detail="Expected application/json")
-    fetch_site = request.headers.get("sec-fetch-site")
-    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
-        raise HTTPException(status_code=403, detail="Cross-site request refused")
-
-    try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Malformed JSON body")
-    if not isinstance(body, dict):
-        raise HTTPException(status_code=400, detail="Expected a JSON object")
+    body = await _same_origin_json(
+        request, lambda authority: _names_this_machine(request, _authority_host(authority))
+    )
 
     rel = body.get("path")
     target = body.get("target") or "native"
@@ -1482,9 +1794,7 @@ async def open_local_path(request: Request):
 
     state = await resolve_worktree(request)
     project_resolved = Path(state.project_root).resolve()
-    resolved = (project_resolved / rel).resolve()
-    if not resolved.is_relative_to(project_resolved):
-        raise HTTPException(status_code=403, detail="Access denied")
+    resolved = await asyncio.to_thread(_project_path, state, rel)
     # Files only, matching /files/.  A directory is not a surface the page sends,
     # and on macOS an .app bundle is a directory that `open` would execute.
     if not resolved.is_file():
@@ -1498,6 +1808,315 @@ async def open_local_path(request: Request):
     else:
         await asyncio.to_thread(_open_native_sync, resolved)
     return {"status": "opened", "target": target}
+
+
+# --- Routes: /api/repro/build and /api/repro/explain -----------------------
+#
+# The page runs `superra repro build` for one card.  The server spawns the
+# runner as its own process group in the page's worktree, so the build outlives
+# this server, and records the job beside the runner's state.  The mutation lock
+# the runner holds is the truth for "a build is running"; the job file only says
+# which build the page started and how it ended.
+
+BUILD_JOB_FILENAME = "dashboard-build.json"
+BUILD_LOG_FILENAME = "dashboard-build.log"
+BUILD_HOSTS_ENV_VAR = "SUPERRA_DASHBOARD_HOSTS"
+# A just-spawned runner has not taken the lock yet; trust its live pid this long.
+BUILD_STARTUP_GRACE = 30.0
+BUILD_LOG_TAIL_LINES = 40
+BUILD_DETAIL_LINES = 12
+_build_start_lock = threading.Lock()
+
+
+def _repro_actions_enabled() -> bool:
+    """True when the page may build: a live server outside doc mode.  Unlike local
+    open, an off-loopback ``--host`` bind keeps it: the operator chose that bind."""
+    return not DOC_MODE
+
+
+def _machine_names() -> set[str]:
+    """This machine's own names, plus any the operator lists in ``SUPERRA_DASHBOARD_HOSTS``."""
+    names = {socket.gethostname(), socket.getfqdn()}
+    names |= {n.split(".")[0] for n in list(names)}
+    names |= {n + ".local" for n in list(names) if "." not in n}
+    names |= set(os.environ.get(BUILD_HOSTS_ENV_VAR, "").split(","))
+    return {n.strip().lower().rstrip(".") for n in names if n.strip()}
+
+
+def _is_trusted_authority(authority: str) -> bool:
+    """True when a ``Host`` header names this machine: loopback, an IP literal, or
+    one of its own names.  A rebinding page sends its own domain, which is none of
+    these, and an IP literal involves no DNS to rebind."""
+    host = _authority_host(authority).lower().rstrip(".")
+    if not host:
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return host == "localhost" or host in _machine_names()
+
+
+def _build_args(target: str, only: bool, force: bool) -> list[str]:
+    """`build` arguments; `--` keeps a target from ever parsing as a flag."""
+    return (["--only"] if only else []) + (["--force"] if force else []) + ["--", target]
+
+
+def _validate_build_target(graph, target) -> str:
+    """*target* when it selects steps of the current graph, else a 400."""
+    if (not isinstance(target, str) or not target or target != target.strip()
+            or target.startswith("-") or any(ord(c) < 32 for c in target)):
+        raise HTTPException(status_code=400, detail="Invalid build target")
+    try:
+        names, unknown = select_steps(graph, [target])
+    except ReproStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if unknown or not names:
+        raise HTTPException(status_code=400, detail=f"No step or task matches {target}")
+    return target
+
+
+def _login_env(project_root: Path) -> dict[str, str]:
+    """The researcher's login-shell environment, so a build sees the toolchain
+    their terminal does (Julia, conda, ``PATH``) rather than this server's,
+    which is often an agent hook's.  Falls back to this process's environment."""
+    shell = os.environ.get("SHELL") or "/bin/sh"
+    marker = b"\0__SUPERRA_ENV__\0"
+    env = dict(os.environ)
+    try:
+        out = subprocess.run(  # noqa: S603 - argv form; the command text is constant
+            [shell, "-l", "-i", "-c", "printf '\\0__SUPERRA_ENV__\\0'; env -0"],
+            stdin=subprocess.DEVNULL, capture_output=True, timeout=30, check=False,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        out = b""
+    _, found, tail = out.partition(marker)
+    if found:
+        env = {}
+        for item in tail.split(b"\0"):
+            key, eq, value = item.partition(b"=")
+            if eq and key:
+                env[key.decode(errors="replace")] = value.decode(errors="replace")
+    env["PWD"] = str(project_root)
+    env.pop("OLDPWD", None)
+    env["PYTHONUNBUFFERED"] = "1"  # the log keeps the runner's line order as it runs
+    return env
+
+
+def _job_file(paths) -> Path:
+    return paths.state_dir / BUILD_JOB_FILENAME
+
+
+def _read_job(paths) -> dict | None:
+    try:
+        job = json.loads(_job_file(paths).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return job if isinstance(job, dict) else None
+
+
+def _write_job(paths, job: dict) -> None:
+    from _repro_acceptance import atomic_json
+    atomic_json(_job_file(paths), job)
+
+
+def _pid_alive(pid) -> bool:
+    try:
+        os.kill(int(pid), 0)
+    except (OSError, ValueError, TypeError):
+        return False
+    return True
+
+
+def _job_alive(job: dict | None, holder: int | None) -> bool:
+    """True while the page's job is the build running here: its process group holds
+    the mutation lock, or it was spawned moments ago and has not taken it yet.
+    A recycled pid fails the group check."""
+    if job is None or "returncode" in job or not _pid_alive(job.get("pid")):
+        return False
+    if holder:
+        try:
+            return os.getpgid(holder) == job["pid"]
+        except OSError:
+            return False
+    return time.time() - job.get("started_at", 0) < BUILD_STARTUP_GRACE
+
+
+def _reap_build(proc: subprocess.Popen, paths, job: dict) -> None:
+    returncode = proc.wait()
+    current = _read_job(paths)
+    if current is not None and current.get("pid") == job["pid"]:
+        _write_job(paths, dict(current, returncode=returncode, ended_at=time.time()))
+
+
+def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool) -> dict:
+    """Spawn one `superra repro build` for the page's worktree; refuse a second."""
+    from _repro_state import ensure_state_dir
+    project_root = Path(state.project_root)
+    paths = runner_paths(project_root)
+    args = _build_args(target, only, force)
+    with _build_start_lock:
+        holder = lock_holder(paths)
+        if holder is not None or _job_alive(_read_job(paths), holder):
+            raise ReproStateError("another reproduction build or acceptance mutation is running")
+        ensure_state_dir(paths)
+        paths.logs_dir.mkdir(parents=True, exist_ok=True)
+        argv = [sys.executable, str(Path(__file__).with_name("repro_run.py")),
+                "--root", str(state.plan_root), "build", *args]
+        with (paths.logs_dir / BUILD_LOG_FILENAME).open("wb") as log:
+            proc = subprocess.Popen(  # noqa: S603 - argv form, shell=False
+                argv, cwd=project_root, env=_login_env(project_root),
+                stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        job = {
+            "pid": proc.pid,
+            "target": target,
+            "only": only,
+            "force": force,
+            "command": "superra repro build " + " ".join(
+                a if a.startswith("--") else shlex.quote(a) for a in args if a != "--"),
+            "started_at": time.time(),
+            "log": f"{paths.state_dir.name}/logs/{BUILD_LOG_FILENAME}",
+        }
+        _write_job(paths, job)
+    threading.Thread(target=_reap_build, args=(proc, paths, job), daemon=True).start()
+    return job
+
+
+def _build_summary(log_text: str) -> tuple[str, list[str]]:
+    """The line of a build log that says how it ended, and the lines that explain it.
+
+    After an `Error:` summary, the lines that follow it (the download gate's file
+    list); after a step count, each failed step's block (a step stopped at its
+    start names the files it needs), at most BUILD_DETAIL_LINES.
+    """
+    lines = [line.rstrip() for line in log_text.splitlines() if line.strip()]
+    for at in range(len(lines) - 1, -1, -1):
+        line = lines[at].strip()
+        if line.startswith("Error:"):
+            return line, lines[at + 1:]
+        if (line.startswith(("Interrupted", "Nothing to execute", "No steps registered"))
+                or re.match(r"\d+ step\(s\): ", line)):
+            failed, inside = [], False
+            for row in lines[:at]:
+                inside = row.startswith("✗ ") or (inside and row[:1].isspace())
+                if inside:
+                    failed.append(row)
+            if len(failed) > BUILD_DETAIL_LINES:
+                failed = failed[:BUILD_DETAIL_LINES] + [f"… {len(failed) - BUILD_DETAIL_LINES} more line(s) in the log"]
+            return line, failed
+    return (lines[-1].strip() if lines else ""), []
+
+
+def _build_state_sync(state: WorktreeState) -> dict:
+    """Whether a build is running here, the page's last build, and the executing steps."""
+    paths = runner_paths(Path(state.project_root))
+    holder = lock_holder(paths)
+    job = _read_job(paths)
+    running = holder is not None
+    if job is not None:
+        job["alive"] = _job_alive(job, holder)
+        running = running or job["alive"]
+        tail = _log_tail(paths.logs_dir / BUILD_LOG_FILENAME, BUILD_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES)
+        job["summary"], job["detail"] = ("", []) if job["alive"] else _build_summary(tail)
+        job["log_tail"] = tail
+    steps = []
+    if running and paths.runs_dir.is_dir():
+        for record_file in sorted(paths.runs_dir.glob("*.json")):
+            try:
+                record = json.loads(record_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if (isinstance(record, dict) and record.get("outcome") in ("running", "pending")
+                    and holder and record.get("pid") == holder):
+                steps.append({"name": record_file.stem, "started_at": record.get("started_at")})
+    return {"enabled": _repro_actions_enabled(), "running": running, "job": job, "steps": steps}
+
+
+def _stop_build_sync(state: WorktreeState) -> dict:
+    paths = runner_paths(Path(state.project_root))
+    job = _read_job(paths)
+    if not _job_alive(job, lock_holder(paths)):
+        raise HTTPException(status_code=409, detail="No build started from the dashboard is running")
+    try:
+        os.killpg(int(job["pid"]), signal.SIGTERM)  # its own group: start_new_session
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=409, detail=f"Could not stop the build: {exc}")
+    return {"status": "stopping", "pid": job["pid"]}
+
+
+@app.get("/api/repro/build")
+async def repro_build_state(request: Request):
+    """The worktree's running build, if any, and the page's last build."""
+    state = await resolve_worktree(request)
+    return await asyncio.to_thread(_build_state_sync, state)
+
+
+@app.post("/api/repro/build")
+async def repro_build(request: Request):
+    """Start `superra repro build <target> [--only] [--force]` in the page's worktree.
+
+    The route executes the commands the tree declares, so it takes only a
+    same-origin JSON request from a ``Host`` naming this machine, and only a
+    target present in the current graph, passed as one argv element after ``--``.
+    """
+    if not _repro_actions_enabled():
+        raise HTTPException(status_code=403, detail="Builds are disabled on this server")
+    body = await _same_origin_json(request, _is_trusted_authority)
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    graph = await asyncio.to_thread(_repro_graph, state)
+    target = _validate_build_target(graph, body.get("target"))
+    try:
+        return await asyncio.to_thread(
+            _start_build_sync, state, target, body.get("only") is True, body.get("force") is True)
+    except ReproStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@app.post("/api/repro/build/stop")
+async def repro_build_stop(request: Request):
+    """Stop the build this page started; the runner records its stopped steps as failed."""
+    if not _repro_actions_enabled():
+        raise HTTPException(status_code=403, detail="Builds are disabled on this server")
+    await _same_origin_json(request, _is_trusted_authority)
+    state = await resolve_worktree(request)
+    return await asyncio.to_thread(_stop_build_sync, state)
+
+
+def _repro_explain_sync(state: WorktreeState, target: str, diff: bool = False) -> dict:
+    from _repro_provenance import explain, resolve_target, target_ref
+    from _repro_state import HashCache
+    project_root = Path(state.project_root)
+    graph = _repro_graph(state)
+    paths = runner_paths(project_root)
+    try:
+        kind, value = resolve_target(graph, target, project_root)
+    except ReproStateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if kind == "path":
+        raise HTTPException(status_code=400, detail="Explain takes a task or step")
+    names = [value] if kind == "step" else value[1]
+    cache = HashCache(paths.cache_file)
+    try:
+        report = compute_status(graph, paths, targets=[target_ref(graph.step(n)) for n in names],
+                                cache=cache, upstream=True, live_build=lock_holder(paths))
+        result = explain(report, paths, cache, kind, value, full_diff=diff, plan_name=state.plan_root.name)
+    except ReproStateError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    cache.flush()
+    return result
+
+
+@app.get("/api/repro/explain")
+async def repro_explain(request: Request, target: str, diff: bool = False):
+    """`superra repro explain <target> --json [--diff]` for a task or step: why it is not fresh."""
+    state = await resolve_worktree(request)
+    if state.root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    return await asyncio.to_thread(_repro_explain_sync, state, target, diff)
 
 
 # --- Comment routes --------------------------------------------------------
@@ -1924,7 +2543,7 @@ async def export_subtree(request: Request, root: str = ""):
 # ---------------------------------------------------------------------------
 # The `generate` subcommand renders the SAME base.html template the live server
 # serves, in standalone mode: every fragment the live client fetches (/nav,
-# /nav/<path>, /node/<path>, /api/children-graph?root=<path>, /kanban) is
+# /nav/<path>, /node/<path>, /api/children-graph?root=<path>) is
 # pre-rendered here with the identical Jinja partials/render helpers and
 # embedded inline, and base.html's standalone fetch shim resolves the client's
 # fetch() calls from that embedded map. There is exactly one dashboard source
@@ -1935,7 +2554,7 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     """Pre-render every server fragment the standalone client fetches.
 
     Mirrors the live routes (/nav, /nav/<path>, /node/<path>,
-    /api/children-graph?root=<path>, /kanban) byte-for-byte (JSON fragments
+    /api/children-graph?root=<path>) byte-for-byte (JSON fragments
     value-for-value) by reusing the same render helpers, keyed by the exact URL
     the client requests so base.html's standaloneFetch resolves them offline.
     Takes the render state explicitly via *state* (its ``root_task`` and
@@ -1964,15 +2583,17 @@ def _build_standalone_fragments(state: WorktreeState) -> dict[str, object]:
     # node body at all. /nav/<path> stays descendants-only (the root is served
     # by the main /nav fragment, never /nav/).
     all_tasks = collect_all_tasks(root_task)
+    graph = _repro_graph(state)
     for task in [root_task, *all_tasks]:
         fragments[f"/node/{task.path}"] = _render_node_body(task, state.project_root)
-        fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task)
+        fragments[f"/api/children-graph?root={task.path}"] = _children_graph_payload(task, graph)
         if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
 
-    # /kanban — the full board.
-    kanban_tmpl = env.get_template("kanban.html")
-    fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
+    # Reproduction view — a snapshot of the graph and of the freshness state at
+    # export time.
+    fragments["/api/repro/graph"] = _repro_graph_payload(state)
+    fragments["/api/repro/status"] = _repro_status_payload(state)
 
     return fragments
 
@@ -2275,6 +2896,7 @@ def _build_search_index(root_task: Task, all_tasks: list[Task]) -> list[dict[str
             "path": task.path,
             "slug": task.slug,
             "title": task.title or "",
+            "status": task.status,
             "text": _search_text(task.body),
         })
     return index
@@ -2309,7 +2931,7 @@ def render_standalone_html(
     bare root basename so a tree nested below the repo root keeps its leading
     path.  Empty falls back to the basename (a tree at the repo root, e.g.
     ``superRA``).  *doc_mode* (opt-in) renders the tree as documentation: task-workflow
-    chrome (status badges, summary stats/progress, kanban toggle, children
+    chrome (status badges, summary stats/progress, layout toggle, children
     dependency view) is suppressed, and a genuine body file link resolves
     repo-root-relative (the doc authoring contract) rather than against the doc
     node's dir.  *doc_local_links* names basenames the build emits beside the
@@ -2494,11 +3116,12 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
 
     Binds *host*, defaulting to loopback (``127.0.0.1``).  The server is
     unauthenticated and exposes the project's files (``/files/{path}``), the
-    full task tree (``/export``), and disk-writing comment routes; with
+    full task tree (``/export``), disk-writing comment routes, and the build
+    route that runs the tree's declared commands; with
     background-by-default serving this is a long-lived ambient surface, so it
     must not be reachable off-host unless the operator deliberately opts in via
     ``--host`` (e.g. ``--host 0.0.0.0`` for trusted-LAN serving).  Records the
-    bound host in ``BOUND_HOST``, which gates ``/api/open``.
+    ``/api/open`` stays limited to a browser on this machine (``_is_local_viewer``).
 
     Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
     ``_server.should_exit = True``.  This is the single in-process serve path:
@@ -2509,17 +3132,13 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     """
     import uvicorn
 
-    global _server, BOUND_HOST
-    BOUND_HOST = host
+    global _server
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:
         _server.run()
     finally:
-        # BOUND_HOST describes the host currently bound; nothing is bound once
-        # run() returns, so put it back to the unserved default.
         _server = None
-        BOUND_HOST = "127.0.0.1"
 
 
 # ---------------------------------------------------------------------------
@@ -2957,10 +3576,26 @@ def serve_background(
     return 1
 
 
-def _log_tail(log_path: Path, lines: int = 20) -> str:
-    """Return the last *lines* lines of the log file, or '' if unreadable."""
+def _log_tail(log_path: Path, lines: int = 20, max_bytes: int | None = None) -> str:
+    """Return the last *lines* lines of the log file, or '' if unreadable.
+
+    *max_bytes* reads only that much from the end of the file, so a caller
+    tailing a log it did not write (a build step's stdout can run to megabytes)
+    never pulls the whole thing into memory. The first line of a truncated read
+    may be a partial line and is dropped.
+    """
     try:
-        text = log_path.read_text(encoding="utf-8", errors="replace")
+        if max_bytes is None:
+            text = log_path.read_text(encoding="utf-8", errors="replace")
+        else:
+            with log_path.open("rb") as handle:
+                handle.seek(0, os.SEEK_END)
+                size = handle.tell()
+                handle.seek(max(0, size - max_bytes))
+                chunk = handle.read()
+            text = chunk.decode("utf-8", errors="replace")
+            if size > max_bytes:
+                text = text.split("\n", 1)[-1]
     except OSError:
         return ""
     return "\n".join(text.splitlines()[-lines:])
@@ -3040,7 +3675,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="127.0.0.1",
         help=(
             "Interface to bind (default: 127.0.0.1, loopback only). "
-            "The server is unauthenticated and serves project files; pass "
+            "The server is unauthenticated, serves project files, and runs the "
+            "tree's builds; pass "
             "--host 0.0.0.0 only to deliberately expose it on a trusted LAN."
         ),
     )

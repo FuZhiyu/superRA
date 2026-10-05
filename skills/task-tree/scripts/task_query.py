@@ -10,12 +10,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _task_snapshot import format_input, frontier_rows, input_footer
+from _repro import Graph, build_graph
 from _task_io import (
     TASK_ROOT_DIRNAME,
     Task,
     autodetect_plan_root,
-    collect_all_tasks,
-    compute_frontier,
     parse_body_sections,
     walk_plan,
 )
@@ -50,15 +50,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def print_tree(task: Task, indent: int = 0, status_filter: str | None = None) -> None:
-    """Print an indented tree with status icons."""
+def print_tree(
+    task: Task,
+    indent: int = 0,
+    status_filter: str | None = None,
+) -> None:
+    """Print an indented tree with status icons, filterable by *status_filter*."""
     effective = task.effective_status()
     icon = STATUS_ICONS.get(effective, "?")
 
+    pass_filter = True
     if status_filter and effective != status_filter:
         pass_filter = False
-    else:
-        pass_filter = True
 
     if task.is_root:
         label = task.title or "(root)"
@@ -130,29 +133,12 @@ def format_focused_tree(root: Task, target_path: str) -> str:
     return "\n".join(lines)
 
 
-def print_frontier(frontier: list[Task], as_json: bool = False) -> None:
-    """Print the dispatch frontier."""
-    if as_json:
-        data = [{"path": t.path, "title": t.title, "status": t.status} for t in frontier]
-        print(json.dumps(data, indent=2))
-        return
-
-    if not frontier:
-        print("No tasks on the frontier (all approved, blocked, or parked).")
-        return
-
-    for task in frontier:
-        icon = STATUS_ICONS.get(task.status, "?")
-        deps = f" [depends: {', '.join(task.depends_on)}]" if task.depends_on else ""
-        print(f"  {icon} {task.path}: {task.title}{deps}")
-
-
 def _sanitize_mermaid_id(slug: str) -> str:
     """Replace non-alphanumeric characters (except hyphens) with underscores."""
     return re.sub(r"[^a-zA-Z0-9_-]", "_", slug)
 
 
-def render_dag(task: Task, subtree_path: str = "") -> str:
+def render_dag(task: Task, subtree_path: str = "", graph: Graph | None = None) -> str:
     """Render a Mermaid DAG of sibling dependencies within a subtree."""
     if subtree_path:
         target = _find_subtask(task, subtree_path)
@@ -161,6 +147,20 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
             sys.exit(1)
     else:
         target = task
+
+    if graph is not None:
+        view = graph.dependencies.boundaries.get(target.path, {"nodes": [], "edges": []})
+        lines = ["graph LR"]
+        ids = {node: f"n{i}" for i, node in enumerate(view["nodes"])}
+        for node, node_id in ids.items():
+            label = node.replace('"', "'")
+            lines.append(f'    {node_id}["{label}"]')
+        for edge in view["edges"]:
+            kinds = ", ".join(sorted({e["kind"] for e in edge["evidence"]}))
+            lines.append(f'    {ids[edge["from"]]} -->|{kinds}| {ids[edge["to"]]}')
+        for finding in graph.findings:
+            lines.append("    %% " + finding.to_text().replace("\n", " "))
+        return "\n".join(lines)
 
     if not target.children:
         return "graph LR\n    %% no children"
@@ -212,7 +212,7 @@ def _find_subtask(task: Task, path: str) -> Task | None:
     return None
 
 
-def tree_to_json(task: Task) -> dict:
+def tree_to_json(task: Task, graph: Graph | None = None) -> dict:
     """Serialize the task tree to a JSON-compatible dict."""
     sections = parse_body_sections(task.body)
     return {
@@ -221,6 +221,9 @@ def tree_to_json(task: Task) -> dict:
         "status": task.status,
         "effective_status": task.effective_status(),
         "depends_on": task.depends_on,
+        "effective_depends_on": (graph.dependencies.prerequisites(task.path)
+                                 if graph and graph.dependencies and graph.dependencies.complete else None),
+        "dependencies_complete": bool(graph and graph.dependencies and graph.dependencies.complete),
         "is_leaf": task.is_leaf,
         "body": task.body,
         "objective": sections.get("Objective", ""),
@@ -228,7 +231,7 @@ def tree_to_json(task: Task) -> dict:
         "decisions": sections.get("Decisions", ""),
         "revision_notes": sections.get("Revision Notes", ""),
         "review_notes": sections.get("Review Notes", ""),
-        "children": [tree_to_json(c) for c in task.children],
+        "children": [tree_to_json(c, graph=graph) for c in task.children],
     }
 
 
@@ -247,19 +250,45 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.tree:
         if args.as_json:
-            print(json.dumps(tree_to_json(root), indent=2))
+            # `resolve_vars=False` skips `${VAR}` resolution (no env/shell evaluation).
+            graph = build_graph(plan_root, root=root, resolve_vars=False)
+            print(json.dumps(tree_to_json(root, graph=graph), indent=2))
         else:
             print_tree(root, status_filter=args.status)
 
     elif args.frontier:
-        frontier = compute_frontier(root)
+        graph = build_graph(plan_root, root=root)
+        try:
+            rows = frontier_rows(graph, plan_root)
+        except (ValueError, RuntimeError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
         if args.status:
-            frontier = [t for t in frontier if t.status == args.status]
-        print_frontier(frontier, as_json=args.as_json)
-
+            rows = [row for row in rows if row["status"] == args.status]
+        if args.as_json:
+            print(json.dumps(rows, indent=2))
+        else:
+            for row in rows:
+                print(f"  {row['path'] or '(root)'}: {row['title']}")
+                for item in row["inputs"]:
+                    print(f"    {format_input(item)}")
+            if not rows:
+                print("No tasks on the frontier (all approved, blocked, or parked).")
+            elif any(row["inputs"] for row in rows):
+                print(input_footer())
+        errors = sum(f.severity == "error" and f.category == "reproduction" for f in graph.findings)
+        if errors:
+            print(f"Note: {errors} reproduction error(s) leave file inputs unknown; "
+                  "run `superra task check --category reproduction`.", file=sys.stderr)
+        return
     elif args.dag is not None:
-        mermaid = render_dag(root, args.dag)
-        print(mermaid)
+        graph = build_graph(plan_root, root=root)
+        if args.as_json:
+            print(json.dumps(graph.dependencies.to_dict(), indent=2))
+        else:
+            print(render_dag(root, args.dag, graph=graph))
+        if not graph.dependencies.valid:
+            sys.exit(1)
 
 
 if __name__ == "__main__":

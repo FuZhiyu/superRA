@@ -12,7 +12,9 @@ level — the wrapper sends `dashboard` straight to `plan_dashboard.py` so the
 web stack never lands on this task hot path. The in-process `dashboard` handler
 below stays the single home for the user-facing-surface translation;
 `plan_dashboard.py` delegates back to it when the wrapper routes `dashboard`
-there, so the translation has one home.
+there, so the translation has one home. `repro` forwards its arguments verbatim
+to `repro_run.py`, which owns that flag surface and re-execs itself under uv
+only to read a legacy `pytask.lock` on Python 3.10.
 """
 
 from __future__ import annotations
@@ -88,6 +90,20 @@ def _resolved_root_value(root: str | None) -> str:
     return TASK_ROOT_DIRNAME
 
 
+def _wrapper_only_root() -> Path | None:
+    """A ``superRA/`` holding only the ``wrapper init`` wrapper, walking up from cwd.
+
+    Autodetect needs a ``task.md`` to recognize a root; the wrapper marks one
+    that is initialized but has no task yet, so the first ``task create`` works.
+    """
+    current = Path.cwd().resolve()
+    for directory in (current, *current.parents):
+        candidate = directory / TASK_ROOT_DIRNAME
+        if (candidate / "superra").is_file():
+            return candidate
+    return None
+
+
 def _plan_root(root: str | None) -> Path:
     """Resolved task root as a Path for direct mutator-function calls.
 
@@ -98,6 +114,12 @@ def _plan_root(root: str | None) -> Path:
     if root is not None:
         return Path(root)
     detected = resolve_plan_root_arg(None)
+    wrapper_root = _wrapper_only_root()
+    # A nearer wrapper-initialized root wins over a farther autodetected tree.
+    if wrapper_root is not None and (
+        detected is None or len(wrapper_root.parts) > len(detected.resolve().parts)
+    ):
+        detected = wrapper_root
     if detected is None:
         print("Error: could not auto-detect task root. Use --root.", file=sys.stderr)
         sys.exit(1)
@@ -237,6 +259,8 @@ def _run_dag(args: argparse.Namespace) -> None:
     argv = _root_args(args.root) + ["--dag"]
     if args.subtree:
         argv.append(args.subtree)
+    if args.as_json:
+        argv.append("--json")
     _module_main("task_query", argv)
 
 
@@ -244,6 +268,8 @@ def _run_check(args: argparse.Namespace) -> None:
     argv = _root_args(args.root)
     if args.as_json:
         argv.append("--json")
+    if args.show_all:
+        argv.append("--all")
     _append_optional(argv, "--category", args.category)
     _module_main("task_check", argv)
 
@@ -402,7 +428,8 @@ def build_parser() -> argparse.ArgumentParser:
         default="127.0.0.1",
         help=(
             "Interface to bind (default: 127.0.0.1, loopback only). "
-            "The server is unauthenticated; pass --host 0.0.0.0 only to "
+            "The server is unauthenticated and runs the tree's builds; "
+            "pass --host 0.0.0.0 only to "
             "deliberately expose it on a trusted LAN."
         ),
     )
@@ -550,6 +577,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     dag = task_sub.add_parser("dag", help="Render a Mermaid dependency DAG")
     dag.add_argument("subtree", nargs="?", default="", help="Optional subtree path")
+    dag.add_argument("--json", action="store_true", dest="as_json")
     dag.add_argument(
         "--root",
         default=None,
@@ -564,7 +592,8 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
     check.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
-    check.add_argument("--category", choices=["status", "dependency", "rollup", "sync-impact"], help="Check one category")
+    check.add_argument("--category", choices=["status", "dependency", "rollup", "sync-impact", "reproduction", "links"], help="Check one category")
+    check.add_argument("--all", action="store_true", dest="show_all", help="List every finding instead of a capped list per category")
     _set_runner(check, _run_check)
 
     create = task_sub.add_parser("create", help="Create a task directory")
@@ -731,6 +760,14 @@ def build_parser() -> argparse.ArgumentParser:
     post_tool_use = hook_sub.add_parser("post-tool-use", help="Run the PostToolUse hook")
     _set_runner(post_tool_use, _run_hook)
 
+    # Registered for `superra --help` only: `main` hands every `repro` argument
+    # to repro_run.py before argparse runs, so the flag surface has one owner.
+    sub.add_parser(
+        "repro",
+        help="Build and inspect the reproduction graph (`superra repro --help`)",
+        add_help=False,
+    )
+
     wrapper = sub.add_parser("wrapper", help="Generate the resolver-carrying task-tree CLI wrapper")
     wrapper_sub = wrapper.add_subparsers(dest="wrapper_command", required=True)
     wrapper_init = wrapper_sub.add_parser(
@@ -754,6 +791,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> None:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "repro":
+        _module_main("repro_run", argv[1:])
+        return
     parser = build_parser()
     args = parser.parse_args(argv)
     runner = getattr(args, "runner", None)

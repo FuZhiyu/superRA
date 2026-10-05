@@ -6,7 +6,7 @@ Integrate obtains researcher approval for the protected record and reviewer-auth
 
 ## Step 1: Run the protection suite
 
-Every existing check plus the mechanisms selected at Protect. A failing drift test or document check blocks Integrate until classified under its owning protection discipline.
+Every existing check, the mechanisms selected at Protect, and the completion gate (`../../reproducibility/references/protect-and-completion.md` §The completion gate). A failing drift test, document check, or reproduction step blocks Integrate until classified under its owning protection discipline.
 
 ## Step 2: Recover the task state
 

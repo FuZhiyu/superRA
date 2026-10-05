@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Shared internals for the task-tree skill.
 
-Provides parsing, serialization, tree walking, frontier computation,
-and status rollup for the directory-tree task tree.
+Provides parsing, serialization, tree walking, and status rollup for the directory-tree task tree.
 """
 
 from __future__ import annotations
@@ -950,7 +949,10 @@ def walk_plan(plan_root: Path) -> Task:
     """
     root_task_md = plan_root / "task.md"
     if not root_task_md.is_symlink() and root_task_md.exists():
-        root = parse_task(root_task_md, plan_root)
+        try:
+            root = parse_task(root_task_md, plan_root)
+        except (OSError, UnicodeDecodeError) as exc:
+            root = Task(path="", dir_path=plan_root, title="(unreadable root)", parse_error=str(exc))
     else:
         root = Task(path="", dir_path=plan_root, title=SYNTHETIC_ROOT_TITLE)
 
@@ -1006,8 +1008,8 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     """Find and parse child task directories, sorted topologically by depends_on.
 
     Per-file errors (``OSError``, ``UnicodeDecodeError``) are caught, warned,
-    and skipped so one unreadable or undecodable ``task.md`` does not abort the
-    whole walk for all readers (dashboard, ``task query``, ``task read``).
+    and retained as parse-error nodes so one unreadable ``task.md`` does not
+    abort the whole walk for all readers (dashboard, ``task query``, ``task read``).
     Mirrors the leniency design used for unknown status values.
     """
     subdirs = iter_child_task_dirs(directory)
@@ -1017,11 +1019,12 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
             child = parse_task(subdir / "task.md", plan_root)
         except (OSError, UnicodeDecodeError) as exc:
             warnings.warn(
-                f"Skipping {subdir / 'task.md'}: {exc}; "
+                f"Unreadable {subdir / 'task.md'}: {exc}; "
                 f"run `superra task check` to diagnose.",
                 stacklevel=2,
             )
-            continue
+            child = Task(path=subdir.relative_to(plan_root).as_posix(), dir_path=subdir,
+                         title=subdir.name, parse_error=str(exc))
         child.children = _walk_children(subdir, plan_root)
         parsed.append(child)
 
@@ -1187,74 +1190,6 @@ def propagate_parent_status(
             updated += 1
 
     return updated
-
-
-def compute_frontier(root: Task) -> list[Task]:
-    """Compute the dispatch frontier: leaf tasks that have actionable work now.
-
-    A leaf task is on the frontier when:
-    1. Its own status is actionable — 'not-started' or 'in-progress' (ready to
-       implement), 'implemented' (approval decision open), or 'revise' (ready
-       to fix).
-       Each entry carries its status, so a caller reads the next action from it.
-    2. All sibling dependencies have effective_status 'approved', 'archived',
-       'implemented', or 'revise' — i.e. the dependency's work product exists,
-       even if review or a fix round is still open. Only 'not-started',
-       'in-progress', and 'postponed' dependencies block dependents.
-    3. All ancestor tasks' sibling dependencies are met (recursively)
-    """
-    frontier: list[Task] = []
-    _collect_frontier(root, frontier, ancestors_ready=True)
-    return frontier
-
-
-# Leaf statuses that represent actionable, not-yet-done work. 'approved' is done;
-# 'archived'/'postponed' are parked. The caller distinguishes implement vs review
-# vs fix work by reading each task's status.
-_ACTIONABLE_STATUSES = ("not-started", "in-progress", "implemented", "revise")
-
-
-def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -> None:
-    """Recursively collect frontier tasks."""
-    if task.is_leaf:
-        if task.is_root and task.title == SYNTHETIC_ROOT_TITLE:
-            return  # synthetic placeholder for a rootless forest, not real work
-        if task.status in ("archived", "postponed"):
-            return  # parked tasks never appear on the frontier
-        if ancestors_ready and task.status in _ACTIONABLE_STATUSES:
-            frontier.append(task)
-        return
-
-    sibling_map = {c.slug: c for c in task.children}
-
-    for child in task.children:
-        # Skip parked (archived/postponed) children entirely
-        if child.effective_status() in ("archived", "postponed"):
-            continue
-
-        deps_met = True
-        for dep in child.depends_on:
-            dep_task = sibling_map.get(dep)
-            if dep_task is None:
-                warnings.warn(
-                    f"Task {child.path!r} depends on {dep!r} which does not "
-                    f"match any sibling task",
-                    stacklevel=2,
-                )
-                deps_met = False
-                break
-            # A dependency is satisfied once its work product exists —
-            # 'implemented' and 'revise' count, so dependents can proceed while
-            # review or a deferred fix round is open. Postponed dependencies
-            # are NOT satisfied — postponing a task deliberately blocks its
-            # dependents until it is resumed.
-            dep_status = dep_task.effective_status()
-            if dep_status not in ("approved", "archived", "implemented", "revise"):
-                deps_met = False
-                break
-
-        child_ready = ancestors_ready and deps_met
-        _collect_frontier(child, frontier, ancestors_ready=child_ready)
 
 
 def collect_all_tasks(root: Task) -> list[Task]:

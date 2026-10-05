@@ -57,13 +57,15 @@ def test_default_ci_path_never_imports_sdk_or_codex():
 
 
 def test_table_matches_manifest_domain_rows():
-    # The four manifest domains are all present. A drift here means the table no
-    # longer matches the Skill-Load Manifest Domain table.
+    # The four manifest domains plus reproducibility, which the manifest's
+    # durable-artifact rule loads on matching wording at any stage. A drift here
+    # means the table no longer matches the Skill-Load Manifest.
     assert ALL_DOMAIN_SKILLS == {
         "econ-data-analysis",
         "theory-modeling",
         "academic-writing",
         "slide-design",
+        "reproducibility",
     }
 
 

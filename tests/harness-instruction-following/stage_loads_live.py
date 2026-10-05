@@ -7,15 +7,15 @@ LC007–LC010), in both harnesses, and that the sole negative stage
 (``implementation``) carries no extra stage-skill expectation:
 
 - ``planning-review`` → ``skills/superplan/references/planning-review.md``
-- ``protection``      → ``result-protection``
+- ``protection``      → ``result-protection`` + ``reproducibility``
 - ``sync``            → ``semantic-merge``
 - ``integration``     → ``refactor-and-integrate``
 - ``maturation``      → ``task-tree`` + ``superplan`` (always); ``academic-writing``
   conditional ("prose-heavy maturation"), so it is not a guaranteed load
 
-``maturation`` is the one positive stage whose manifest row loads **multiple**
-skills, so its row carries a tuple of expected skill names; the single-skill
-positive rows and the read-channel row are unchanged.
+``protection`` and ``maturation`` are the positive stages whose manifest rows load
+**multiple** skills, so their rows carry a tuple of expected skill names; the
+single-skill positive rows and the read-channel row are unchanged.
 
 One parametrized table (:data:`STAGE_ROWS`) is the single source of truth, so
 adding a future stage is a one-row change. Each row names the expected evidence
@@ -53,6 +53,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from domain_loads_live import ALL_DOMAIN_SKILLS
 from sdk_load_evidence import SkillLoadEvidence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -70,7 +71,7 @@ class StageRow:
 
     - ``stage`` is the ``Stage:`` value the dispatch carries.
     - For a ``CHANNEL_SKILL`` row, ``expected_skills`` holds the manifest skill
-      *name(s)* the stage **always** loads (e.g. ``("result-protection",)`` for a
+      *name(s)* the stage **always** loads (e.g. ``("semantic-merge",)`` for a
       single-skill stage, ``("task-tree", "superplan")`` for the multi-skill
       ``maturation`` stage). A skill the manifest marks conditional (``academic-writing``
       on ``maturation``) is **not** listed — it must not be a guaranteed-load
@@ -103,7 +104,7 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         stage="protection",
         expected=None,
         channel=CHANNEL_SKILL,
-        expected_skills=("result-protection",),
+        expected_skills=("result-protection", "reproducibility"),
     ),
     StageRow(
         stage="sync",
@@ -117,7 +118,7 @@ STAGE_ROWS: tuple[StageRow, ...] = (
         channel=CHANNEL_SKILL,
         expected_skills=("refactor-and-integrate",),
     ),
-    # Positive multi-skill stage: maturation always loads task-tree + superplan.
+    # Second positive multi-skill stage: maturation always loads task-tree + superplan.
     # academic-writing is conditional ("prose-heavy maturation"), so it is deliberately
     # absent from expected_skills — only the guaranteed loads are asserted.
     StageRow(
@@ -133,13 +134,15 @@ STAGE_ROWS: tuple[StageRow, ...] = (
 # All stage skill names, for the negative-case "no stage skill loaded" check.
 # Flattens every positive skill-channel row's expected_skills, including the
 # multi-skill maturation row, so a maturation skill loaded on the negative stage
-# is caught as an over-load.
+# is caught as an over-load. A skill the manifest also loads by wording at any
+# stage (reproducibility, via its durable-artifact rule) is a correct conditional
+# load, so it is not an over-load.
 ALL_STAGE_SKILLS: frozenset[str] = frozenset(
     skill
     for row in STAGE_ROWS
     if row.channel == CHANNEL_SKILL
     for skill in row.expected_skills
-)
+) - ALL_DOMAIN_SKILLS
 
 
 def stage_row(stage: str) -> StageRow:

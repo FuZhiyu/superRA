@@ -51,6 +51,7 @@ Read commit messages, diffs, and any task tree or docs for each side. Current-br
 - **Data or schema** — column names, file formats, key definitions, sample filters. Escalate before choosing — the user owns these calls.
 - **Docs or narrative** — prose explaining intent. Prefer synthesis; rewrite stale claims from either side.
 - **Generated outputs** — figures, tables, compiled artifacts, fixtures. **Regenerate** from merged sources rather than hand-edit either side's copy.
+- **Reproduction records** — a conflicted `repro-lock.json` needs no hand edit: `superra repro` keeps each entry on one side or identical on both and drops the entries the sides disagree on, whose steps then read `missing`. Resolve those steps by the stale rule (`reproducibility/references/rerun-or-accept.md`). Any `superra repro build` rewrites the lock without markers — build a fresh step when the rule builds none — then commit it. A conflicted `repro-acceptance/<step>.json` accepts nothing: remove it and resolve its step by the same rule.
 - **Tests** — including drift tests. Preserve both sides' assertions unless a meaningful result change justifies re-expecting; escalate result changes rather than silently updating.
 - **Config or build** — dependencies, pipeline wiring, environment. Synthesize when additive; escalate when directions diverge.
 

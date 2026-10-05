@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
+from _repro import REPRO_SECTION, build_graph
+from _task_snapshot import CURRENT, format_input, input_footer, input_producers, step_states, task_inputs
 from _task_io import (
     Task,
     autodetect_plan_root,
@@ -38,12 +41,18 @@ def _collect_ancestors(plan_root: Path, target_path: str) -> list[Task]:
         current_dir = current_dir / parts[i]
         task_md = current_dir / "task.md"
         if task_md.exists():
-            ancestors.append(parse_task(task_md, plan_root))
+            try:
+                ancestors.append(parse_task(task_md, plan_root))
+            except (OSError, UnicodeDecodeError):
+                pass  # The shared snapshot retains the parse diagnostic.
     # Also include root if it exists and target is not root
     root_md = plan_root / "task.md"
     if root_md.exists():
-        root_task = parse_task(root_md, plan_root)
-        ancestors.insert(0, root_task)
+        try:
+            root_task = parse_task(root_md, plan_root)
+            ancestors.insert(0, root_task)
+        except (OSError, UnicodeDecodeError):
+            pass
     # deduplicate (root might have been added twice if parts[0] == plan_root)
     seen: list[str] = []
     unique: list[Task] = []
@@ -99,6 +108,51 @@ def _sibling_map(plan_root: Path, target_task: Task) -> dict[str, Task]:
 def _dep_tasks(target_task: Task, siblings: dict[str, Task]) -> list[tuple[str, Task | None]]:
     """For each depends_on entry, return (slug, Task or None)."""
     return [(dep, siblings.get(dep)) for dep in target_task.depends_on]
+
+
+# ---------------------------------------------------------------------------
+# Reproduction helpers
+# ---------------------------------------------------------------------------
+
+def _reproduction_view(
+    plan_root: Path, target_task: Task, root: Task | None, graph=None,
+    states: dict | None = None, unavailable: str | None = None,
+) -> dict | None:
+    """Return the task's owned-step states and derived task edges, or ``None``.
+
+    ``None`` means the task carries no ``## Reproduction`` section: such a task
+    owns no steps and cannot appear in any task-level edge (an edge needs a
+    producing and a consuming step), so there is nothing to compute and the
+    graph is never built — this is what keeps a read cheap on a tree with no
+    Reproduction sections at all.
+    """
+    if REPRO_SECTION not in parse_body_sections(target_task.body):
+        return None
+
+    tree = root if root is not None else walk_plan(plan_root)
+    graph = graph or build_graph(plan_root, project_root=plan_root.resolve().parent, root=tree)
+
+    steps = sorted(graph.steps_for(target_task.path), key=lambda s: s.name)
+    if states is None:
+        states, unavailable = step_states(graph, plan_root, {s.name for s in steps})
+
+    step_rows = []
+    for step in steps:
+        outs = [o.path.logical for o in step.outs]
+        entry = states.get(step.name)
+        if entry is None:
+            status, reason, evidence = "unknown", f"runner unavailable: {unavailable}", {}
+        else:
+            status, reason, evidence = entry.status, entry.reason, entry.to_dict()
+        row = {"name": step.name, "status": status, "reason": reason, "outs": outs}
+        row.update({k: evidence.get(k) for k in ('local_status', 'local_reason', 'boundary_inputs')})
+        step_rows.append(row)
+
+    return {
+        "steps": step_rows,
+        "feeds_on": sorted({a for a, b in graph.task_edges if b == target_task.path}),
+        "feeds": sorted({b for a, b in graph.task_edges if a == target_task.path}),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -191,12 +245,35 @@ def _render_frontmatter_readable(fm: dict) -> str:
     return "\n".join(lines)
 
 
+def _render_reproduction_human(repro: dict) -> list[str]:
+    """Render the ``=== Reproduction ===`` block from a `_reproduction_view` dict."""
+    lines = ["=== Reproduction ===\n"]
+    if repro["steps"]:
+        lines.append("steps:")
+        for row in repro["steps"]:
+            outs = ", ".join(row["outs"]) if row["outs"] else "(none)"
+            lines.append(
+                f"  - {row['name']}: {row['status']} — {row['reason']} [outs: {outs}]"
+            )
+            if row.get('local_status') and row['local_status'] != row['status']:
+                lines.append(f"    own state: {row['local_status']} — {row['local_reason']}")
+            for boundary in row.get('boundary_inputs') or []:
+                lines.append(f"    saved input: {boundary['logical']} ({boundary['provenance']}; producer {boundary['producer']})")
+    else:
+        lines.append("steps: (none)")
+    for task_path in repro["feeds"]:
+        lines.append(f"feeds: {task_path}")
+    return lines
+
+
 def render_human(
     ancestors: list[Task],
     target_task: Task,
     dep_pairs: list[tuple[str, Task | None]],
     show_ancestors: bool = True,
     focused_tree: str = "",
+    repro: dict | None = None,
+    readiness: dict | None = None,
 ) -> str:
     parts: list[str] = []
 
@@ -254,14 +331,36 @@ def render_human(
             parts.append("")
 
     if dep_pairs:
-        parts.append("=== Sibling Dependencies ===\n")
+        parts.append("=== Prerequisites (depends_on) ===\n")
+        def parent(path):
+            return path.rsplit("/", 1)[0] if "/" in path else ""
         for slug, dep_task in dep_pairs:
             if dep_task is not None:
                 eff = dep_task.effective_status()
                 title = dep_task.title or slug
-                parts.append(f'- {slug} ({eff}) — "{title}"')
+                inherited = "" if parent(dep_task.path) == parent(target_task.path) else " (inherited)"
+                parts.append(f'- {slug} ({eff}) — "{title}"{inherited}')
             else:
                 parts.append(f"- {slug} (NOT FOUND)")
+    if readiness is not None:
+        if readiness["blockers"]:
+            parts.append("Not ready: waits on " + ", ".join(
+                f"{b['path']} ({b['status']})" for b in readiness["blockers"]))
+        elif not readiness["ready"]:
+            parts.append(f"Not ready: {readiness['reason']}")
+        pending = [row for row in readiness["inputs"] if row["state"] not in CURRENT]
+        current = len(readiness["inputs"]) - len(pending)
+        if pending:
+            parts.append("")
+            parts.append("=== Inputs Not Fresh ===\n")
+            parts.extend(f"- {format_input(row)}" for row in pending)
+            parts.append(input_footer(shlex.quote(target_task.path or ".")))
+        if current:
+            parts.append(f"{current} {'other ' if pending else ''}input(s) fresh")
+
+    if repro is not None:
+        parts.append("")
+        parts.extend(_render_reproduction_human(repro))
 
     return "\n".join(parts)
 
@@ -276,6 +375,7 @@ def render_json(
     dep_pairs: list[tuple[str, Task | None]],
     show_ancestors: bool = True,
     focused_tree: str = "",
+    repro: dict | None = None,
 ) -> str:
     fm, _ = parse_frontmatter(
         (target_task.dir_path / "task.md").read_text(encoding="utf-8")
@@ -307,13 +407,14 @@ def render_json(
         "effective_status": target_task.effective_status(),
         "depends_on": target_task.depends_on,
         "sections": {k: v.strip() for k, v in sections.items()},
+        "reproduction": repro,
     }
 
     deps_data = []
     for slug, dep_task in dep_pairs:
         if dep_task is not None:
             deps_data.append({
-                "slug": slug,
+                "slug": dep_task.slug,
                 "path": dep_task.path,
                 "title": dep_task.title,
                 "status": dep_task.status,
@@ -420,21 +521,38 @@ def main(argv: list[str] | None = None) -> None:
     show_ancestors = not args.no_ancestors
     ancestors = _collect_ancestors(plan_root, target_task.path) if show_ancestors else []
 
-    # Collect sibling deps
-    siblings = _sibling_map(plan_root, target_task)
-    dep_pairs = _dep_tasks(target_task, siblings)
-
     # Build the focused tree (root → target spine, siblings, direct children).
     focused_tree = ""
+    root = walk_plan(plan_root)
+    graph = build_graph(plan_root, root=root)
     if show_ancestors:
-        root = walk_plan(plan_root)
         focused_tree = format_focused_tree(root, target_task.path)
+    deps = graph.dependencies
+    path = target_task.path
+    dep_pairs = [(p, deps.tasks[p]) for p in deps.prerequisites(path)]
+    own = {s.name for s in graph.steps_for(path)} if REPRO_SECTION in parse_body_sections(target_task.body) else set()
+    states, unavailable = step_states(graph, plan_root, own | input_producers(graph, [path]))
+    repro = _reproduction_view(plan_root, target_task, root, graph=graph, states=states, unavailable=unavailable)
+    readiness = {"ready": deps.ready(path), "blockers": deps.blockers(path),
+                 "inputs": task_inputs(graph, path, states, unavailable)}
+    if not readiness["ready"] and not readiness["blockers"]:
+        readiness["reason"] = ("archived" if path in deps.archived else "depends_on graph is invalid: "
+                               + "; ".join(f["message"] for f in deps.findings if f["severity"] == "error"))
+    if unavailable:
+        readiness["unavailable"] = unavailable
 
     # Render
     if args.as_json:
-        print(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree))
+        payload = json.loads(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree, repro=repro))
+        payload["dependency_graph"] = graph.dependencies.to_dict()
+        payload["findings"] = [f.to_dict() for f in graph.findings]
+        payload["readiness"] = readiness
+        print(json.dumps(payload, indent=2))
     else:
-        print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree))
+        print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors,
+                           focused_tree=focused_tree, repro=repro, readiness=readiness))
+        for finding in graph.findings:
+            print(finding.to_text())
 
 
 if __name__ == "__main__":

@@ -10,6 +10,12 @@ Checks:
    from children.
 4. Sync-impact leak — advisory warning for any task still carrying a
    temporary ## Sync Impact section past Integrate closeout.
+5. Reproduction — the ## Reproduction section and config.yaml build-graph
+   contract (schema errors, duplicate outs, unknown ${VAR} refs); see
+   _repro.check_reproduction. Never-built steps are runner state, not a
+   finding, so a fresh clone still checks clean. Plus an advisory warning per
+   generated-looking file a task's ## Results links that no step produces or
+   reads; see _repro_signals.check_results_coverage.
 
 Exit code 0 if clean, 1 if issues found.
 """
@@ -20,10 +26,12 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _repro import build_graph
+from _repro_signals import check_results_coverage
+from _step_links import check_step_links
 from _task_io import (
     TASK_ROOT_DIRNAME,
     VALID_STATUSES,
@@ -33,33 +41,12 @@ from _task_io import (
     resolve_plan_root_arg,
     walk_plan,
 )
-from _task_validate import detect_cycles, invalid_status_message, validate_review_notes
-
-
-# ---------------------------------------------------------------------------
-# Finding data model
-# ---------------------------------------------------------------------------
-
-@dataclass
-class Finding:
-    """A single diagnostic finding."""
-
-    task_path: str
-    category: str  # "status" | "dependency" | "rollup" | "sync-impact"
-    severity: str  # "error" | "warning"
-    message: str
-
-    def to_text(self) -> str:
-        prefix = self.task_path or "(root)"
-        return f"[{self.severity.upper()}] [{self.category}] {prefix}: {self.message}"
-
-    def to_dict(self) -> dict:
-        return {
-            "task_path": self.task_path,
-            "category": self.category,
-            "severity": self.severity,
-            "message": self.message,
-        }
+from _task_validate import (
+    OUTPUT_CAP,
+    Finding,
+    invalid_status_message,
+    validate_review_notes,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +83,7 @@ def _check_status_recursive(
     # Check for stale review_status / integration_status in raw frontmatter
     task_md = task.dir_path / "task.md"
     if task_md.exists():
-        text = task_md.read_text(encoding="utf-8")
+        text = task_md.read_text(encoding="utf-8", errors="replace")
         fm, _ = parse_frontmatter(text)
         stale_fields = {"review_status", "integration_status"}
         for field_name in sorted(stale_fields & fm.keys()):
@@ -129,61 +116,6 @@ def _check_status_recursive(
 # ---------------------------------------------------------------------------
 # Check 2: Dependency integrity
 # ---------------------------------------------------------------------------
-
-def check_dependency_integrity(root: Task) -> list[Finding]:
-    """Check dependency resolution, cycles, and archived dependencies."""
-    findings: list[Finding] = []
-    _check_deps_recursive(root, findings)
-    return findings
-
-
-def _check_deps_recursive(task: Task, findings: list[Finding]) -> None:
-    if not task.children:
-        return
-
-    sibling_map = {c.slug: c for c in task.children}
-
-    # Check each child's depends_on references
-    for child in task.children:
-        for dep in child.depends_on:
-            if dep not in sibling_map:
-                findings.append(Finding(
-                    task_path=child.path,
-                    category="dependency",
-                    severity="error",
-                    message=f"depends_on '{dep}' does not resolve to any sibling task",
-                ))
-            else:
-                dep_task = sibling_map[dep]
-                if dep_task.effective_status() == "archived":
-                    findings.append(Finding(
-                        task_path=child.path,
-                        category="dependency",
-                        severity="warning",
-                        message=f"depends on archived task '{dep}'",
-                    ))
-                elif dep_task.effective_status() == "postponed":
-                    findings.append(Finding(
-                        task_path=child.path,
-                        category="dependency",
-                        severity="warning",
-                        message=f"depends on postponed task '{dep}' (blocked until resumed)",
-                    ))
-
-    # Cycle detection at this sibling level
-    cycle_warnings = detect_cycles(task.children)
-    for warning in cycle_warnings:
-        findings.append(Finding(
-            task_path=task.path,
-            category="dependency",
-            severity="error",
-            message=warning,
-        ))
-
-    # Recurse into children that have their own children
-    for child in task.children:
-        _check_deps_recursive(child, findings)
-
 
 # ---------------------------------------------------------------------------
 # Check 3: Rollup consistency
@@ -246,7 +178,7 @@ def check_sync_impact(root: Task) -> list[Finding]:
 def _check_sync_impact_recursive(task: Task, findings: list[Finding]) -> None:
     task_md = task.dir_path / "task.md"
     if task_md.exists():
-        text = task_md.read_text(encoding="utf-8")
+        text = task_md.read_text(encoding="utf-8", errors="replace")
         if _SYNC_IMPACT_HEADING.search(text):
             findings.append(Finding(
                 task_path=task.path,
@@ -282,8 +214,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        choices=["status", "dependency", "rollup", "sync-impact"],
+        choices=["status", "dependency", "rollup", "sync-impact", "reproduction", "links"],
         help="Only run a specific check category",
+    )
+    parser.add_argument(
+        "--all", action="store_true", dest="show_all",
+        help=f"List every finding (default text output lists {OUTPUT_CAP} per category and severity)",
     )
     return parser.parse_args(argv)
 
@@ -298,30 +234,52 @@ def run_checks(
 
     if category is None or category == "status":
         findings.extend(check_status_validity(root, plan_root))
-    if category is None or category == "dependency":
-        findings.extend(check_dependency_integrity(root))
+
     if category is None or category == "rollup":
         findings.extend(check_rollup_consistency(root))
     if category is None or category == "sync-impact":
         findings.extend(check_sync_impact(root))
+    if category is None or category in {"dependency", "reproduction", "links"}:
+        graph = build_graph(plan_root, root=root)
+        if category != "links":
+            findings.extend(graph.findings)
+        if category is None or category == "reproduction":
+            findings.extend(
+                check_results_coverage(graph, root, plan_root.resolve().parent)
+            )
+        if category is None or category == "links":
+            findings.extend(check_step_links(plan_root, graph))
 
     return findings
 
 
-def format_text(findings: list[Finding]) -> str:
-    """Format findings as human-readable text."""
+def format_text(findings: list[Finding], limit: int | None = OUTPUT_CAP) -> str:
+    """Format findings as human-readable text, errors first.
+
+    Each (severity, category) group lists at most *limit* findings and counts
+    the rest with the command that lists them; None lists every finding.
+    """
     if not findings:
         return "All checks passed. No issues found."
 
-    lines: list[str] = []
     errors = [f for f in findings if f.severity == "error"]
     warnings = [f for f in findings if f.severity == "warning"]
+    lines = [
+        f"Found {len(findings)} issue(s): {len(errors)} error(s), {len(warnings)} warning(s).",
+        "",
+    ]
 
-    lines.append(f"Found {len(findings)} issue(s): {len(errors)} error(s), {len(warnings)} warning(s).")
-    lines.append("")
-
-    for finding in findings:
-        lines.append(finding.to_text())
+    groups: dict[tuple[str, str], list[Finding]] = {}
+    for finding in sorted(findings, key=lambda f: f.severity != "error"):
+        groups.setdefault((finding.severity, finding.category), []).append(finding)
+    for (severity, category), group in groups.items():
+        shown = group if limit is None else group[:limit]
+        lines.extend(finding.to_text() for finding in shown)
+        if len(group) > len(shown):
+            lines.append(
+                f"... {len(group) - len(shown)} more {category} {severity}(s); "
+                f"list them with `superra task check --category {category} --all`"
+            )
 
     return "\n".join(lines)
 
@@ -356,7 +314,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.as_json:
         print(format_json(findings))
     else:
-        print(format_text(findings))
+        print(format_text(findings, limit=None if args.show_all else OUTPUT_CAP))
 
     sys.exit(1 if findings else 0)
 

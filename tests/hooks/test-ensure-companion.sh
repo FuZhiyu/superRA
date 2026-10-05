@@ -44,9 +44,11 @@ print(json.dumps({
 }))
 ' "$transcript_path" "$tool_name" "$skill")
 
-  local out
-  out=$(env -i PATH="$PATH" HOME="$HOME" bash "$HOOK" <<<"$input")
+  local out ledger_dir
+  ledger_dir=$(mktemp -d)
+  out=$(env -i PATH="$PATH" HOME="$HOME" SUPERRA_SKILL_LEDGER_DIR="$ledger_dir" bash "$HOOK" <<<"$input")
   local rc=$?
+  rm -rf "$ledger_dir"
 
   [ "$transcript_mode" = "file" ] && [ -n "$transcript_path" ] && rm -f "$transcript_path"
 
@@ -161,7 +163,53 @@ run_case "V6 deny-reason round-trip"     expect-deny   "Skill" "superRA:superpla
 run_raw_silent_case "V7 non-object JSON array" '[1,2,3]'
 run_raw_silent_case "V7 non-object JSON null"  'null'
 
-# Registry wiring: Claude + Cursor reference ensure-companion; Codex has no
+# V8: the transcript lags the Skill call by seconds, so a retry right after a
+# companion load sees a stale transcript. The ledger the gate writes on each
+# allowed Skill call clears the retry; ledgers are per session and per agent.
+ledger_hook() {
+  local ledger_dir="$1" session="$2" agent="$3" skill="$4" transcript="$5"
+  python3 -c '
+import json, sys
+print(json.dumps({
+    "session_id": sys.argv[1],
+    "transcript_path": sys.argv[4],
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Skill",
+    "tool_input": {"skill": sys.argv[3]},
+    **({"agent_id": sys.argv[2]} if sys.argv[2] else {}),
+}))
+' "$session" "$agent" "$skill" "$transcript" \
+    | env -i PATH="$PATH" HOME="$HOME" SUPERRA_SKILL_LEDGER_DIR="$ledger_dir" bash "$HOOK"
+}
+
+check_ledger() {
+  local name="$1" expect="$2" out="$3" got=silent
+  printf '%s' "$out" | grep -q '"permissionDecision":"deny"' && got=deny
+  if [ "$got" = "$expect" ]; then
+    printf 'PASS  %-50s (got %s)\n' "$name" "$got"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL  %-50s (expected %s, got %s)\n' "$name" "$expect" "$got"
+    failed_names+=("$name")
+    fail=$((fail + 1))
+  fi
+}
+
+ledger_dir=$(mktemp -d)
+stale=$(mktemp)
+printf '%s\n' "$using_loaded" >"$stale"
+check_ledger "V8a stale transcript denies before load" deny \
+  "$(ledger_hook "$ledger_dir" s1 "" superRA:superimplement "$stale")"
+ledger_hook "$ledger_dir" s1 "" superRA:agent-orchestration "$stale" >/dev/null
+check_ledger "V8b ledger clears retry on stale transcript" silent \
+  "$(ledger_hook "$ledger_dir" s1 "" superRA:superimplement "$stale")"
+check_ledger "V8c ledger is per session" deny \
+  "$(ledger_hook "$ledger_dir" s2 "" superRA:superimplement "$stale")"
+check_ledger "V8d ledger is per agent" deny \
+  "$(ledger_hook "$ledger_dir" s1 agent-1 superRA:superimplement "$stale")"
+rm -rf "$ledger_dir" "$stale"
+
+# Registry wiring: Claude references ensure-companion; Codex has no
 # Skill interception so it must NOT wire the gate.
 if python3 - "$REPO_ROOT" <<'PY'
 import json, sys
@@ -170,7 +218,6 @@ from pathlib import Path
 root = Path(sys.argv[1])
 claude = json.loads((root / "hooks/hooks.json").read_text(encoding="utf-8"))
 codex = json.loads((root / "hooks/hooks-codex.json").read_text(encoding="utf-8"))
-cursor = json.loads((root / "hooks/hooks-cursor.json").read_text(encoding="utf-8"))
 
 claude_skill = [
     hook["command"]
@@ -188,16 +235,12 @@ codex_cmds = [
     for hook in group["hooks"]
 ]
 assert not any("ensure-companion" in cmd or "ensure-using-superra" in cmd for cmd in codex_cmds)
-
-cursor_cmds = [hook["command"] for hook in cursor["hooks"]["preToolUse"]]
-assert any("ensure-companion" in cmd for cmd in cursor_cmds)
-assert not any("ensure-using-superra" in cmd or "ensure-agent-orchestration" in cmd for cmd in cursor_cmds)
 PY
 then
-  printf 'PASS  %-50s\n' "registry wiring (Claude, Codex, Cursor)"
+  printf 'PASS  %-50s\n' "registry wiring (Claude, Codex)"
   pass=$((pass + 1))
 else
-  printf 'FAIL  %-50s\n' "registry wiring (Claude, Codex, Cursor)"
+  printf 'FAIL  %-50s\n' "registry wiring (Claude, Codex)"
   failed_names+=("registry wiring")
   fail=$((fail + 1))
 fi

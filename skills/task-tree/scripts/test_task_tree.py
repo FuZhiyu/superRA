@@ -16,6 +16,7 @@ import pytest
 SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+import _repro_signals
 import _task_io
 import _task_validate
 from _task_io import parse_body_sections
@@ -34,6 +35,12 @@ import cli
 
 # Shared helpers — canonical definitions live in conftest.py.
 from conftest import _write_task_md, _write_tiny_png
+
+
+def _frontier(root):
+    from _task_dependencies import compose
+    deps = compose(root, [], [])
+    return [deps.tasks[row["path"]] for row in deps.frontier()]
 
 
 def _workflow_lines(content: str) -> list[str]:
@@ -346,8 +353,8 @@ class TestWalkPlan:
         assert load.slug == "01-load"
         assert load.is_leaf
 
-    def test_walk_skips_undecodable_file(self, tmp_path):
-        """An undecodable task.md is warned and skipped; the walk completes."""
+    def test_walk_retains_undecodable_file_as_error(self, tmp_path):
+        """An unreadable task remains visible and prevents a complete graph."""
         import warnings as _warnings
         root_dir = tmp_path / "superRA"
         root_dir.mkdir()
@@ -363,8 +370,9 @@ class TestWalkPlan:
             _warnings.simplefilter("always")
             root = _task_io.walk_plan(root_dir)
 
-        assert len(root.children) == 1
+        assert len(root.children) == 2
         assert root.children[0].slug == "01-good"
+        assert root.children[1].parse_error
         assert caught
 
 
@@ -389,7 +397,7 @@ class TestComputeStatus:
 class TestComputeFrontier:
     def test_linear_chain(self, plan_root):
         root = _task_io.walk_plan(plan_root)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-second" in paths
         assert "01-first" not in paths  # already approved
@@ -397,7 +405,7 @@ class TestComputeFrontier:
 
     def test_nested_frontier(self, plan_with_branches):
         root = _task_io.walk_plan(plan_with_branches)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "01-data-prep/02-merge" in paths
         assert "02-estimation" not in paths  # blocked by 01-data-prep not approved
@@ -406,7 +414,7 @@ class TestComputeFrontier:
         root = _task_io.walk_plan(plan_root)
         for child in root.children:
             child.status = "approved"
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         assert len(frontier) == 0
 
     def test_no_deps_all_frontier(self, tmp_path):
@@ -419,7 +427,7 @@ class TestComputeFrontier:
             _write_task_md(d / "task.md", name, "not-started",
                            objective="Do it.")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         assert len(frontier) == 3
 
     def test_synthetic_root_not_on_frontier(self, tmp_path):
@@ -429,7 +437,7 @@ class TestComputeFrontier:
         root_dir.mkdir()
         root = _task_io.walk_plan(root_dir)  # no task.md, no children
         assert root.title == "(no root task.md)"
-        assert _task_io.compute_frontier(root) == []
+        assert _frontier(root) == []
 
     def test_revise_and_implemented_on_frontier(self, plan_root):
         """'revise' (ready to fix) and 'implemented' (approval decision open) are
@@ -441,7 +449,7 @@ class TestComputeFrontier:
         # 02-second depends on 01-first (approved), so deps are met.
         for state in ("revise", "implemented"):
             root.children[1].status = state
-            frontier = _task_io.compute_frontier(root)
+            frontier = _frontier(root)
             paths = [t.path for t in frontier]
             assert "02-second" in paths, (
                 f"'{state}' tasks are actionable and should be on the frontier"
@@ -471,7 +479,7 @@ class TestComputeFrontier:
             _write_task_md(d / "task.md", name, status,
                            depends_on=deps, objective="Do it.")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-B" in paths
         assert "03-C" in paths
@@ -511,7 +519,7 @@ class TestComputeFrontier:
                        objective="Do it.")
 
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         # Deep leaf under L1-a is reachable (no blocking deps at any level)
         assert "01-L1a/01-L2/01-leaf" in paths
@@ -534,7 +542,7 @@ class TestComputeFrontier:
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Empty", "not-started")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         # Root with no children is itself a leaf and is on the frontier
         assert len(frontier) == 1
         assert frontier[0].is_root
@@ -1822,6 +1830,25 @@ class TestMigrationMapping:
         )
         assert fm["status"] == "revise"
 
+    def test_migrate_into_wrapper_only_root(self, tmp_path):
+        """A superRA/ holding only the wrapper counts as empty."""
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text("# Plan\n\n### Task 1: Load Data\n\nDo it.\n", encoding="utf-8")
+        output = tmp_path / "superRA"
+        output.mkdir()
+        (output / "superra").write_text("#!/bin/sh\n", encoding="utf-8")
+        plan_migrate.migrate(plan_md, None, output)
+        assert (output / "01-load-data" / "task.md").exists()
+        assert (output / "superra").exists()
+
+    def test_migrate_refuses_root_with_tasks(self, tmp_path):
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text("# Plan\n\n### Task 1: Load Data\n\nDo it.\n", encoding="utf-8")
+        output = tmp_path / "superRA"
+        (output / "01-existing").mkdir(parents=True)
+        with pytest.raises(ValueError, match="not empty"):
+            plan_migrate.migrate(plan_md, None, output)
+
     def test_review_status_wins_over_checkbox(self, tmp_path):
         """When review_status is set but integration_status is not, review wins."""
         plan_md = tmp_path / "PLAN.md"
@@ -1887,109 +1914,10 @@ class TestValidateFrontmatter:
         assert warnings
 
 
-class TestValidateDependencies:
-    def test_valid_dep_no_warnings(self, plan_root):
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second", "03-third"])
-        assert warnings == []
-
-    def test_missing_sibling_ref(self, plan_root):
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        # Pass siblings that don't include 01-first
-        warnings = _task_validate.validate_dependencies(task, ["02-second", "03-third"])
-        assert warnings
-
-    def test_nonexistent_dep(self, plan_root):
-        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        task.depends_on = ["nonexistent"]
-        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second"])
-        assert warnings
-
-    def test_no_deps_no_warnings(self, plan_root):
-        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
-        assert task.depends_on == []
-        warnings = _task_validate.validate_dependencies(task, ["01-first"])
-        assert warnings == []
-
-
-class TestDetectCycles:
-    def _make_tasks(self, tmp_path, specs):
-        """Create tasks from (slug, deps) specs. Returns list of Task objects."""
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir(exist_ok=True)
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        for slug, deps in specs:
-            d = root_dir / slug
-            d.mkdir(exist_ok=True)
-            _write_task_md(d / "task.md", slug, "not-started", depends_on=deps)
-        tasks = []
-        for slug, _deps in specs:
-            tasks.append(_task_io.parse_task(root_dir / slug / "task.md"))
-        return tasks
-
-    def test_no_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", []),
-            ("02-b", ["01-a"]),
-            ("03-c", ["02-b"]),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings == []
-
-    def test_simple_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", ["02-b"]),
-            ("02-b", ["01-a"]),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings
-
-    def test_three_node_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", ["03-c"]),
-            ("02-b", ["01-a"]),
-            ("03-c", ["02-b"]),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings
-
-    def test_independent_tasks_no_cycle(self, tmp_path):
-        tasks = self._make_tasks(tmp_path, [
-            ("01-a", []),
-            ("02-b", []),
-            ("03-c", []),
-        ])
-        warnings = _task_validate.detect_cycles(tasks)
-        assert warnings == []
-
-
 class TestValidatePlan:
     def test_valid_plan_no_warnings(self, plan_root):
         warnings = _task_validate.validate_plan(plan_root)
         assert warnings == []
-
-    def test_missing_dep_produces_warning(self, plan_root):
-        # Add a task with a depends_on pointing to a nonexistent sibling
-        bad_dir = plan_root / "04-bad"
-        bad_dir.mkdir()
-        _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
-                       depends_on=["99-nonexistent"])
-        warnings = _task_validate.validate_plan(plan_root)
-        assert warnings
-
-    def test_cycle_produces_warning(self, tmp_path):
-        root_dir = tmp_path / "superRA"
-        root_dir.mkdir()
-        _write_task_md(root_dir / "task.md", "Root", "not-started")
-        d1 = root_dir / "01-a"
-        d1.mkdir()
-        _write_task_md(d1 / "task.md", "A", "not-started", depends_on=["02-b"])
-        d2 = root_dir / "02-b"
-        d2.mkdir()
-        _write_task_md(d2 / "task.md", "B", "not-started", depends_on=["01-a"])
-        warnings = _task_validate.validate_plan(root_dir)
-        assert warnings
-
 
 # --- Topological sort tests ---
 
@@ -2207,6 +2135,63 @@ class TestTaskRead:
         for key in ("path", "title", "status", "effective_status",
                     "first_section", "sections"):
             assert key in root_anc
+
+
+class TestTaskReadReproduction:
+    """`task read`'s ``## Reproduction`` block: step states and task edges."""
+
+    def _pipeline(self, tmp_path):
+        """Two-task pipeline: 01-build produces panel.parquet, which
+        02-estimate consumes."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="Root.")
+        b = root / "01-build"
+        b.mkdir()
+        _write_task_md(
+            b / "task.md", "Build", "not-started", objective="Build panel.",
+            reproduction=(
+                "steps:\n"
+                "  - name: build-panel\n"
+                "    cmd: sh Code/build.sh\n"
+                "    deps: [Code/build.sh]\n"
+                "    outs: [output/panel.parquet]\n"
+            ),
+        )
+        e = root / "02-estimate"
+        e.mkdir()
+        _write_task_md(
+            e / "task.md", "Estimate", "not-started",
+            objective="Estimate model.", depends_on=["01-build"],
+            reproduction=(
+                "steps:\n"
+                "  - name: fit-model\n"
+                "    cmd: sh Code/fit.sh\n"
+                "    deps: [output/panel.parquet]\n"
+                "    outs: [output/model.pkl]\n"
+            ),
+        )
+        (tmp_path / "Code").mkdir()
+        (tmp_path / "Code" / "build.sh").write_text("true\n", encoding="utf-8")
+        (tmp_path / "Code" / "fit.sh").write_text("true\n", encoding="utf-8")
+        return root
+
+    def test_task_edges_are_feeds_and_feeds_on(self, tmp_path):
+        """The producer shows `feeds:`; the consumer shows `feeds on:`."""
+        root = self._pipeline(tmp_path)
+        producer = _task_io.parse_task(root / "01-build" / "task.md", root)
+        consumer = _task_io.parse_task(root / "02-estimate" / "task.md", root)
+        producer_view = task_read._reproduction_view(root, producer, None)
+        consumer_view = task_read._reproduction_view(root, consumer, None)
+        assert producer_view["feeds"] == ["02-estimate"]
+        assert producer_view["feeds_on"] == []
+        assert consumer_view["feeds_on"] == ["01-build"]
+        assert consumer_view["feeds"] == []
+        human = task_read.render_human(
+            [], producer, [], show_ancestors=False, repro=producer_view
+        )
+        assert "feeds: 02-estimate" in human
+        assert "build-panel: missing — never built" in human
 
 
 # --- task_hook tests ---
@@ -2944,6 +2929,371 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stdout == ""
 
+    # --- reproduction reminder (05-reminder-hook) ---
+
+    def _write_repro_config(self, plan_root: Path) -> None:
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n  runners:\n    julia: julia {script}\n", encoding="utf-8"
+        )
+
+    def _write_repro_task(self, task_dir: Path, block: str, title: str = "Pipeline") -> None:
+        task_dir.mkdir(parents=True, exist_ok=True)
+        text = (
+            "---\n"
+            f'title: "{title}"\n'
+            "status: not-started\n"
+            "depends_on: []\n"
+            "---\n\n"
+            "## Objective\n\nBuild the pipeline.\n\n"
+            f"## Reproduction\n\n```yaml\n{block.strip()}\n```\n"
+        )
+        (task_dir / "task.md").write_text(text, encoding="utf-8")
+
+    def test_reproduction_reminder_unregistered_companion_script(self, tmp_path):
+        """A script under the task root that no step registers reminds with no
+        owning step."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_repro_config(plan_root)
+        helper = plan_root / "01-first" / "attachments" / "helper.jl"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("# helper\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(helper)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Reproduction:" in context
+        assert "superRA/01-first/attachments/helper.jl" in context
+        assert "owning step(s): none" in context
+        assert "superra repro status" in context
+
+    def test_reproduction_reminder_registered_dep(self, tmp_path):
+        """A declared step dep reminds and names the owning step."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        self._write_repro_task(
+            task_dir,
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Scripts/build.jl\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n",
+        )
+        dep = tmp_path / "Scripts" / "build.jl"
+        dep.parent.mkdir(parents=True)
+        dep.write_text("# build\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(dep)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "Reproduction:" in context
+        assert "Scripts/build.jl" in context
+        assert "build-panel" in context
+
+    def test_reproduction_reminder_fires_again_after_section_edit(self, tmp_path):
+        """Editing the owning `## Reproduction` section clears the file's marker."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = plan_root / "01-pipeline"
+        block = (
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: echo build\n"
+            "    deps:\n"
+            "      - Scripts/build.jl\n"
+        )
+        self._write_repro_task(task_dir, block)
+        dep = tmp_path / "Scripts" / "build.jl"
+        dep.parent.mkdir(parents=True)
+        dep.write_text("# build\n", encoding="utf-8")
+
+        dep_payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(dep)},
+        }
+        first = self._run_hook_result(dep_payload, cwd=tmp_path)
+        assert "Reproduction:" in json.loads(first.stdout)["hookSpecificOutput"]["additionalContext"]
+
+        second = self._run_hook_result(dep_payload, cwd=tmp_path)
+        assert second.stdout == ""  # suppressed for the rest of the session
+
+        # Re-saving the task's Reproduction section clears the marker even
+        # when the section's content is unchanged — the edit itself triggers.
+        self._write_repro_task(task_dir, block, title="Pipeline (touched)")
+        task_payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        self._run_hook_result(task_payload, cwd=tmp_path)
+
+        third = self._run_hook_result(dep_payload, cwd=tmp_path)
+        assert third.returncode == 0
+        assert "Reproduction:" in json.loads(third.stdout)["hookSpecificOutput"]["additionalContext"]
+
+    def test_reproduction_reminder_silent_without_config(self, tmp_path):
+        """No reproduction config or section anywhere: the reminder stays silent."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        _write_task_md(plan_root / "task.md", "Root", "not-started", objective="Root.")
+        code_file = tmp_path / "Code" / "anything.jl"
+        code_file.parent.mkdir(parents=True)
+        code_file.write_text("# nothing declared\n", encoding="utf-8")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(code_file)},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    # --- advisory signals (12-agent-protocol/02-agent-signals) ---
+
+    def _write_chain(self, plan_root: Path) -> None:
+        """Three chained steps: build-panel -> fit-model -> make-figure."""
+        self._write_repro_task(
+            plan_root / "01-pipeline",
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: julia Code/build.jl\n"
+            "    deps:\n"
+            "      - Code/build.jl\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n"
+            "  - name: fit-model\n"
+            "    cmd: julia Code/fit.jl\n"
+            "    deps:\n"
+            "      - out/panel.parquet\n"
+            "      - Code/fit.jl\n"
+            "    outs:\n"
+            "      - out/fit.json\n"
+            "  - name: make-figure\n"
+            "    cmd: julia Code/fig.jl\n"
+            "    deps:\n"
+            "      - out/fit.json\n"
+            "    outs:\n"
+            "      - out/fig.png\n",
+        )
+        code = plan_root.parent / "Code"
+        code.mkdir(parents=True, exist_ok=True)
+        for name in ("build.jl", "fit.jl", "fig.jl"):
+            (code / name).write_text(f"# {name}\n", encoding="utf-8")
+
+    def _record_run(self, project_root: Path, step: str, duration: float) -> None:
+        runs = project_root / ".superra-repro" / "runs"
+        runs.mkdir(parents=True, exist_ok=True)
+        (runs / f"{step}.json").write_text(
+            json.dumps({"outcome": "success", "duration": duration}), encoding="utf-8"
+        )
+
+    def test_reproduction_reminder_lists_downstream_fan_out(self, tmp_path):
+        """The reminder names every step the edit stales and its last duration."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        self._write_chain(plan_root)
+        self._record_run(tmp_path, "build-panel", 12.4)
+        self._record_run(tmp_path, "fit-model", 3.0)
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(tmp_path / "Code" / "build.jl")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert (
+            "Stales build-panel (12.4s), fit-model (3.0s), "
+            "make-figure (no recorded duration)"
+        ) in context
+
+    def _write_implemented_task(
+        self, plan_root: Path, results: str, *, status: str = "implemented"
+    ) -> Path:
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir(parents=True, exist_ok=True)
+        _write_task_md(
+            task_dir / "task.md",
+            "Pipeline",
+            status,
+            objective="Build the pipeline.",
+            results=results,
+            reproduction=(
+                "steps:\n"
+                "  - name: build-panel\n"
+                "    cmd: julia Code/build.jl\n"
+                "    deps:\n"
+                "      - raw/input.csv\n"
+                "    outs:\n"
+                "      - out/panel.parquet\n"
+            ),
+        )
+        return task_dir
+
+    def _write_artifacts(self, project_root: Path, *relative: str) -> None:
+        for rel in relative:
+            path = project_root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"artifact")
+
+    def test_implemented_reminder_names_uncovered_files(self, tmp_path):
+        """A leaf reaching `implemented` with an unregistered result reminds once."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_dir = self._write_implemented_task(
+            plan_root, "The [figure](../../out/fig.png) shows the spread.\n"
+        )
+        self._write_artifacts(tmp_path, "out/fig.png")
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert "out/fig.png" in context
+        assert "01-pipeline is implemented" in context
+        assert "superRA:reproducibility" in context
+
+        # Once per transition: still implemented, so a further edit is silent.
+        second = self._run_hook_result(payload, cwd=tmp_path)
+        assert "out/fig.png" not in (second.stdout or "")
+
+    def test_implemented_reminder_caps_file_list(self, tmp_path):
+        """Uncovered files past the output cap collapse to a count."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        cap = _task_validate.OUTPUT_CAP
+        names = [f"out/fig{i:02d}.png" for i in range(cap + 3)]
+        task_dir = self._write_implemented_task(
+            plan_root, "".join(f"[f](../../{n})\n" for n in names)
+        )
+        self._write_artifacts(tmp_path, *names)
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert names[cap - 1] in context
+        assert names[cap] not in context
+        assert "and 3 more" in context
+
+# --- results-coverage check (task_check `reproduction` category) ---
+
+
+class TestResultsCoverageCheck:
+    @pytest.mark.parametrize(
+        "candidate,declared",
+        [
+            ("output/estimates/alpha.csv", "${OUT}/estimates"),  # var-rooted directory
+            ("out/fig.png", "${OUT}/fig.png"),                   # var-rooted file
+        ],
+    )
+    def test_var_rooted_declaration_covers_its_files(self, candidate, declared):
+        """An unresolved `${VAR}` must never make a registered out look unregistered."""
+        assert _repro_signals._matches(candidate, declared)
+
+    def test_unrelated_path_does_not_match_a_var_rooted_declaration(self):
+        assert not _repro_signals._matches("Paper/model.tex", "${OUT}/tables")
+
+    def _tree(
+        self,
+        tmp_path: Path,
+        results: str,
+        *,
+        reproduction: str = (
+            "steps:\n"
+            "  - name: build-panel\n"
+            "    cmd: julia Code/build.jl\n"
+            "    deps:\n"
+            "      - raw/input.csv\n"
+            "    outs:\n"
+            "      - out/panel.parquet\n"
+            "      - out/tables/main.tex\n"
+        ),
+    ) -> Path:
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        _write_task_md(plan_root / "task.md", "Root", "not-started")
+        task_dir = plan_root / "01-pipeline"
+        task_dir.mkdir()
+        _write_task_md(
+            task_dir / "task.md", "Pipeline", "implemented",
+            results=results, reproduction=reproduction,
+        )
+        for rel in ("out/panel.parquet", "out/fig.png", "out/tables/summary.tex",
+                    "raw/input.csv", "Paper/model.tex", "notes.md", "tmp/draft.png"):
+            path = tmp_path / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"artifact")
+        return plan_root
+
+    def _coverage_findings(self, plan_root: Path) -> list:
+        return [
+            f for f in task_check.run_checks(plan_root, category="reproduction")
+            if "## Results links" in f.message
+        ]
+
+    def test_uncovered_artifact_warns(self, tmp_path):
+        plan_root = self._tree(tmp_path, "See the [figure](../../out/fig.png).\n")
+        findings = self._coverage_findings(plan_root)
+        assert len(findings) == 1
+        assert findings[0].severity == "warning"
+        assert findings[0].category == "reproduction"
+        assert findings[0].task_path == "01-pipeline"
+        assert "out/fig.png" in findings[0].message
+
+    def test_declared_out_is_silent(self, tmp_path):
+        plan_root = self._tree(tmp_path, "See the [panel](../../out/panel.parquet).\n")
+        assert self._coverage_findings(plan_root) == []
+
+    def test_tex_warns_only_under_an_output_root(self, tmp_path):
+        """A `.tex` beside the prose is a document; one in an out directory is a table."""
+        plan_root = self._tree(
+            tmp_path,
+            "See [the model](../../Paper/model.tex) and "
+            "[the table](../../out/tables/summary.tex).\n",
+        )
+        findings = self._coverage_findings(plan_root)
+        assert len(findings) == 1
+        assert "out/tables/summary.tex" in findings[0].message
+
+    def test_resolved_var_out_is_silent(self, tmp_path):
+        """`task check` resolves `${VAR}`, so a var-declared out covers its link."""
+        plan_root = self._tree(
+            tmp_path, "See the [figure](../../out/fig.png).\n",
+            reproduction=(
+                "steps:\n"
+                "  - name: make-figure\n"
+                "    cmd: julia Code/fig.jl\n"
+                '    outs:\n      - "${OUT}/fig.png"\n'
+            ),
+        )
+        (plan_root / "config.yaml").write_text(
+            "reproduction:\n  vars:\n    OUT: out\n", encoding="utf-8"
+        )
+        assert self._coverage_findings(plan_root) == []
+
+
 # --- Revision-note stale-leak validation tests ---
 
 
@@ -3154,7 +3504,7 @@ class TestArchivedInFrontier:
         d2.mkdir()
         _write_task_md(d2 / "task.md", "Archived", "archived")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "01-active" in paths
         assert "02-archived" not in paths
@@ -3172,7 +3522,7 @@ class TestArchivedInFrontier:
         _write_task_md(d2 / "task.md", "Downstream", "not-started",
                        depends_on=["01-dep"])
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-downstream" in paths, (
             "archived dependency should be treated as satisfied"
@@ -3263,7 +3613,7 @@ class TestPostponedSemantics:
         d2.mkdir()
         _write_task_md(d2 / "task.md", "Postponed", "postponed")
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "01-active" in paths
         assert "02-postponed" not in paths
@@ -3281,7 +3631,7 @@ class TestPostponedSemantics:
         _write_task_md(d2 / "task.md", "Downstream", "not-started",
                        depends_on=["01-dep"])
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-downstream" not in paths, (
             "postponed dependency should block the dependent"
@@ -3304,7 +3654,7 @@ class TestPostponedSemantics:
         _write_task_md(d2 / "task.md", "Downstream", "not-started",
                        depends_on=["01-dep"])
         root = _task_io.walk_plan(root_dir)
-        frontier = _task_io.compute_frontier(root)
+        frontier = _frontier(root)
         paths = [t.path for t in frontier]
         assert "02-downstream" in paths, (
             "archived dependency should be treated as satisfied (unlike postponed)"
@@ -3558,6 +3908,23 @@ class TestForwardCompatibleReading:
 
 
 class TestTaskCheck:
+    def test_text_output_caps_each_group_errors_first(self):
+        cap = _task_validate.OUTPUT_CAP
+        findings = [
+            _task_validate.Finding("t", "reproduction", "warning", f"w{i}")
+            for i in range(cap + 5)
+        ] + [_task_validate.Finding("t", "status", "error", "bad")]
+        text = task_check.format_text(findings)
+        lines = text.splitlines()
+        assert lines[2].startswith("[ERROR] [status]")
+        assert sum(line.startswith("[WARNING]") for line in lines) == cap
+        assert (
+            "5 more reproduction warning(s); list them with "
+            "`superra task check --category reproduction --all`"
+        ) in text
+        full = task_check.format_text(findings, limit=None)
+        assert sum(line.startswith("[WARNING]") for line in full.splitlines()) == cap + 5
+
     def test_clean_tree_no_findings(self, tmp_path):
         """A valid tree produces no findings."""
         root_dir = tmp_path / "superRA"
@@ -3710,6 +4077,21 @@ class TestTaskCheck:
             f.category == "dependency" and f.severity == "warning"
             for f in findings
         )
+
+    def test_postponed_consumer_of_postponed_dependency_is_silent(self, tmp_path):
+        """A postponed task depending on a postponed sibling is not reported as blocked."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "postponed")
+        d2 = root_dir / "02-consumer"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Consumer", "postponed",
+                       depends_on=["01-dep"])
+        findings = task_check.run_checks(root_dir, category="dependency")
+        assert not any("postponed" in f.message for f in findings)
 
     def test_detects_rollup_mismatch(self, tmp_path):
         """Flags when stored parent status disagrees with computed rollup."""
@@ -3864,6 +4246,52 @@ class TestTaskCheck:
         assert findings  # leak detected
         after = (root_dir / "01-a" / "task.md").read_text(encoding="utf-8")
         assert before == after, "task check must not mutate the tree"
+
+    # --- Reproduction category ---
+
+    def test_reproduction_runs_by_default(self, tmp_path):
+        """Running with no --category still includes reproduction findings."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-dup"
+        d.mkdir()
+        _write_task_md(
+            d / "task.md", "Dup", "not-started",
+            reproduction=(
+                "steps:\n"
+                "  - name: a\n"
+                "    cmd: sh a.sh\n"
+                "    outs: [output/x.txt]\n"
+                "  - name: b\n"
+                "    cmd: sh b.sh\n"
+                "    outs: [output/x.txt]\n"
+            ),
+        )
+        findings = task_check.run_checks(root_dir)
+        assert any(
+            f.category == "reproduction" and f.severity == "error" for f in findings
+        )
+
+    def test_reproduction_never_built_step_checks_clean(self, tmp_path):
+        """A registered, never-built step is runner state, not a finding —
+        a fresh clone checks clean."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-build"
+        d.mkdir()
+        _write_task_md(
+            d / "task.md", "Build", "not-started",
+            reproduction=(
+                "steps:\n"
+                "  - name: build\n"
+                "    cmd: sh build.sh\n"
+                "    outs: [output/panel.parquet]\n"
+            ),
+        )
+        findings = task_check.run_checks(root_dir, category="reproduction")
+        assert findings == []
 
 
 # --- Status rollup propagation tests (from better-handoff, adapted for unified status) ---
@@ -4382,3 +4810,14 @@ class TestTreeHookInvariants:
         # Propagation lands the parent at approved before validation runs, so
         # the leftover Revision Notes warning appears in the same run.
         assert any("Revision Notes" in w for w in feedback)
+
+    def test_reconcile_caps_validation_warnings(self, tmp_path, monkeypatch):
+        root, _parent = self._tree(tmp_path)
+        cap = _task_validate.OUTPUT_CAP
+        monkeypatch.setattr(
+            _task_validate, "validate_plan",
+            lambda _root: [f"t{i}: warning {i}" for i in range(cap + 4)],
+        )
+        feedback = task_hook._reconcile(root, task_path=None)
+        assert sum("Validation warning in" in w for w in feedback) == cap
+        assert any("4 more validation warning(s)" in w for w in feedback)

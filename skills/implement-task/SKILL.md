@@ -19,7 +19,7 @@ Achieve the task's `## Objective` with your own judgment. Gates don't substitute
 
 ## Before You Start
 
-1. Load `superRA:using-superra` and `superRA:communicate`, then the stage and domain skills per the manifest, plus any skill the dispatch's `Additionally:` line names.
+1. Load `superRA:using-superra` and `superRA:communicate`, then every skill the manifest assigns, plus any skill the dispatch's `Additionally:` line names.
 2. Read each assigned task via `superra task read <path>`.
 
 ## Execution
@@ -46,14 +46,15 @@ Before commit:
 
 1. **Gates.** Walk every loaded skill's gates matching what you did. Every `[BLOCKING]` item passes — fix-first, not handoff. Flag unaddressed `[ADVISORY]` items in your return.
 2. **Results.** `## Results` and the return hold to `superRA:communicate` and §Reporting — nothing left in `## Results` is stale.
-3. **Hygiene.** Edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
+3. **Hygiene.** Task-file edits only inside assigned `task.md` files; reviewer prose untouched beyond `→ implemented:`; `## Revision Notes` removed if it was present; figures committed under `attachments/` and embedded; every material finding in the task file, not only your return.
+4. **Reproduction.** A result you recorded from retained code: `superRA:reproducibility` §Recording a Result.
 
 ## Commit
 
 Set `status: implemented` in each task's frontmatter — you own transitions up to `implemented`, including `revise → implemented`. Then code + assigned task.md files in one atomic commit, per `superRA:using-superra` §Commits:
 
 ```bash
-git add [code files] superRA/<task-path>/task.md
+git add [code, tracked outputs, changed repro-lock.json and repro-acceptance/] superRA/<task-path>/task.md
 git commit -m "implement(<task-path>): <STATE> — <delta>"   # STATE = DONE | CONCERNS | BLOCKED
 ```
 
@@ -69,4 +70,4 @@ Status enum + commit SHA, plus extras left out and unaddressed `[ADVISORY]` item
 
 ## Escalation
 
-STOP and return BLOCKED or NEEDS_CONTEXT when inputs or results don't match expectations, you lack upstream context, or a decision belongs to the researcher. Ask, don't guess.
+STOP and return BLOCKED or NEEDS_CONTEXT when inputs or results don't match expectations, you lack upstream context, or a decision belongs to the researcher. Ask, don't guess. A costly stale step returns DONE_WITH_CONCERNS instead: `superRA:reproducibility` `references/rerun-or-accept.md`.

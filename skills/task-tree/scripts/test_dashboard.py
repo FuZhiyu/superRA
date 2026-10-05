@@ -230,16 +230,9 @@ class TestServerRoutes:
         assert 'id="crumbs"' in text
         assert 'id="active-node"' in text
         assert 'id="children-dag"' in text
-        # Workspace/Kanban toggle; the standalone DAG button is removed.
+        # Workspace toggle; the standalone DAG button is removed.
         assert 'id="btn-workspace"' in text
-        assert 'id="btn-kanban"' in text
         assert 'id="btn-dag"' not in text
-
-    def test_dag_returns_mermaid(self, client):
-        resp = client.get("/dag")
-        assert resp.status_code == 200
-        assert "mermaid" in resp.text
-        assert "graph LR" in resp.text
 
     def test_export_returns_attachment(self, client):
         """The Share route returns standalone HTML as a file download."""
@@ -356,6 +349,8 @@ class TestServerRoutes:
             ("highlight.min.js", "text/javascript"),
             ("languages/julia.min.js", "text/javascript"),
             ("purify.min.js", "text/javascript"),
+            ("pdf.min.mjs", "text/javascript"),
+            ("pdf.worker.min.mjs", "text/javascript"),
             ("fonts/KaTeX_Main-Regular.woff2", "font/woff2"),
         ):
             resp = client.get(f"/static/{name}")
@@ -397,6 +392,90 @@ class TestServerRoutes:
     def test_files_returns_404_for_missing(self, client):
         resp = client.get("/files/no_such_file.txt")
         assert resp.status_code == 404
+
+    def test_file_peek_answers_kind_size_and_bounded_head(self, client, plan_root):
+        """The hover preview reads a stat plus at most PEEK_HEAD_BYTES, marks an
+        image or PDF previewable only under the preview limit, and answers a
+        missing output as not built rather than an error."""
+        root = plan_root.parent
+        (root / "out").mkdir()
+        (root / "out" / "table.csv").write_text("a,b\n" + "1,2\n" * 5000)
+        _write_tiny_png(root / "out" / "fig.png")
+        (root / "out" / "big.pdf").write_bytes(b"%PDF-1.4\n" + b"0" * (2 * 1024 * 1024 + 1))
+        (root / "out" / "panel.parquet").write_bytes(b"PAR1\0\0")
+
+        csv = client.get("/api/file-peek", params={"path": "out/table.csv"}).json()
+        assert csv["kind"] == "text" and csv["truncated"]
+        assert csv["head"].startswith("a,b\n1,2") and len(csv["head"]) == plan_dashboard.PEEK_HEAD_BYTES
+        png = client.get("/api/file-peek", params={"path": "out/fig.png"}).json()
+        assert png["kind"] == "image" and png["previewable"] and "head" not in png
+        pdf = client.get("/api/file-peek", params={"path": "out/big.pdf"}).json()
+        assert pdf["kind"] == "pdf" and not pdf["previewable"]
+        parquet = client.get("/api/file-peek", params={"path": "out/panel.parquet"}).json()
+        assert parquet["kind"] == "binary" and not parquet["previewable"] and "head" not in parquet
+        folder = client.get("/api/file-peek", params={"path": "out"}).json()
+        assert folder == {**folder, "kind": "directory", "entries": 4, "entries_capped": False}
+        assert client.get("/api/file-peek", params={"path": "out/later.csv"}).json() == {"exists": False}
+        assert client.get("/api/file-peek", params={"path": "../../etc/passwd"}).status_code == 403
+        assert client.get("/api/file-peek", params={"path": "out/fig.png\0x"}).status_code == 400
+
+    def test_file_peek_answers_an_online_only_file_from_its_stat(self, client, plan_root, monkeypatch):
+        """An `SF_DATALESS` file or folder, or a legacy Dropbox placeholder, is
+        never opened or listed: the route returns `online_only` and the size the
+        stat knows."""
+        import builtins
+        import _repro_state
+        root = plan_root.parent
+        (root / "cloud").mkdir()
+        (root / "cloud" / "vendor.csv").write_text("v\n" * 1000)
+        (root / "cloud" / "folder").mkdir()
+        (root / "cloud" / "placeholder.csv").write_bytes(b"")
+        dataless = {(i.st_dev, i.st_ino) for i in (os.stat(root / "cloud" / name) for name in ("vendor.csv", "folder"))}
+        placeholder = os.path.realpath(root / "cloud" / "placeholder.csv")
+        monkeypatch.setattr(_repro_state, "file_flags",
+                            lambda info: _repro_state.SF_DATALESS if (info.st_dev, info.st_ino) in dataless else 0)
+        monkeypatch.setattr(_repro_state, "has_placeholder_xattr", lambda path: os.path.realpath(path) == placeholder)
+        real_open, real_scandir = builtins.open, os.scandir
+
+        def refuse(path):
+            if os.path.realpath(path).startswith(os.path.realpath(root / "cloud")):
+                raise AssertionError(f"read online-only {path}")
+        monkeypatch.setattr(builtins, "open", lambda f, *a, **k: (refuse(f), real_open(f, *a, **k))[1])
+        monkeypatch.setattr(os, "scandir", lambda p=".": (refuse(p), real_scandir(p))[1])
+
+        peek = lambda path: client.get("/api/file-peek", params={"path": path}).json()  # noqa: E731
+        assert peek("cloud/vendor.csv") == {"exists": True, "online_only": True, "kind": "file", "size": 2000,
+                                            "mtime_ns": os.stat(root / "cloud" / "vendor.csv").st_mtime_ns}
+        assert peek("cloud/folder")["online_only"] and peek("cloud/folder")["size"] is None
+        assert peek("cloud/placeholder.csv")["online_only"] and peek("cloud/placeholder.csv")["size"] is None
+
+    def test_symlinked_folders_and_declared_external_paths_are_readable(self, plan_root, tmp_path_factory):
+        """A symlink inside the project is the researcher's own inclusion, and a path
+        the reproduction graph declares is too; `..` and anything else outside stay
+        refused."""
+        outside = tmp_path_factory.mktemp("elsewhere")
+        (outside / "sub").mkdir(parents=True)
+        (outside / "raw.csv").write_text("id,x\n1,2\n")
+        (outside / "secret.txt").write_text("no")
+        external = tmp_path_factory.mktemp("external")
+        (external / "result.csv").write_text("a\n1\n")
+        (external / "other.csv").write_text("no")
+        (plan_root.parent / "data").symlink_to(outside, target_is_directory=True)
+        task = plan_root / "05-external"
+        task.mkdir()
+        (task / "task.md").write_text(
+            "---\ntitle: External output\nstatus: in-progress\n---\n\n## Objective\n\nWrite outside.\n\n"
+            f"## Reproduction\n\n```yaml\nsteps:\n  - name: ext\n    cmd: echo hi\n    outs: [{external / 'result.csv'}]\n```\n"
+        )
+        with _client_for(plan_root) as c:
+            def peek(path):
+                return c.get("/api/file-peek", params={"path": path})
+            assert c.get("/files/data/raw.csv").text == "id,x\n1,2\n"
+            assert peek("data/raw.csv").json()["head"] == "id,x\n1,2\n"
+            assert peek("data/sub/../secret.txt").status_code == 403
+            assert peek(str(external / "result.csv")).json()["head"] == "a\n1\n"
+            assert peek(str(external / "other.csv")).status_code == 403
+            assert peek(str(outside / "raw.csv")).status_code == 403
 
     def test_events_sse_generator_yields_heartbeat(self, client):
         """The SSE event_generator yields a heartbeat as its first message.
@@ -1704,19 +1783,6 @@ class TestTemplateRendering:
         # not prematurely close the payload container.
         assert "<\\/script>" in html
 
-    def test_dag_has_dependency_arrows(self, plan_root):
-        plan_dashboard.PLAN_ROOT = plan_root
-        plan_dashboard.rebuild_tree()
-        env = plan_dashboard._get_jinja_env()
-        template = env.get_template("dag.html")
-        all_tasks = _task_io.collect_all_tasks(_launch_state(plan_dashboard).root_task)
-        html = template.render(
-            root_task=_launch_state(plan_dashboard).root_task, all_tasks=all_tasks
-        )
-        assert "graph LR" in html
-        # 02-second depends on 01-first
-        assert "-->" in html
-
 
 # ---------------------------------------------------------------------------
 # TestCLI
@@ -1982,23 +2048,6 @@ class TestTouchPolish:
         assert "-webkit-tap-highlight-color: transparent;" in BASE_HTML
         assert ".task-row:active" in BASE_HTML
 
-    def test_phone_search_sheet_present(self):
-        """The phone search/filter sheet, its trigger, and the JS that adopts the
-        existing #search-box / #filter-status into it are all present."""
-        assert 'id="search-sheet"' in BASE_HTML
-        assert 'id="search-trigger"' in BASE_HTML
-        assert 'id="search-sheet-backdrop"' in BASE_HTML
-        assert "function toggleSearchSheet" in BASE_HTML
-        assert "function openSearchSheet" in BASE_HTML
-        assert "function closeSearchSheet" in BASE_HTML
-        # The sheet adopts the live elements rather than duplicating inputs.
-        assert 'id="search-host"' in BASE_HTML
-        assert "body.appendChild(host)" in BASE_HTML
-
-    def test_search_sheet_closed_by_navigation(self):
-        """A navigation selection closes the sheet alongside the drawer."""
-        assert "closeSearchSheet();" in BASE_HTML
-
     def test_content_safe_area_insets(self):
         """The detail panel and the bottom sheet pad past the home indicator /
         notch with env(safe-area-inset-*) (complements 01's chrome insets)."""
@@ -2012,20 +2061,19 @@ class TestTouchPolish:
         assert "overscroll-behavior-x: contain;" in BASE_HTML
         coarse = BASE_HTML.split("@media (pointer: coarse)", 1)[1]
         assert "mask-image: linear-gradient(to right" in coarse
-        assert "scroll-snap-type: x proximity;" in coarse
 
     def test_served_page_carries_polish_primitives(self, client):
         """The polish primitives survive the live render (server path): markup
         stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
-        assert 'id="search-sheet"' in text
+        assert 'id="workspace-filter"' in text
         assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
         assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', text)
         css = client.get("/static/dashboard.css").text
         assert "@media (pointer: coarse)" in css
         assert "-webkit-tap-highlight-color: transparent;" in css
         js = client.get("/static/dashboard.js").text
-        assert "function toggleSearchSheet" in js
+        assert "function openWorkspaceFilter" in js
 
 
 def _have_chromium() -> bool:
@@ -2121,7 +2169,7 @@ class TestTouchPolishRendered:
                     pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
                     pg.wait_for_timeout(300)
                     trig = pg.locator("#search-trigger").is_visible()
-                    inline = pg.locator("#search-box").is_visible()
+                    inline = pg.locator("#btn-find").is_visible()
                     ctx.close()
                     assert not trig, f"trigger visible on iPad {w}x{h} (should be inline only)"
                     assert inline, f"inline search hidden on iPad {w}x{h}"
@@ -2132,11 +2180,11 @@ class TestTouchPolishRendered:
                 pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
                 pg.wait_for_timeout(300)
                 trig = pg.locator("#search-trigger").is_visible()
-                inline = pg.locator("#search-box").is_visible()
+                inline = pg.locator("#btn-find").is_visible()
                 ctx.close()
                 b.close()
-            assert trig, "trigger hidden on iPhone (should be shown)"
-            assert not inline, "inline search visible on iPhone (should be in sheet/hidden)"
+            assert not trig, "retired trigger visible on iPhone"
+            assert inline, "shared search hidden on iPhone"
         finally:
             self._stop(t)
 
@@ -2359,7 +2407,7 @@ def _run_node(harness_body):
     prints a JSON line we parse back.  Returns the decoded object."""
     defs = _extract_js_defs([
         "childrenSig", "childCardHTML", "SUBTASK_HEADER",
-        "buildChildGrid", "buildChildFlow", "escapeHtml", "escapeAttr",
+        "buildChildGrid", "escapeHtml", "escapeAttr",
     ])
     script = defs + "\n" + harness_body
     proc = subprocess.run(
@@ -2379,66 +2427,9 @@ class TestChildFlowClientLogic:
             "var html=buildChildGrid(kids);"
             "console.log(JSON.stringify({"
             "  hasCard: html.indexOf('child-card')>=0,"
-            "  hasGrid: html.indexOf('child-grid')>=0,"
-            "  hasFlow: html.indexOf('child-flow')>=0}));"
+            "  hasGrid: html.indexOf('child-grid')>=0}));"
         )
-        assert out["hasCard"] and out["hasGrid"] and not out["hasFlow"]
-
-    def test_topological_tier_order(self):
-        """buildChildFlow groups children into execution tiers: a (tier 0),
-        then b & c (depend on a), then d (depends on b)."""
-        out = _run_node(
-            "var kids=["
-            "  {path:'a',slug:'a',title:'A',status:'approved'},"
-            "  {path:'b',slug:'b',title:'B',status:'in-progress'},"
-            "  {path:'c',slug:'c',title:'C',status:'not-started'},"
-            "  {path:'d',slug:'d',title:'D',status:'not-started'}];"
-            "var edges={b:['a'],c:['a'],d:['b']};"
-            "var html=buildChildFlow(kids, edges);"
-            "var tiers=html.split('flow-tier').slice(1).map(function(seg){"
-            "  var m=seg.match(/data-path=\"([a-d])\"/g)||[];"
-            "  return m.map(function(s){return s.match(/\"([a-d])\"/)[1];});});"
-            "console.log(JSON.stringify({tiers: tiers}));"
-        )
-        assert out["tiers"] == [["a"], ["b", "c"], ["d"]]
-
-    def test_cycle_is_safe_and_terminates(self):
-        """A cyclic edge set must still terminate and place every child; the
-        unresolvable nodes are flushed into the final tier."""
-        out = _run_node(
-            "var kids=["
-            "  {path:'a',slug:'a',title:'A',status:'not-started'},"
-            "  {path:'b',slug:'b',title:'B',status:'not-started'},"
-            "  {path:'c',slug:'c',title:'C',status:'not-started'}];"
-            "var edges={a:['b'],b:['a'],c:[]};"  # a<->b cycle, c independent
-            "var html=buildChildFlow(kids, edges);"
-            "var tiers=html.split('flow-tier').slice(1).map(function(seg){"
-            "  var m=seg.match(/data-path=\"([a-c])\"/g)||[];"
-            "  return m.map(function(s){return s.match(/\"([a-c])\"/)[1];});});"
-            "var all=[].concat.apply([],tiers).sort().join('');"
-            "console.log(JSON.stringify({all: all, lastTier: tiers[tiers.length-1].sort()}));"
-        )
-        # Every child placed exactly once; the cyclic pair lands in the last tier.
-        assert out["all"] == "abc"
-        assert set(out["lastTier"]) == {"a", "b"}
-
-    def test_after_footer_names_direct_deps_only(self):
-        """A dependent card's `after:` footer lists only its direct sibling
-        deps (d depends on b, not transitively on a)."""
-        out = _run_node(
-            "var kids=["
-            "  {path:'a',slug:'a',title:'A',status:'approved'},"
-            "  {path:'b',slug:'b',title:'B',status:'approved'},"
-            "  {path:'d',slug:'d',title:'D',status:'not-started'}];"
-            "var edges={b:['a'],d:['b']};"
-            "var html=buildChildFlow(kids, edges);"
-            # Isolate d's card markup, then read its dep-slug footer entries.
-            "var dCard=html.split('data-path=\"d\"')[1].split('</button>')[0];"
-            "var deps=(dCard.match(/dep-slug\">([a-d])</g)||[])"
-            "  .map(function(s){return s.match(/>([a-d])</)[1];});"
-            "console.log(JSON.stringify({deps: deps}));"
-        )
-        assert out["deps"] == ["b"]
+        assert out["hasCard"] and out["hasGrid"]
 
     def test_children_sig_busts_on_status_change(self):
         out = _run_node(
@@ -2848,11 +2839,12 @@ def forest_root(tmp_path):
     return root
 
 
-def _client_for(plan_root, base_url: str | None = None):
+def _client_for(plan_root, base_url: str | None = None, peer: str | None = None):
     """Build a TestClient pointed at *plan_root* (any basename), launch worktree.
 
-    *base_url* overrides the default ``http://testserver`` origin, which matters
-    only for routes that check the ``Host`` authority (``/api/open``).
+    *base_url* overrides the default ``http://testserver`` origin and *peer* the
+    client address; both matter only where the page asks whether the browser is
+    on this machine (``LOCAL_OPEN``, ``/api/open``).
     """
     from starlette.testclient import TestClient
 
@@ -2861,6 +2853,8 @@ def _client_for(plan_root, base_url: str | None = None):
     plan_dashboard._worktree_cache.clear()
     plan_dashboard.rebuild_tree()
     kwargs = {"base_url": base_url} if base_url else {}
+    if peer:
+        kwargs["client"] = (peer, 50000)
     return TestClient(plan_dashboard.app, raise_server_exceptions=True, **kwargs)
 
 
@@ -2908,8 +2902,10 @@ class TestFileLinkConsistency:
         # its `docs/...` lead), not the bare basename or a hardcoded segment.
         assert "REPO_ROOT_PREFIX ? REPO_ROOT_PREFIX + '/' : ''" in fn
         assert "/superRA/" not in fn  # no hardcoded path segment
-        # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
-        assert "vscode://file/' + RESOLVED_ROOT + '/' + contentDirRel + relHref" in BASE_HTML
+        # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX
+        # (PROJECT_ROOT only for a project file shown in the reading pane).
+        assert "var fileRoot = RESOLVED_ROOT;" in BASE_HTML
+        assert "vscode://file/' + fileRoot + '/' + contentDirRel + relHref" in BASE_HTML
         assert "var repoPathPrefix = rootRel + contentDirRel;" in BASE_HTML
         # The old hardcoded prefixes are gone from the builders.
         assert "'superRA/' + path + '/task.md'" not in BASE_HTML
@@ -3085,34 +3081,24 @@ class TestWorktreeOpenButton:
                        BASE_HTML, re.S)
         assert fn and "worktree-open-btn" not in fn.group(0)
 
-    def test_href_uses_project_root_via_shared_uri_builder(self):
-        """Without the local-open route the button keeps its pre-route deep link:
-        PROJECT_ROOT (the whole worktree, not the superRA/ subdir) through the
-        shared vscodeFileUri."""
+    def test_hidden_without_an_editor_to_open(self):
+        """GitHub-file mode has no local folder, and a browser on another machine
+        no editor holding this worktree, so both hide the button."""
         fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
                        BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
-        assert "vscodeFileUri(PROJECT_ROOT)" in body
-        # Scoped to the pre-route branch, because the local-open branch above
-        # deliberately targets a task file under RESOLVED_ROOT.  Both the direct
-        # name and taskFileVscodeHref, which reaches it indirectly, stay out.
-        pre_route = re.search(r"\}\s*else\s*\{(.*?)\n  \}", body, re.S)
-        assert pre_route
-        assert "RESOLVED_ROOT" not in pre_route.group(1)
-        assert "taskFileVscodeHref" not in pre_route.group(1)
-        # GitHub-file mode has no local folder to open → hide the button.
-        assert "if (REPO_FILE_BASE) { btn.style.display = 'none'; return; }" in body
+        assert "if (REPO_FILE_BASE || !window.LOCAL_OPEN) { btn.style.display = 'none'; return; }" in body
+        assert "vscodeFileUri(PROJECT_ROOT)" not in body
 
     def test_local_open_targets_active_task_file_in_this_worktree(self):
-        """With the local-open route the button opens the ACTIVE task's file with
-        target 'editor', so the route can pass the worktree folder alongside it and
-        the file lands in the window holding this worktree."""
+        """The button opens the ACTIVE task's file with target 'editor', so the
+        route can pass the worktree folder alongside it and the file lands in the
+        window holding this worktree."""
         fn = re.search(r"function updateWorktreeOpenHref\(\)\s*\{.*?\n\}",
                        BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
-        assert "if (window.LOCAL_OPEN) {" in body
         assert "taskFileOpenPath(activePath)" in body
         assert "'data-open-target', 'editor'" in body
 
@@ -3309,9 +3295,12 @@ class TestTabTitleWiring:
         )
         assert fn
         body = fn.group(0)
-        assert "setTabTitle(entry.name);" in body
-        catch = re.search(r"\}\)\.catch\(function\(error\) \{.*?\n  \}\);", body, re.S)
-        assert catch and "setTabTitle('');" in catch.group(0)
+        assert "buildArtifactPageHead(taskPath, entry.name)" in body
+        assert "showArtifactLoadError(region, token, error)" in body
+        head = re.search(r"function buildArtifactPageHead\(taskPath, name\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert head and "setTabTitle(name);" in head.group(0)
+        error = re.search(r"function showArtifactLoadError\(region, token, error\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert error and "setTabTitle('');" in error.group(0)
 
     def test_deep_descent_patch_awaits_the_sidebar_update(self):
         """Same completion hook as the status badge — not a fixed-interval poll —
@@ -3365,24 +3354,33 @@ def _read_local_open_flag(html: str) -> str:
 class TestLocalOpen:
     # --- Render-time flag -------------------------------------------------
 
-    def test_flag_true_for_loopback_live_page(self, plan_root, monkeypatch):
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
+    def test_flag_true_for_a_browser_on_this_machine(self, plan_root, monkeypatch):
+        """Loopback, or the address the connection arrived on (the researcher's own
+        desktop reaching an off-loopback bind through its own LAN/Tailscale IP)."""
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
-        with _client_for(plan_root) as c:
-            assert _read_local_open_flag(c.get("/").text) == "true"
+        for base, peer in (("http://127.0.0.1:8995", "127.0.0.1"), ("http://localhost:8995", "::1"),
+                           ("http://100.64.0.5:8995", "100.64.0.5")):
+            with _client_for(plan_root, base_url=base, peer=peer) as c:
+                assert _read_local_open_flag(c.get("/").text) == "true", base
 
-    def test_flag_false_off_loopback(self, plan_root, monkeypatch):
-        """An off-loopback --host may put the browser on another machine, so the
-        page keeps its vscode:// links and never calls the route."""
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
+    def test_flag_false_for_another_machine(self, plan_root, monkeypatch):
+        """A phone or another computer has nothing here to open a file with, so its
+        page opens files in the reading pane and never calls the route."""
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
-        with _client_for(plan_root) as c:
+        with _client_for(plan_root, base_url="http://100.64.0.5:8995", peer="100.64.0.9") as c:
             assert _read_local_open_flag(c.get("/").text) == "false"
 
+    def test_flag_false_behind_a_reverse_proxy(self, plan_root, monkeypatch):
+        """A proxy on this machine connects from loopback but forwards the public
+        name, so the browser behind it is not taken for a local one."""
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        with _client_for(plan_root, base_url="http://127.0.0.1:8995", peer="127.0.0.1") as c:
+            page = c.get("/", headers={"host": "mac.tailnet.ts.net"}).text
+            assert _read_local_open_flag(page) == "false"
+
     def test_flag_false_in_doc_mode(self, plan_root, monkeypatch):
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
-        with _client_for(plan_root) as c:
+        with _client_for(plan_root, base_url="http://127.0.0.1:8995", peer="127.0.0.1") as c:
             assert _read_local_open_flag(c.get("/").text) == "false"
 
     def test_flag_false_in_standalone_export(self, plan_root):
@@ -3395,40 +3393,19 @@ class TestLocalOpen:
         for host in ("0.0.0.0", "192.168.1.10", "100.64.0.1", "::", "", "example.com"):
             assert not plan_dashboard._is_loopback_host(host), host
 
-    def test_serve_records_bound_host(self, monkeypatch):
-        """serve() is the single in-process serve path, so the host it is handed is
-        the one the route gates on."""
-        pytest.importorskip("uvicorn")
-        import uvicorn
-
-        seen = {}
-
-        class _FakeServer:
-            def __init__(self, config):
-                pass
-
-            def run(self):
-                seen["bound"] = plan_dashboard.BOUND_HOST
-
-        monkeypatch.setattr(uvicorn, "Server", _FakeServer)
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
-        plan_dashboard.serve(12345, host="0.0.0.0")
-        assert seen["bound"] == "0.0.0.0"
-
     # --- Opening ----------------------------------------------------------
 
     def _spawns(self, monkeypatch):
         """Capture every process the route would launch, without launching one."""
         calls: list[list[str]] = []
         monkeypatch.setattr(plan_dashboard, "_spawn", calls.append)
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "127.0.0.1")
         monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
         return calls
 
     def _client(self, plan_root):
-        """A client whose default ``Host`` authority is loopback — what a browser on
+        """A loopback client with a loopback ``Host`` authority — what a browser on
         the researcher's own machine sends, and what the route requires."""
-        return _client_for(plan_root, base_url="http://127.0.0.1:8995")
+        return _client_for(plan_root, base_url="http://127.0.0.1:8995", peer="127.0.0.1")
 
     def test_native_open_hands_file_to_os(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
@@ -3499,10 +3476,9 @@ class TestLocalOpen:
 
     # --- Refusals ---------------------------------------------------------
 
-    def test_refuses_off_loopback(self, plan_root, monkeypatch):
+    def test_refuses_another_machine(self, plan_root, monkeypatch):
         calls = self._spawns(monkeypatch)
-        monkeypatch.setattr(plan_dashboard, "BOUND_HOST", "0.0.0.0")
-        with self._client(plan_root) as c:
+        with _client_for(plan_root, base_url="http://100.64.0.5:8995", peer="100.64.0.9") as c:
             r = c.post("/api/open", json={"path": "superRA/01-first/task.md"})
         assert r.status_code == 403
         assert calls == []
@@ -3572,8 +3548,8 @@ class TestLocalOpen:
         """DNS rebinding defeats both origin checks: a page on evil.example.com that
         rebinds the name to 127.0.0.1 is same-origin to the browser, so it needs no
         preflight and sends `Sec-Fetch-Site: same-origin` freely.  What it cannot
-        change is the authority it puts in `Host`, so the route requires a loopback
-        one.  The deterministic 8100–8999 port makes the precondition cheap to meet,
+        change is the authority it puts in `Host`, so the route requires one naming
+        this machine.  The deterministic 8100–8999 port makes the precondition cheap to meet,
         and the route starts processes."""
         calls = self._spawns(monkeypatch)
         with self._client(plan_root) as c:
@@ -3587,16 +3563,20 @@ class TestLocalOpen:
                 },
             )
         assert r.status_code == 403
-        assert r.json()["detail"] == "Untrusted Host header"
+        assert "only for a browser on this machine" in r.json()["detail"]
         assert calls == []
 
-    def test_loopback_authority_predicate(self):
-        """The Host check strips the port and IPv6 brackets, then applies the same
-        loopback test as the bind check."""
-        for authority in ("127.0.0.1", "127.0.0.1:8995", "localhost:8995", "[::1]:8995", "[::1]"):
-            assert plan_dashboard._is_loopback_authority(authority), authority
-        for authority in ("evil.example.com:8995", "192.168.1.10:8995", "", "0.0.0.0:8995"):
-            assert not plan_dashboard._is_loopback_authority(authority), authority
+    def test_host_and_peer_parsing(self):
+        """`Host` loses its port and IPv6 brackets, and a dual-stack bind's
+        IPv4-mapped peer compares as plain IPv4."""
+        from types import SimpleNamespace
+        for authority, host in (("127.0.0.1:8995", "127.0.0.1"), ("[::1]:8995", "::1"),
+                                ("[::1]", "::1"), ("localhost", "localhost"), ("", "")):
+            assert plan_dashboard._authority_host(authority) == host, authority
+        req = SimpleNamespace(scope={"server": ("::ffff:192.168.1.5", 8995)})
+        assert plan_dashboard._names_this_machine(req, "192.168.1.5")
+        assert plan_dashboard._names_this_machine(req, "::ffff:127.0.0.1")
+        assert not plan_dashboard._names_this_machine(req, "192.168.1.6")
 
     def test_refuses_a_directory(self, plan_root, monkeypatch):
         """Files only, matching /files/.  No surface sends a directory, and on macOS
@@ -3728,12 +3708,14 @@ class TestLocalOpen:
 
     def test_card_head_button_opens_in_default_application(self):
         """The card-head button targets the OS default application (no editor named
-        in its label, icon, or title)."""
+        in its label, icon, or title); a standalone export keeps its VS Code link,
+        and a live page on another machine gets no button."""
         fn = re.search(r"async function loadActiveNode\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
         assert fn
         body = fn.group(0)
         assert "var openNative = window.LOCAL_OPEN && !REPO_FILE_BASE;" in body
         assert "openNative ? 'Open' : 'VS Code'" in body
+        assert "((openNative || REPO_FILE_BASE || window.STANDALONE) ? '<a class=\"open-btn\"" in body
         assert "openNative ? OPEN_ICON : EDITOR_ICON" in body
         assert "taskFileOpenPath(path)" in body
 
@@ -3816,11 +3798,10 @@ class TestDashboard:
     def test_generate_embeds_fragments_inline(self, plan_root):
         """Every fragment the standalone client fetches is pre-rendered inline."""
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
-        # Nav tree, per-node bodies, per-node children graphs, and the kanban board.
+        # Nav tree, per-node bodies, and per-node children graphs.
         assert "/nav" in html
         assert "/node/01-first" in html
         assert "/api/children-graph?root=02-second" in html
-        assert "/kanban" in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
 
@@ -3942,7 +3923,6 @@ class TestDashboard:
         with TestClient(plan_dashboard.app) as c:
             assert fragments["/nav"] == c.get("/nav").text
             assert fragments["/node/01-first"] == c.get("/node/01-first").text
-            assert fragments["/kanban"] == c.get("/kanban").text
             assert (
                 fragments["/api/children-graph?root=02-second"]
                 == c.get("/api/children-graph", params={"root": "02-second"}).json()
@@ -4450,7 +4430,6 @@ class TestDocMode:
         for selector in (
             "html[data-doc-mode] .badge",
             "html[data-doc-mode] #summary-bar",
-            "html[data-doc-mode] #btn-kanban",
             "html[data-doc-mode] .children-dag",
         ):
             assert selector in html, f"missing doc-mode rule: {selector}"
@@ -4869,23 +4848,6 @@ class TestServerSideEscaping:
         assert "<script>alert(2)</script>" not in html
         assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
 
-    def test_kanban_card_escaped_with_no_interpolated_onclick(self, adv_client):
-        """The kanban card title is literal text, and the card is wired via a
-        data-path attribute + delegated handler rather than an inline onclick
-        built by interpolating the task path."""
-        html = adv_client.get("/kanban").text
-        assert "<script>alert(2)</script>" not in html
-        assert "&lt;script&gt;alert(2)&lt;/script&gt;" in html
-        assert 'onclick="revealTask(' not in html
-        assert 'data-path="01-adversarial"' in html
-
-    def test_active_node_card_assembly_delegates_to_kanban_handler(self):
-        """onKanbanCardClick reads the card's data-path (delegated), mirroring
-        onChildCardClick's escaped-attribute + delegation pattern."""
-        src = BASE_HTML
-        assert "function onKanbanCardClick(event)" in src
-        assert "card.dataset.path" in src
-
     def test_comment_anchor_selectors_use_css_escape(self):
         """A `"` in a `##` header used to throw out of querySelector and abort
         comment loading for the whole task; CSS.escape guards both
@@ -4944,7 +4906,7 @@ class TestServerSideEscaping:
         # escaped by the client's escapeHtml at display time, per
         # TestClientSearch — not asserted here).
         escaped_leaf_title = "\\u0026lt;script\\u0026gt;alert(2)\\u0026lt;/script\\u0026gt;"
-        assert html.count(escaped_leaf_title) == 2  # kanban card, nav row
+        assert html.count(escaped_leaf_title) == 1  # nav row
 
         # The children-graph payload's title field is single JSON-escaped —
         # still script-safe with no HTML-escape round trip.
@@ -5010,7 +4972,7 @@ class TestClientSearch:
         assert "function runSearch" in src
         assert "function scoreSearchRecord" in src
         # chooseSearchResult navigates through the same setActive router.
-        assert "setActive(rec.path" in src
+        assert "reproSelectTask(rec.path" in src
 
     def test_search_keyboard_affordances(self):
         """Keyboard: focus shortcut ('/' or Ctrl/Cmd-K), arrow navigation, Enter
@@ -5147,8 +5109,7 @@ class TestMasterDetailPartials:
 
     def test_existing_routes_unaffected(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
-            for route in ("/", "/dag", "/kanban"):
-                assert c.get(route).status_code == 200
+            assert c.get("/").status_code == 200
 
 
 class TestIdleShutdown:
@@ -6528,3 +6489,604 @@ class TestServeBindHost:
 
         expected = plan_dashboard._dashboard_url(port, plan_root)
         assert opened == [expected]
+
+
+# ---------------------------------------------------------------------------
+# Reproduction view: the two API routes, the export snapshot, the page wiring,
+# and the client-side layout
+#
+# The routes are read-only projections of `_repro.graph_to_dict` and
+# `_repro_state.compute_status(...).to_dict()`; these tests pin the projection
+# the client depends on (including the dashboard-local `log_tail`) and the
+# invariant that reading them never creates runner state in the project.
+# ---------------------------------------------------------------------------
+
+REPRO_CONFIG = """\
+reproduction:
+  vars:
+    OUT: build
+  env_deps:
+    - env.lock
+"""
+
+REPRO_INGEST = """\
+---
+title: "Ingest"
+status: in-progress
+depends_on: []
+---
+
+## Objective
+
+Read the vendor extract.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: fetch-crsp
+    cmd: sh code/fetch.sh
+    deps:
+      - code/fetch.sh
+    outs:
+      - "${OUT}/crsp.csv"
+  - name: check-ingest
+    kind: check
+    cmd: sh code/check.sh
+    deps:
+      - "${OUT}/crsp.csv"
+```
+"""
+
+REPRO_PANEL = """\
+---
+title: "Panel"
+status: in-progress
+depends_on: []
+---
+
+## Objective
+
+Build the panel.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: merge-panel
+    cmd: sh code/merge.sh
+    deps:
+      - "${OUT}/crsp.csv"
+      - code/merge.sh
+    outs:
+      - "${OUT}/panel.csv"
+```
+"""
+
+
+@pytest.fixture
+def repro_plan(tmp_path):
+    """A tree declaring three steps across two owner tasks: a pair (one a check
+    step) and a third step consuming the first task's out, so the payload
+    carries a cross-task edge and both step kinds."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+    (root / "config.yaml").write_text(REPRO_CONFIG, encoding="utf-8")
+    _write_task_md(root / "task.md", "Repro Project", "in-progress",
+                   objective="Root.")
+    (root / "01-ingest").mkdir()
+    (root / "01-ingest" / "task.md").write_text(REPRO_INGEST, encoding="utf-8")
+    (root / "02-panel").mkdir()
+    (root / "02-panel" / "task.md").write_text(REPRO_PANEL, encoding="utf-8")
+    code = tmp_path / "code"
+    code.mkdir()
+    for name in ("fetch.sh", "check.sh", "merge.sh"):
+        (code / name).write_text("#!/bin/sh\n", encoding="utf-8")
+    (tmp_path / "env.lock").write_text("sh 5.2\n", encoding="utf-8")
+    return root
+
+
+def _repro_client(plan_root):
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+    plan_dashboard.PLAN_ROOT = plan_root
+    return TestClient(plan_dashboard.app)
+
+
+class TestReproRoutes:
+    def test_graph_route_serves_the_declared_graph(self, repro_plan):
+        with _repro_client(repro_plan) as c:
+            body = c.get("/api/repro/graph").json()
+        assert [s["name"] for s in body["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert [t["path"] for t in body["tasks"]] == ["01-ingest", "02-panel"]
+        # Step edges are inferred from files, including across owner tasks.
+        assert {(e["from"], e["to"]) for e in body["step_edges"]} == {
+            ("fetch-crsp", "check-ingest"), ("fetch-crsp", "merge-panel"),
+        }
+        merge = [s for s in body["steps"] if s["name"] == "merge-panel"][0]
+        assert merge["task"] == "02-panel"
+        assert [o["path"]["logical"] for o in merge["outs"]] == ["${OUT}/panel.csv"]
+        assert [s["kind"] for s in body["steps"]] == ["build", "check", "build"]
+
+    def test_status_route_serves_the_runner_contract(self, repro_plan):
+        with _repro_client(repro_plan) as c:
+            c.get("/api/repro/graph")
+            body = c.get("/api/repro/status").json()
+        # A dashboard GET writes no runner state into the project.
+        assert not (repro_plan.parent / ".superra-repro").exists()
+        assert not (repro_plan.parent / ".gitignore").exists()
+        assert body["summary"] == {
+            "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "unverified": 0,
+            "total": 3, "producers": {
+                "fresh": 0, "stale": 0, "missing": 0, "failed": 0, "unverified": 0, "total": 0},
+        }
+        assert body["ok"] is False
+        entry = body["steps"][0]
+        assert entry["name"] == "fetch-crsp"
+        assert entry["status"] == "missing" and entry["reason"] == "never built"
+        # The dashboard's own addition: the node detail panel's log tail rides
+        # the status payload, so the view needs no third route.
+        assert entry["log_tail"] == ""
+        for key in ("task", "kind", "cmd", "deps", "outs", "duration"):
+            assert key in entry
+
+    def test_status_route_degrades_when_the_lock_cannot_be_read(
+        self, repro_plan, monkeypatch
+    ):
+        """Without `tomllib` (Python < 3.11) the runner cannot read the lock; the
+        payload keeps its shape and names the reason instead of failing."""
+        def _boom(*args, **kwargs):
+            raise plan_dashboard.ReproStateError("reading pytask.lock needs Python 3.11+")
+
+        monkeypatch.setattr(plan_dashboard, "compute_status", _boom)
+        with _repro_client(repro_plan) as c:
+            resp = c.get("/api/repro/status")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["steps"] == [] and body["ok"] is False
+        assert body["summary"]["total"] == 0
+        assert "Python 3.11" in body["unavailable"]
+
+    def test_tree_with_no_reproduction_sections_serves_empty_payloads(self, plan_root):
+        with _repro_client(plan_root) as c:
+            graph = c.get("/api/repro/graph").json()
+            status = c.get("/api/repro/status").json()
+        assert graph["steps"] == [] and graph["tasks"] == [] and graph["findings"] == []
+        assert status["steps"] == [] and status["summary"]["total"] == 0
+        assert status["ok"] is True
+
+    def test_findings_travel_once_in_the_graph_payload(self, repro_plan):
+        """The view reads findings off the graph; the status payload and the
+        dependency block do not repeat them."""
+        (repro_plan / "01-ingest" / "task.md").write_text(
+            REPRO_INGEST.replace("sh code/fetch.sh", "[unclosed"), encoding="utf-8"
+        )
+        plan_dashboard._repro_graph_cache.clear()
+        with _repro_client(repro_plan) as c:
+            graph = c.get("/api/repro/graph").json()
+            status = c.get("/api/repro/status").json()
+        assert graph["findings"]
+        assert "findings" not in status
+        assert set(graph["dependencies"]) == {"tasks", "archived_tasks", "logical"}
+        assert "task_edges" not in graph
+
+
+# ---------------------------------------------------------------------------
+# TestReproBuildRoutes — POST /api/repro/build runs `superra repro build` for a
+# graph card, GET reports it, POST /api/repro/build/stop ends it, and GET
+# /api/repro/explain answers the hover card.  The build route executes the
+# commands the tree declares, so its refusals are pinned as tightly as its
+# lifecycle.
+# ---------------------------------------------------------------------------
+
+
+def _read_repro_actions_flag(html: str) -> str:
+    m = re.search(r"window\.REPRO_ACTIONS = (\w+);", html)
+    assert m, "REPRO_ACTIONS not injected"
+    return m.group(1)
+
+
+def _wait_for(predicate, timeout=20.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        value = predicate()
+        if value:
+            return value
+        time.sleep(0.1)
+    raise AssertionError("condition not reached in time")
+
+
+class TestReproBuildRoutes:
+    @pytest.fixture
+    def plan(self, repro_plan, monkeypatch):
+        """The repro fixture with a fetch step that writes its out after *SLOW* seconds,
+        served on a loopback authority, building with this process's environment."""
+        code = repro_plan.parent / "code"
+        (code / "fetch.sh").write_text(
+            '#!/bin/sh\nsleep "${SLOW:-0}"\nmkdir -p build\necho crsp > build/crsp.csv\n', encoding="utf-8")
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        monkeypatch.setattr(plan_dashboard, "_login_env", lambda root: dict(os.environ, PWD=str(root)))
+        monkeypatch.delenv("SLOW", raising=False)
+        plan_dashboard._repro_graph_cache.clear()
+        return repro_plan
+
+    def _client(self, plan_root, base_url="http://127.0.0.1:8995"):
+        return _client_for(plan_root, base_url=base_url)
+
+    def _finish(self, c):
+        return _wait_for(lambda: (lambda s: s if not s["running"] and s["job"] and "returncode" in s["job"] else None)(
+            c.get("/api/repro/build").json()))
+
+    # --- Render-time flag -------------------------------------------------
+
+    def test_flag_true_for_live_page_even_off_loopback(self, plan, monkeypatch):
+        with self._client(plan) as c:
+            assert _read_repro_actions_flag(c.get("/").text) == "true"
+
+    def test_flag_false_in_doc_mode_and_export(self, plan, monkeypatch):
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+        with self._client(plan) as c:
+            assert _read_repro_actions_flag(c.get("/").text) == "false"
+        monkeypatch.setattr(plan_dashboard, "DOC_MODE", False)
+        html = plan_dashboard.generate_dashboard(plan).read_text("utf-8")
+        assert _read_repro_actions_flag(html) == "false"
+
+    # --- Refusals ---------------------------------------------------------
+
+    def test_refuses_what_is_not_a_same_origin_request_for_a_graph_target(self, plan, monkeypatch):
+        spawned = []
+        monkeypatch.setattr(plan_dashboard, "_start_build_sync", lambda *a: spawned.append(a) or {})
+        with self._client(plan) as c:
+            ok = {"target": "01-ingest"}
+            assert c.post("/api/repro/build", content=json.dumps(ok),
+                          headers={"content-type": "text/plain"}).status_code == 415
+            assert c.post("/api/repro/build", json=ok,
+                          headers={"sec-fetch-site": "cross-site"}).status_code == 403
+            assert c.post("/api/repro/build", json=ok,
+                          headers={"host": "evil.example.com:8995"}).status_code == 403
+            for bad in ("--force", "-j", "nope", "", " 01-ingest", "01-ingest\n", 7, None):
+                assert c.post("/api/repro/build", json={"target": bad}).status_code == 400, bad
+            assert not spawned
+            assert c.post("/api/repro/build", json=ok).status_code == 200
+            monkeypatch.setattr(plan_dashboard, "DOC_MODE", True)
+            assert c.post("/api/repro/build", json=ok).status_code == 403
+            assert c.post("/api/repro/build/stop", json={}).status_code == 403
+        assert [a[1:] for a in spawned] == [("01-ingest", False, False)]
+
+    def test_trusted_authority_names_this_machine_only(self, monkeypatch):
+        monkeypatch.setenv(plan_dashboard.BUILD_HOSTS_ENV_VAR, "studio.tail1234.ts.net")
+        own = socket.gethostname()
+        for host in ("127.0.0.1:8995", "localhost", "[::1]:80", "100.64.0.7:8995",
+                     own, own.split(".")[0] + ":8995", "studio.tail1234.ts.net"):
+            assert plan_dashboard._is_trusted_authority(host), host
+        for host in ("evil.example.com", "evil.example.com:8995", "", own + ".evil.example.com"):
+            assert not plan_dashboard._is_trusted_authority(host), host
+
+    def test_target_is_one_argv_element_after_the_separator(self):
+        assert plan_dashboard._build_args("02-panel", True, True) == ["--only", "--force", "--", "02-panel"]
+        assert plan_dashboard._build_args("01-ingest#fetch-crsp", False, False) == ["--", "01-ingest#fetch-crsp"]
+
+    # --- Lifecycle --------------------------------------------------------
+
+    def test_build_runs_reports_and_refreshes_state(self, plan):
+        with self._client(plan) as c:
+            assert c.get("/api/repro/build").json() == {"enabled": True, "running": False, "job": None, "steps": []}
+            r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp"})
+            assert r.status_code == 200, r.text
+            assert r.json()["command"] == "superra repro build '01-ingest#fetch-crsp'"
+            state = self._finish(c)
+            status = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}
+        assert state["job"]["returncode"] == 0
+        assert state["job"]["summary"] == "1 step(s): 1 executed"
+        assert status["fetch-crsp"]["status"] == "fresh"
+        assert status["fetch-crsp"]["duration"] is not None
+
+    def test_only_request_scopes_the_build_and_a_gated_build_lists_its_files(self, plan):
+        """`only` reaches the runner as `--only`; a build the download gate stops
+        returns the gate's file list as `detail`, not only its first line."""
+        (plan.parent / "code" / "fetch.sh").unlink()
+        with self._client(plan) as c:
+            r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp", "only": True})
+            assert r.status_code == 200, r.text
+            assert r.json()["command"] == "superra repro build --only '01-ingest#fetch-crsp'"
+            assert r.json()["only"] is True
+            job = self._finish(c)["job"]
+        assert job["returncode"] == 1
+        assert job["summary"].startswith("Error: 1 file(s) the build reads are not on this machine")
+        assert job["detail"][0].split() [:2] == ["code/fetch.sh", "-"]
+        assert "no step produces it" in job["detail"][0]
+
+    def test_build_summary_keeps_an_errors_lines_and_each_failed_steps_block(self):
+        log = "Execution scope: 1 step(s): a\nError: 2 file(s) are gone:\n  x.csv  1 B\n  y.csv  2 B\nTry --only.\n"
+        assert plan_dashboard._build_summary(log) == (
+            "Error: 2 file(s) are gone:", ["  x.csv  1 B", "  y.csv  2 B", "Try --only."])
+        assert plan_dashboard._build_summary("✓ a  executed\n1 step(s): 1 executed\n") == ("1 step(s): 1 executed", [])
+        stopped = ("✓ clean  executed\n✗ join  failed\n  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:\n"
+                   "    Data/vendor.csv  2.4 MB  online-only here\n✓ report  executed\n3 step(s): 2 executed, 1 failed\n")
+        assert plan_dashboard._build_summary(stopped) == ("3 step(s): 2 executed, 1 failed", [
+            "✗ join  failed", "  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:",
+            "    Data/vendor.csv  2.4 MB  online-only here"])
+        many = "".join(f"✗ s{i}  failed\n  boom\n" for i in range(10)) + "10 step(s): 10 failed\n"
+        detail = plan_dashboard._build_summary(many)[1]
+        assert len(detail) == plan_dashboard.BUILD_DETAIL_LINES + 1 and detail[-1] == "… 8 more line(s) in the log"
+
+    def test_running_build_reads_running_refuses_a_second_and_stops(self, plan, monkeypatch):
+        monkeypatch.setenv("SLOW", "30")
+        with self._client(plan) as c:
+            assert c.post("/api/repro/build", json={"target": "01-ingest"}).status_code == 200
+            state = _wait_for(lambda: (lambda s: s if s["steps"] else None)(c.get("/api/repro/build").json()))
+            assert state["running"] and state["job"]["alive"]
+            assert [s["name"] for s in state["steps"]] == ["fetch-crsp"]
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+            assert entry["running"] is True and entry["reason"] == "building now"
+            assert entry["status"] != "failed"
+            second = c.post("/api/repro/build", json={"target": "02-panel"})
+            assert second.status_code == 409
+            assert "another reproduction build" in second.json()["detail"]
+            assert c.post("/api/repro/build/stop", json={}).status_code == 200
+            state = self._finish(c)
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+        assert state["job"]["returncode"] != 0
+        assert entry["status"] == "failed"
+        with self._client(plan) as c:
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_a_build_outside_the_dashboard_refuses_the_page(self, plan):
+        """A CLI build holds the lock: the page cannot start or stop one, and a
+        step a crashed build left in flight still reads interrupted."""
+        from _repro_acceptance import mutation_lock
+        from _repro_state import ensure_state_dir, runner_paths, write_run_record
+        paths = runner_paths(plan.parent)
+        ensure_state_dir(paths)
+        write_run_record(paths, "fetch-crsp", {"outcome": "running", "started_at": 1.0, "pid": 999999})
+        with mutation_lock(paths), self._client(plan) as c:
+            state = c.get("/api/repro/build").json()
+            assert state["running"] is True and state["steps"] == []
+            entry = {e["name"]: e for e in c.get("/api/repro/status").json()["steps"]}["fetch-crsp"]
+            assert entry["status"] == "failed" and entry["running"] is False
+            assert c.post("/api/repro/build", json={"target": "01-ingest"}).status_code == 409
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_stop_refuses_a_job_whose_pid_is_not_the_build(self, plan):
+        """A job left without an exit code, whose pid now names another process,
+        is not stopped."""
+        from _repro_state import ensure_state_dir, runner_paths
+        paths = runner_paths(plan.parent)
+        ensure_state_dir(paths)
+        plan_dashboard._write_job(paths, {"pid": os.getpid(), "target": "01-ingest", "started_at": 1.0})
+        with self._client(plan) as c:
+            assert c.get("/api/repro/build").json()["job"]["alive"] is False
+            assert c.post("/api/repro/build/stop", json={}).status_code == 409
+
+    def test_project_pages_are_served_sandboxed(self, plan):
+        for name in ("page.html", "page.xht", "feed.rss", "fig.svg", "data.xml"):
+            (plan.parent / name).write_text("<script>fetch('/api/repro/build')</script>", encoding="utf-8")
+        (plan.parent / "fig.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        with self._client(plan) as c:
+            for name in ("page.html", "page.xht", "feed.rss", "fig.svg", "data.xml"):
+                policy = c.get(f"/files/{name}").headers.get("content-security-policy", "")
+                assert policy.startswith("sandbox allow-scripts"), name
+                assert "allow-same-origin" not in policy
+            assert "content-security-policy" not in c.get("/files/fig.png").headers
+
+    # --- Explain ----------------------------------------------------------
+
+    def test_explain_answers_for_a_task_or_step_and_writes_nothing(self, plan):
+        with self._client(plan) as c:
+            task = c.get("/api/repro/explain", params={"target": "02-panel"})
+            step = c.get("/api/repro/explain", params={"target": "01-ingest#fetch-crsp"})
+            path = c.get("/api/repro/explain", params={"target": "code/fetch.sh"})
+            unknown = c.get("/api/repro/explain", params={"target": "nope"})
+        assert task.status_code == 200 and task.json()["kind"] == "task"
+        assert [s["name"] for s in task.json()["steps"]] == ["merge-panel"]
+        assert step.status_code == 200 and step.json()["steps"][0]["status"] == "missing"
+        assert path.status_code == 400 and unknown.status_code == 400
+        assert not (plan.parent / ".superra-repro").exists()
+
+
+    # --- Client estimate (node-backed) ------------------------------------
+
+    @pytest.mark.skipif(_NODE is None, reason="node not available")
+    def test_menu_estimate_and_command_follow_the_selection(self):
+        defs = _extract_js_defs([
+            "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD", "_reproBuild", "reproStatusIndex", "reproStateOf",
+            "reproChannels", "reproWithin", "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope",
+            "reproBuildEstimate", "reproGatedFiles", "formatArtifactBytes",
+        ])
+        # a (stale) -> b (fresh, stale through a) and y (unverified, stale through a); c missing; x unverified.
+        # x and y read the online-only D/cloud.csv; nothing writes it.
+        cloud = "files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048}]"
+        harness = (
+            "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'},{name:'y',task:'t2'}],"
+            "step_edges:[{from:'a',to:'b'},{from:'a',to:'y'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
+            "{name:'b',status:'stale',local_status:'fresh',origin:'a',duration:1},{name:'c',status:'missing',duration:null},"
+            "{name:'x',status:'unverified',duration:3," + cloud + "},"
+            "{name:'y',status:'stale',local_status:'unverified',origin:'a',duration:4," + cloud + "}]}};"
+            "console.log(JSON.stringify({"
+            "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
+            "only:reproBuildEstimate('t2#b','only'), chain:reproBuildEstimate('t2#b',''), task:reproBuildEstimate('t2',''),"
+            "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'),"
+            "writtenFirst:reproGatedFiles([{files:[{node:'o',role:'output'}]},{files:[{node:'o',role:'dependency',outcome:'unknown',online_only:true}]}]),"
+            "cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
+            "root:reproBuildCommand('.','force')}));"
+        )
+        proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, proc.stderr
+        out = json.loads(proc.stdout.strip().splitlines()[-1])
+        assert out["scope"] == ["b", "c", "x", "y"] and out["up"] == ["a", "b"]
+        assert out["only"] == "Nothing stale"
+        assert out["chain"] == "1 step would run · ~2.0s by last runs · 1 more if their inputs change"
+        assert out["task"] == ("2 steps would run · ~2.0s by last runs · 1 never ran · 1 more if their inputs change"
+                               " · 1 need online-only files if their inputs change · 1 online-only, not run")
+        # The runner's gate: forced x and y read D/cloud.csv, so the build runs nothing.
+        assert out["force"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
+        assert out["forceB"] == "2 steps would run · ~3.0s by last runs"
+        assert out["writtenFirst"] == []
+        assert out["cmd"] == "superra repro build 't2#b' --only"
+        assert out["plain"] == "superra repro build t2"
+        assert out["root"] == "superra repro build . --force"
+
+class TestReproExportSnapshot:
+    def _fragments(self, html):
+        match = re.search(r"var STANDALONE_FRAGMENTS = (\{.*?\});\n", html, re.S)
+        assert match, "standalone export carries no fragment map"
+        return json.loads(match.group(1))
+
+    def test_export_embeds_the_graph_and_status_snapshot(self, repro_plan):
+        fragments = self._fragments(
+            plan_dashboard.render_standalone_html(repro_plan)
+        )
+        graph = fragments["/api/repro/graph"]
+        status = fragments["/api/repro/status"]
+        assert [s["name"] for s in graph["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert [s["name"] for s in status["steps"]] == [
+            "fetch-crsp", "check-ingest", "merge-panel",
+        ]
+        assert status["summary"]["missing"] == 3
+
+class TestReproLockWatch:
+    """A build rewrites `repro-lock.json` at the project root, outside the watched
+    plan root, so the watcher adds that one file and turns a change to it into
+    the `repro-updated` broadcast the view refreshes on."""
+
+    def _reset(self):
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_watchers.clear()
+        plan_dashboard._worktree_locks.clear()
+
+    def test_lock_change_broadcasts_repro_updated(self, tmp_path):
+        import watchfiles
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        plan_dashboard._worktree_cache["wt-a"] = plan_dashboard._build_worktree_state(
+            "wt-a", root
+        )
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {queue}
+
+        async def _test():
+            state = plan_dashboard._worktree_cache["wt-a"]
+            lock = tmp_path / "repro-lock.json"
+            await plan_dashboard._rebuild_and_broadcast(
+                state, {(watchfiles.Change.modified, str(lock))}
+            )
+            assert not queue.empty()
+            assert "event: repro-updated" in queue.get_nowait()
+            # The lock is not a task file: no tree rebuild rode along with it.
+            assert queue.empty()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Reproduction findings rendering (node-backed)
+# ---------------------------------------------------------------------------
+
+
+def _run_repro_render_node(harness_body):
+    defs = _extract_js_defs([
+        "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD",
+        "reproStatusIndex", "reproStateOf", "reproChannels", "reproRollup", "reproTaskTitle", "reproHeadHTML",
+        "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
+        "reproControlsHTML", "reproTasks", "reproStronglyConnected", "reproCycleMembers", "reproHierarchy",
+        "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
+        "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
+        "onReproClick", "reproNavigate", "reproHash",
+        "_reproBuild", "reproActionsOn", "reproExplainable", "reproStepTarget", "reproTaskTarget",
+        "reproIsRunning", "reproNodeMeta", "reproChipHTML", "reproBuildStatusHTML",
+        "escapeHtml", "escapeAttr",
+    ])
+    # drawReproView writes into a container and rebinds handlers; the harness
+    # supplies just enough DOM and module state for the pure render path.
+    shim = (
+        "var _workspaceFilters={statuses:[],tasks:null};\n"
+        "var _reproSelected='', _reproData=null, pathTitles={};\n"
+        "var window={}; var _reproNav={selected:'',expanded:[]};\n"
+        "var _reproNotice='', _reproLayoutCache=null, _reproViewNext='open', _reproPreserve='';\n"
+        "var activeArtifactPath='',currentView='reproduction',activePath='', ACTIVE_WT='fixture', location={hash:''};\n"
+        "var history={pushState:function(s,t,url){location.hash=url;}};\n"
+        "var document={getElementById:function(id){return id==='view-reproduction'?box:null;}};\n"
+        "function reproReaderControls(){}\n"
+        "function reproBindViewport(){}\n"
+        "function reproBindEdges(){}\n"
+        "function reproSizeWorkspace(){}\n"
+        "function reproFit(){}\n"
+        "function reproOpen(){}\n"
+        "function reproTransform(){}\n"
+        "function reproBindHead(){}\n"
+        "function reproBindExplain(){}\n"
+        "function renderReproDetail(){}\n"
+    )
+    body = _extract_js_defs(["drawReproView"])
+    proc = subprocess.run(
+        [_NODE, "-e", shim + defs + "\n" + body + "\n" + harness_body],
+        capture_output=True, text=True, timeout=20,
+    )
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproStateChannels:
+    def test_cards_split_reported_and_own_state_and_the_legend_explains_both(self):
+        """Border and label carry the reported state, the fill the step's own:
+        tinted where they agree, empty when inherited, hatched when online-only."""
+        out = _run_repro_render_node(
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
+            "var steps=['clean','merge','join','rows','gate'].map(function(n){return {name:n,task:n==='rows'?'cloud':'est',kind:n==='gate'?'check':'build',deps:[],outs:[]};});"
+            "var data={graph:{steps:steps,step_edges:[{from:'clean',to:'merge',via:'a'},{from:'clean',to:'join',via:'a'}],findings:[],"
+            "  dependencies:{tasks:[{path:'est',title:'Est',status:'in-progress'},{path:'cloud',title:'Cloud',status:'in-progress'}],logical:[]}},"
+            "  status:{steps:[{name:'clean',status:'stale'},{name:'merge',status:'stale',local_status:'fresh',origin:'clean'},"
+            "    {name:'join',status:'stale',local_status:'unverified',origin:'clean'},{name:'rows',status:'unverified'},{name:'gate',status:'fresh'}]}};"
+            "_reproNav.expanded=['est','cloud'];drawReproView(box, data);"
+            "console.log(JSON.stringify({html: box.innerHTML}));"
+        )
+        html = out["html"]
+        assert 'class="repro-node rp-stale" ' in html
+        assert 'class="repro-node rp-stale rp-inherited"' in html and "stale · upstream" in html
+        assert 'class="repro-node rp-stale rp-hatched"' in html and 'repro-cloud-tag' in html
+        assert 'class="repro-node rp-unverified rp-hatched"' in html and "unverified · online-only" in html
+        assert 'class="repro-node rp-fresh is-check"' in html
+        assert 'class="rp-task rp-hatched' in html and html.count('class="rp-task rp-hatched') == 1
+        assert "external" not in html
+        assert "Fill · the step's own evidence" in html
+        for fill in ("tinted", "empty", "hatched"):
+            assert f"<strong>{fill}</strong>" in html
+        assert 'repro-legend-item rp-unverified"' in html and "rp-unknown" not in html
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproFindingsRendering:
+    def test_a_broken_task_card_is_marked_and_links_its_finding(self):
+        """A task whose section failed to parse draws no steps; its card must not
+        read like a task with none declared, and a depends_on-only edge must not
+        read like a file edge."""
+        out = _run_repro_render_node(
+            "var box={innerHTML:'',querySelector:function(){return null;}};"
+            "var data={graph:{steps:[],step_edges:[],"
+            "  findings:[{severity:'error',task_path:'broken',message:'bad yaml'}],"
+            "  dependencies:{tasks:[{path:'broken',title:'Broken',status:'in-progress'},"
+            "    {path:'notes',title:'Notes',status:'in-progress'}],"
+            "  logical:[{kind:'logical',from:'broken',to:'notes',declaration:'notes/task.md depends_on: broken'}]}},"
+            "  status:{steps:[]}};"
+            "drawReproView(box, data);"
+            "console.log(JSON.stringify({html: box.innerHTML}));"
+        )
+        html = out["html"]
+        assert 'class="rp-task is-error"' in html
+        assert 'data-rp-action="finding" data-value="broken"' in html
+        assert 'data-finding-task="broken"' in html
+        assert 'class="rp-wire is-logical"' in html

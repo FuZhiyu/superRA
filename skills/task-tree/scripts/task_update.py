@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _task_snapshot import preflight, print_edit_notes
+from _task_dependencies import within
 from _task_io import (
     TASK_ROOT_DIRNAME,
     VALID_STATUSES,
@@ -121,6 +123,26 @@ def update_task(
             file=sys.stderr,
         )
 
+    edit = None
+    if status is not None and status != task.status and "archived" in {status, task.status}:
+        def proposed(root, tasks):
+            target = tasks[task_path]
+            if cascade:
+                for path, descendant in tasks.items():
+                    if within(path, task_path) and descendant.is_leaf:
+                        if descendant.status != "archived" or status == "archived":
+                            descendant.status = status
+                for node in reversed(list(tasks.values())):
+                    if node.children:
+                        node.status = compute_status(node)
+            else:
+                target.status = status
+        try:
+            edit = preflight(plan_root, proposed)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+
     # --- Cascade application -------------------------------------------------
     if cascade and status is not None:
         leaves = _collect_descendant_leaves(task_dir, plan_root)
@@ -135,6 +157,8 @@ def update_task(
                 write_task(leaf)
                 n_updated += 1
         print(f"Cascaded status={status!r} to {n_updated} descendant leaf(s).")
+        if edit:
+            print_edit_notes(edit)
         return
 
     # --- Normal (non-cascade) update -----------------------------------------
@@ -154,6 +178,8 @@ def update_task(
         propagated = propagate_parent_status(plan_root, task_path)
         if propagated:
             print(f"Propagated status to {propagated} ancestor(s).")
+        if edit:
+            print_edit_notes(edit)
     else:
         print("No changes.")
 

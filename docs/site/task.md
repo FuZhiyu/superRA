@@ -23,11 +23,11 @@ doc-page authors inherit it via `task read` of any node under this root.
   `## ` section as a plain heading. Do not add `## Results` / `## Review Notes` to doc
   nodes; those are task-workflow sections, not doc content.
 - Ordering: numeric directory prefixes (01-, 02-, ...) set display order; they are
-  display-only (doc nodes carry no real dependencies). The 01- slot is retired: the
-  welcome content lives on this root node, and child numbering starts at 02-.
+  display-only (doc nodes carry no real dependencies). Number each level
+  contiguously from 01-; the welcome content lives on this root node.
 - Cross-page links: hash links #/<path> where <path> is the doc-tree-relative node path,
-  e.g. [the domain skills](#/03-domain-skills); a nested page uses its full directory
-  path, e.g. #/04-utility-skills/01-task-tree/02-cli-commands. The export's nav already
+  e.g. [the domain skills](#/02-domain-skills); a nested page uses its full directory
+  path, e.g. #/02-domain-skills/01-econ-data-analysis. The export's nav already
   shows the descent, so link a page to its parent only where the prose hands the reader
   back up, not on every page by rote.
 - Repo-file links: to cite a skill/agent/source file as authority, write a normal
@@ -46,28 +46,30 @@ doc-page authors inherit it via `task read` of any node under this root.
   agent-facing behavior.
 -->
 
-superRA turns an AI coding agent into a disciplined research assistant. It runs on Claude Code and Codex.
+**superRA turns AI agents into research assistants whose work you can see, steer, and reproduce.** It brings a plan–implement–integrate workflow, domain discipline, and a reproduction graph that traces every table and figure to the code that made it. A live dashboard ties them together: every task, decision, and result is a committed file, so you see where the work stands and which results are current. It runs on Claude Code and Codex.
 
-What it is:
+[Explore an example project →](showcase-analysis-tree.html)
 
-- A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. [Here](#/07-showcase) is an example — and you are looking at the dashboard right now, since this documentation site is built on the very same system.
-- An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
-- **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design.
-- **Utility skills** that teach agents practical mechanics — loading papers from Zotero, writing results in well-formed Markdown, syncing data across worktrees, and more.
+![The superRA dashboard: the live Graph view of an asset-pricing study after an edit to the analysis script. The data step reads fresh; the analysis step reads stale, with a hover card naming the changed file; its downstream check is stale through it. The selected task's results and figures sit beside the graph.](01-quickstart/attachments/showcase-graph.webp)
 
 ## Why superRA?
 
-AI agents are fast but undisciplined. They generate more code than anyone will carefully review. They drift as the context window fills, and starting fresh loses the thread of what was done and why. They drop half the sample before a regression runs, then report "everything looks good". superRA brings review discipline to every step, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent, not a pile of single-shot outputs.
+Research is exploratory, rarely testable in advance, and judged by people, so the researcher has to stay in the loop. Agent work makes that hard because it lives in the chat, not in a record. The reasoning vanishes when the session ends, the project's stage is invisible, and nothing logs which script and inputs produced each result, so no one can tell whether a table still comes from the current code and data.
 
-## Why not an existing framework like Superpowers?
+Frameworks such as [Superpowers](https://github.com/obra/superpowers) target software, where unit tests verify the work and the goal is to take the human out of the loop. superRA keeps you in it: the project lives where you and the agent both see it.
 
-[Superpowers](https://github.com/obra/superpowers) and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics, and the frontier of agentic-driven software engineering pushes hard to remove the human from the loop.
+## What you get
 
-However, **social-science research needs a different rhythm**: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts the same workflow spine but keeps the human firmly in the loop.
+- **[A dashboard for the whole project.](#/03-utility-skills/01-task-tree)** This site is one.
+  - **Persistent history.** Each task's objective, decisions, results, and reviews are committed files. Any session or coauthor resumes from them; one exported HTML file shares them.
+  - **Task management.** A task tree with status, dependencies, and what is ready next. Pin a comment to a task to steer it.
+  - **The project's stage at a glance.** Status rolls up the tree: planned, in progress, awaiting your call, done.
+- **[Know which results are current.](#/03-utility-skills/02-reproducibility)** Each table and figure traces to the script that made it. After an edit, the Graph view marks what went stale and rebuilds only that.
+- **[An agent that works with you.](#/04-workflows)** It edits the task file with you as a live canvas, pauses for feedback, and asks before spending on a review. Autonomous runs on request.
+- **Discipline as the work goes.** [Domain skills](#/02-domain-skills) for data analysis, theory, writing, and slides; independent review where it earns its cost; an integration step that lands the work as clean, protected code.
+- **Quality-of-life utilities.** [Utility skills](#/03-utility-skills) that read and cite papers from Zotero, convert PDFs to Markdown, merge branches by intent, and sync data across worktrees.
 
 ## How it works
-
-A typical superRA workflow looks like this:
 
 <div style="margin:1.4em auto;max-width:560px;">
 <svg viewBox="0 0 560 324" style="width:100%;height:auto;font-family:var(--font-text);" role="img" aria-label="PLAN, IMPLEMENT, and INTEGRATE phase boxes in a vertical flow down to a finished state, with two dashed 'plan change' edges looping back from IMPLEMENT and INTEGRATE into PLAN.">
@@ -95,8 +97,8 @@ A typical superRA workflow looks like this:
     <rect x="170" y="98" width="372" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)"/>
     <rect x="171" y="106" width="3" height="46" rx="1.5" fill="var(--accent)"/>
     <text x="188" y="121" style="font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:.02em;fill:var(--accent);">IMPLEMENT<tspan style="font-family:var(--font-text);font-size:11px;font-weight:400;fill:var(--text-mute);"> (per task)</tspan></text>
-    <text x="188" y="139" style="font-size:13px;fill:var(--text-mid);">implementer &#8644; reviewer loop</text>
-    <text x="188" y="154" style="font-size:13px;fill:var(--text-mid);">APPROVE advances &middot; REVISE loops back</text>
+    <text x="188" y="139" style="font-size:13px;fill:var(--text-mid);">execute with you &middot; self-review</text>
+    <text x="188" y="154" style="font-size:13px;fill:var(--text-mid);">independent review where it earns its cost</text>
   </g>
 
   <g>
@@ -117,25 +119,36 @@ A typical superRA workflow looks like this:
 </svg>
 </div>
 
-In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work. In **IMPLEMENT**, the main agent co-edits and executes with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it; on request, autonomous subagent mode runs implementer and reviewer seats instead. In **INTEGRATE**, you choose the permanent record and protection, the agent syncs and matures that record, you approve one temporary refactoring task, and the agent executes and ships.
+- **[PLAN](#/04-workflows/01-plan)** — the agent scopes your request into a *task tree*: a directory of small `task.md` files, one per unit of work, that you review before execution starts.
+- **[IMPLEMENT](#/04-workflows/02-implement)** — the agent works each task with you, self-reviews, and asks whether to run an independent review now, later, or not at all. On request, autonomous mode hands the tasks to implementer and reviewer subagents.
+- **[INTEGRATE](#/04-workflows/03-integrate)** — you choose which results enter the permanent record and how they are protected. The agent syncs with your base branch, writes the record, and proposes one refactoring task; once you approve, it executes and ships.
 
-Research is rarely this linear, though: unanticipated issues surface mid-implementation, and exploratory sessions turn up findings worth recording as tasks for later. superRA supports changing the plan on the fly, or retroactively creating tasks to be reviewed and integrated.
+Research is rarely this linear. Each phase also runs alone; a surprise mid-implementation or a later scope change routes back to PLAN; and exploratory work can be recorded as tasks after the fact.
 
-## Design Philosophy
+## Get started
 
-superRA's design centers on a few ideas:
+In Claude Code v2.1+:
 
-- **The repo reflects the latest state of every task.** Each task's objective, status, and results live in committed files — not in a chat log or an agent's working memory. So you can always start a fresh agent and continue the work without losing the context.
-- **Review where it earns its cost.** Every task is self-reviewed against its objective; an independent reviewer runs when you ask for one, when the plan flagged the task, or when the agent is uncertain — and once over the accumulated work before anything ships. A review advances the task only on `APPROVE`.
-- **Forward by default, human-in-the-loop by design.** The agent drives the workflow forward on its own and stops only for a hard blocker, a decision that is genuinely yours, or a milestone you set — never for procedural "should I proceed?" check-ins.
-- **Composable and adaptive.** superRA hands the agent composable mechanisms rather than a fixed pipeline. The workflow is domain-neutral, so you can drop in your own domain skill (say, model simulation) without forking it.
+```bash
+claude plugin marketplace add FuZhiyu/superRA
+claude plugin install superRA@superRA
+```
+
+Restart Claude Code, then in a project ask:
+
+```text
+Use superRA to onboard this project and show me the dashboard.
+```
+
+Onboarding builds a task tree and reproduction graph for the work already there, and changes nothing outside `superRA/` until you approve. For new work, the [Quickstart](#/01-quickstart) runs one study end to end. Codex setup, updating, and upgrading are in the [README](README.md).
 
 ## Start here
 
-- To try it, start with the [Quickstart](#/02-quickstart).
-- For which discipline fits your work, the [Domain Skills](#/03-domain-skills) page introduces each one — data analysis, theory modeling, academic writing, slide design.
-- For more on the three phases — what each does for you and what you decide along the way — the [Workflows](#/05-workflows) section covers plan, implement, and integrate one page at a time.
-- For the tools the workflow composes, the [Utility Skills](#/04-utility-skills) page covers the task tree, intent-aware merging, result protection, and the rest of the domain-neutral layer.
-- The [Showcase](#/07-showcase) embeds a real superRA task tree, exported by the same dashboard that renders this site.
-
-superRA is open source and built for researchers comfortable with git and an AI harness. Installation and contribution details live in the project [README](README.md).
+| You want to | Go to |
+|---|---|
+| Try one analysis end to end, or bring in an existing project | [Quickstart](#/01-quickstart) |
+| Learn the task tree, the dashboard, and the reproduction graph | [task-tree](#/03-utility-skills/01-task-tree) |
+| Know which tables and figures are out of date after an edit | [Reproducibility](#/03-utility-skills/02-reproducibility) |
+| Understand one phase and what you decide in it | [Workflows](#/04-workflows) |
+| Pick the discipline for your work | [Domain Skills](#/02-domain-skills) |
+| See an example task tree | [Showcase](#/06-showcase) |
