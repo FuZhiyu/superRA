@@ -1,12 +1,113 @@
 # superRA Release Notes
 
+## [Unreleased]
+
 ## [0.5.0] - 2026-10-04
 
-The reproduction upgrade: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced.
+The reproduction release: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced. Coming from 0.4.1, read [Upgrading from 0.4.1](#upgrading-from-041) first.
 
-### Upgrading a project that used the reproduction pre-release
+### Added
 
-**Every coauthor upgrades superRA before the first commit from steps 3 or 4 lands.** An older superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so for a coauthor who has not upgraded, every step reads stale or missing and no accepted step reads fresh.
+#### Reproduction graph
+
+- **Reproduction sections register producers and checks.** A task's `## Reproduction` section declares steps with their `deps` and `outs`. `superra repro build` reruns the steps whose inputs changed and records each successful build in the committed `repro-lock.json`; `status`, `explain`, `impact`, `accept`, `revoke`, and `dag` complete the command set.
+- **superRA runs builds itself.** `repro build` runs steps as subprocesses in dependency order, `-j N` at a time. A failed step skips its descendants; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed.
+  - `status` and `build` decide freshness by one rule: SHA-256 content hashes with no size cap, and a rerun that regenerates identical bytes leaves its consumers fresh.
+  - Freshness follows symlinked directories, and a sidecar-tracked saved input counts as verified when its bytes match its producer's record.
+  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on a 14-step project.
+  - Editing unrelated tasks or unused configuration during a build leaves its running steps alone; a change to a selected step's command or input bytes keeps its result from being recorded as a success.
+- **Builds include the producer chain.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. They also take in the steps that produce the targets' inputs, back to the external inputs, so naming the final result brings it current. A build skips fresh steps and prints the added producers it will run, with their last durations.
+  - `--only` restricts a command to the targets and uses files from producers outside them as they sit on disk. `--force` reruns the targets only.
+  - `status` exits 3 when the selected steps are fine but a producer behind them is `stale`, `missing`, or `failed`, and names it. Under `--only`, `--json` lists those producers as `behind`.
+- **The lock merges cleanly.** `repro-lock.json` writes each step's entry on one line, separated by blank lines, so a git merge takes each entry whole from one side and cannot mix two builds into a false `fresh`. A conflicted lock still reads: entries the two sides disagree on are dropped and their steps read `missing`; the next build rewrites the lock without markers. `semantic-merge` gives the resolution.
+- **No command downloads a file.** An online-only file (Dropbox, Google Drive, Box, OneDrive, or iCloud through File Provider, or a legacy Dropbox placeholder) is never opened to check it. Its step reads `unverified` unless this machine has already hashed the file; the lock records each file's size, so a File Provider file whose size changed still reads as changed. `build` never runs an `unverified` step and uses its outputs as they are, and `status` exits 0 over it while listing its files with their sizes.
+  - **Download gate.** A build that would run a step reading a file not on this machine, online-only or absent with no producer, runs nothing. It lists the files with their sizes and names `--only` as the way to build the rest.
+- **A check that passed at these inputs elsewhere reads `fresh`**, with the reason `passed at these inputs in lock <rev> on <platform>; not run here`. A local failure still wins.
+- **Reviewed reuse.** `repro accept <targets> --reason '…'` records why current results stand without executing anything, including first registration and outputs from interactive runs; `--dry-run` previews. Valid acceptance reads as `fresh` and preserves the last actual run. Forced verification executes its selected steps; acceptance never claims a step ran again.
+  - **Acceptance records are one portable file per step,** `repro-acceptance/<step>.json`. Branches that accept different steps merge cleanly, and two clones with different data roots or user names write byte-identical records. A record that does not parse disables only its own step, with a warning.
+  - `accept` skips steps already fresh and never rewrites an unchanged record.
+  - Revoking a producer's acceptance leaves a downstream record valid; `status` reports the consumer stale while the producer is not fresh.
+- **`explain` states the facts the stale rule acts on.** Every lock or git source states its relation to HEAD (HEAD's version, N commits behind, or on another branch). Graph errors on the explained steps are listed and make `explain` exit 1. A file several steps read prints once. A task view prints diff excerpts only with `--diff`. A history cache in `.superra-repro/history.json` makes a repeat call run no `git log`.
+- **`impact` lists the steps a change would stale,** including a `superRA/config.yaml` change: one line per affected step with its last recorded duration and why it is affected. `--json` gives the structured output.
+- **`.superra-repro/` stays on its machine.** superRA sets Dropbox's ignore flag on the folder, so another machine's in-progress run cannot mark a step failed here. Deleting the folder stales no step.
+- **Reproduction errors block only the builds they touch.** Planning commands and the frontier keep working, with the errors noted on stderr. `build`, `accept`, and `status` refuse on an error in a selected step's own task, a step cycle through a selected step, or project-wide configuration. `build --dry-run` reports a step whose input is missing as `cannot run`.
+- **Parents retain their steps.** A task can own build steps and child tasks; adding a child preserves existing step identities and freshness. Archived subtrees leave the active graph, with warnings for their downstream consumers.
+
+#### Reproduction in the agent workflow
+
+- **The `reproducibility` skill carries the everyday path and routes the rest.** `SKILL.md` defines the model (producer chain, saved input, external input), lists the core commands, and holds the gate for recording a result. Each other situation loads one reference: designing the graph, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption.
+- **The Skill-Load Manifest loads `reproducibility`** for any task that plans, produces, changes, records, or reviews a result computed by code. Interactive self-review walks every loaded skill's gates.
+- **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps reported to the researcher: those the stale rule left stale, and every `unverified` step. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
+- **Protect asks which inputs are external.**
+- **The edit hook names the steps an edit stales:** edits through any tool, paths built from `${VAR}` variables, and files inside declared directory dependencies. A new script beside registered ones draws a softer reminder.
+
+#### Onboarding
+
+- **The `onboarding` skill brings an existing project into superRA,** even one without git. The agent writes a task tree and a reproduction graph for the work already done, touching nothing outside `superRA/` until the researcher approves. It then offers git, with a `.gitignore` that keeps data out, and an optional rerun in an isolated worktree that checks each result against its original before merging back.
+  - Session start and `superplan` offer onboarding to any project with code, data, or results but no `superRA/`. A legacy `PLAN.md` project enters the same skill, which runs the migration.
+  - `superra task create` creates the first task in a `superRA/` that holds only the wrapper.
+
+#### Dashboard
+
+- **A Graph layout beside Tree** maps the project's tasks, their reproduction steps, and the file edges between them. Tree and Graph share task selection, search, the reader, comments, and attachments.
+  - The graph opens at 80% on the selected task or step; Fit and Project overview fit it on request. Expanding one task level exposes its own steps and child groups; selecting or expanding a node does not change scope.
+  - Arrows carrying only `depends_on` edges are dashed, and only step cycles and `depends_on` cycles are marked as cycles. A task whose declaration has an error gets a red outline and a link to its finding.
+  - Step cards show each step's reported state and its own evidence; Tree rows count their task's steps by state.
+- **Build from the page.** Each task and step card has a **Build** button that shows the command and a time estimate from past runs, then runs it. Hovering a step that is not fresh shows why. A server exposed with `--host` lets any browser that reaches it start these builds.
+- **Hovering a file link previews the file:** its size and date, plus the first lines of a text file, an image, or a PDF's first page. This covers a step's inputs and outputs and file links in task text. Images and PDFs over 2 MiB show only their size, and nothing extra loads until you hover.
+- **A browser on another machine opens files inside the dashboard.** A phone, or a computer reaching an exposed `--host` server, gets a reading-pane view of the file instead of a `vscode://` link it cannot follow. The browser on the dashboard's own machine still opens files in their default application, now even under `--host 0.0.0.0`, because the check is per browser rather than per bind.
+- **Files behind a symlink in the project, and outside paths a `## Reproduction` step declares, can be viewed and opened.** A path containing `..` is refused.
+
+#### Hooks
+
+- **`guard-foreign-checkout` asks before writing into another checkout.** An Edit, Write, or `apply_patch` on a `task.md`, or a git history command, aimed at a checkout other than the session's own prompts for approval, including through `..` paths. Worktrees of the session's own repository pass. Other shell writes (`sed -i`, a heredoc, `python3 -`) are not checked. On Codex the shell side is best-effort, and a runtime that does not honor `ask` allows the action.
+
+### Changed
+
+#### Task tree
+
+- **Only `depends_on` decides readiness; file edges show as inputs.** A task is ready once its `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`. File edges between steps order builds and appear in `task read` and `task frontier` as inputs whose producer is `stale`, `missing`, or `failed`; they never gate.
+  - A `depends_on` that runs against the file flow is a warning. Only step cycles and `depends_on` cycles are errors; a loop that appears only when file edges are grouped by task is not.
+  - `task create`, `move`, `dep add`, and archive transitions print each task they take off the frontier.
+- **`task check` adds the `reproduction` and `links` categories and caps its output.** `reproduction` validates the graph and flags files that `## Results` links but no step produces or reads; `links` checks Markdown citations of named steps. Text output lists at most 10 findings per category and severity and counts the rest; `--all` lists every finding.
+
+#### Hooks
+
+- **`task-hook` sees an edit made through any tool.** A `task.md` changed by a Bash heredoc, `sed -i`, or a script is validated and propagates parent status as an Edit does. The hook now also runs on `UserPromptSubmit` and before each Bash call (`PreToolUse`), only to record a baseline, so the first Bash edit is seen in any task tree the command reaches, including a worktree created before or during the session. A `task.md` edit reports warnings for the edited tasks only.
+- **No task-file rewrites mid-merge.** During an unfinished merge, cherry-pick, revert, or rebase, or while an edited `task.md` has conflict markers, `task-hook` validates without writing and says so in one line. After resolving, run `superra task status propagate`.
+- **Hook feedback is bounded:** at most 10 items per group, errors first, with a count of the rest and the command that lists them.
+
+#### Planning
+
+- **Planning no longer requires a `run_all.sh` pipeline file.** Planners name each artifact and its planned script in the producing task's `## Details`, and the implementer registers the step in `## Reproduction`.
+
+#### Documentation site
+
+- **Pages are renumbered from 01, and the four task-tree subpages are one page.** Old links such as `#/02-quickstart` or `#/04-utility-skills/01-task-tree/02-cli-commands` no longer resolve; the Quickstart is now `#/01-quickstart`. The README and Quickstart state that superRA is built and tested on macOS.
+
+### Removed
+
+- **The dashboard's kanban board and standalone `/dag` page.** The Graph layout replaces the DAG view.
+- **`hooks/hooks-cursor.json`.** superRA ships no Cursor hook manifest.
+
+### Fixed
+
+- **A skill loaded just before a retry now satisfies `ensure-companion` and `ensure-communicate`.** Both read the session transcript, which records a skill load a few seconds late, so loading the companion and retrying at once was denied again in a loop.
+- **`superra dashboard --host <LAN or Tailscale address>` keeps the server it starts.** The launcher now probes the requested interface, where before it probed loopback, declared a bind failure, and stopped the healthy server.
+- **Dispatched agents can write to their assigned worktree.** Before dispatching into a worktree, the orchestrator probes a write; when the harness blocks it, the orchestrator registers the worktree root in the harness's writable roots rather than widening the sandbox.
+- Dashboard sidebar is resizable by touch: the drag handle now shows on iPad and other coarse-pointer devices, in the pinned layout and on the open drawer, and the chosen width survives the drawer's width cap.
+- Dashboard CSS/JS URLs carry a content hash, so a page reload after a server relaunch fetches the current assets instead of the hour-cached copy.
+
+### Upgrading from 0.4.1
+
+- **Upgrade every coauthor on a shared project together.** 0.4.1 has no `superra repro` and no reproduction checks, so a coauthor still on it cannot build, check, or accept the steps others register, and gets no reminder when an edit stales one.
+- **Codex:** the hook manifest adds `guard-foreign-checkout` and two `task-hook` registrations. If you trusted the superRA bundle through `/hooks`, you may need to trust it again.
+
+### Upgrading from the reproduction pre-release
+
+Only if you ran superRA from the `skills/reproducibility` branch before 0.5.0; 0.4.1 users skip this section.
+
+**Every coauthor upgrades before the first commit from steps 3 or 4 lands.** A pre-release superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so for a coauthor who has not upgraded, every step reads stale or missing and no accepted step reads fresh.
 
 1. Upgrade superRA on every machine that works on the project.
 2. Run `superra task check`.
@@ -15,83 +116,18 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 3. Run a build. It writes `repro-lock.json` and prints the `git rm` that retires `pytask.lock` and `repro-builds.json`, which are read until then. Commit the lock and the removal, and delete the `.pytask/` directory.
 4. The first `superra repro accept` converts `repro-acceptance.json` into one file per step under `repro-acceptance/` and deletes it. Commit both changes.
 
-`--tier` and `repro tier` stop with an error naming task targets as the replacement.
+Retired since the pre-release:
 
-### Added
-
-- **Reproduction sections register producers and checks.** A task's `## Reproduction` section declares steps with their `deps` and `outs`; `superra repro build` reruns the steps whose inputs changed and records each successful build in the committed `repro-lock.json`.
-- **The dashboard shows how results are produced:** reproduction steps, freshness, file dependencies, and task ownership. Workflow skills register and verify retained results through the `reproducibility` skill.
-- **The `onboarding` skill brings an existing project into superRA,** even one without git. The agent writes a task tree and a reproduction graph for the work already done, touching nothing outside `superRA/` until the researcher approves. It then offers git, with a `.gitignore` that keeps data out, and an optional rerun in an isolated worktree that checks each result against its original before merging back.
-  - Session start and `superplan` offer onboarding to any project with code, data, or results but no `superRA/`. A legacy `PLAN.md` project enters the same skill, which runs the migration.
-  - `superra task create` creates the first task in a `superRA/` that holds only the wrapper.
-
-### Changed
-
-#### Builds and freshness
-
-- **superRA runs builds itself; pytask is no longer a dependency.** `repro build` runs steps as subprocesses in dependency order, `-j N` at a time. A failed step skips its descendants; Ctrl-C, SIGTERM, or SIGHUP stops running steps and records them failed.
-  - `status` and `build` decide freshness by one rule: SHA-256 content hashes with no size cap, and a rerun that regenerates identical bytes leaves its consumers fresh.
-  - Freshness follows symlinked directories, and a sidecar-tracked saved input counts as verified when its bytes match its producer's record.
-  - `status .` and `build . --dry-run` run in about 0.2 s and 0.4 s on a 14-step project, against about 0.8 s under pytask.
-- **The lock holds one line per step.** `repro-lock.json` (version 2) writes each step's entry on one line, separated by blank lines, so a git merge takes each entry whole from one side and can no longer mix two builds into a false `fresh`. A conflicted lock still reads: entries the two sides disagree on are dropped and their steps read `missing`; the next build rewrites the lock without markers. `semantic-merge` gives the resolution.
-- **Builds include the producer chain by default.** `repro build` and `repro status` require a target: a task path with its descendants, `task#step`, or `.` for every registered step. They also take in the steps that produce the targets' inputs, back to the external inputs, so naming the final result brings it current; a build skips fresh steps and prints the added producers it will run, with their last durations. `--only` restricts a command to the targets and uses files from producers outside them as they sit on disk. `--force` reruns the targets only. `--force-all` is retired, and `--upstream` is a hidden alias for the default.
-  - `status` exits 3 when the selected steps are fine but a producer behind them is `stale`, `missing`, or `failed`, and names it. `status X --upstream` therefore exits 3 in that case, where it exited 1 before. Under `--only`, `--json` lists those producers as `behind`.
-- **No command downloads a file.** An online-only file (Dropbox, Google Drive, Box, OneDrive, or iCloud through File Provider, or a legacy Dropbox placeholder) is never opened to check it. Its step reads `unverified` unless this machine has already hashed the file; the lock records each file's size, so a File Provider file whose size changed still reads as changed. `build` never runs an `unverified` step and uses its outputs as they are, and `status` exits 0 over it while listing its files with their sizes.
-  - **Download gate.** A build that would run a step reading a file not on this machine, online-only or absent with no producer, runs nothing. It lists the files with their sizes and names `--only` as the way to build the rest.
-- **Task targets replace reproduction tiers.** The `task tree --tier` filter and badge are removed.
-- **A check that passed at these inputs elsewhere reads `fresh`**, with the reason `passed at these inputs in lock <rev> on <platform>; not run here`. A local failure still wins.
-- **Scoped build guards.** Unrelated task additions and unused configuration edits no longer abort running steps. Changes to the selected execution contract or input bytes still reject inconsistent success evidence.
-
-#### Readiness and dependencies
-
-- **Only `depends_on` decides readiness.** A task is ready once its `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`. File edges between steps order builds and appear in `task read` and `task frontier` as inputs whose producer is `stale`, `missing`, or `failed`; they never gate.
-  - A `depends_on` that runs against the file flow is a warning. Only step cycles and `depends_on` cycles are errors; a loop that appears only when file edges are grouped by task is not.
-  - `task create`, `move`, `dep add`, and archive transitions print each task they take off the frontier.
-- **Reproduction errors block only the builds they touch.** Planning commands and the frontier keep working, with the errors noted on stderr. `build`, `accept`, and `status` refuse on an error in a selected step's own task, a step cycle through a selected step, or project-wide configuration. `build --dry-run` reports a step whose input is missing as `cannot run`.
-- **Parents retain their steps.** A task can own build steps and child tasks; adding a child preserves existing step identities and freshness. Archived subtrees leave the active graph, with warnings for their downstream consumers.
-
-#### Reviewed acceptance and diagnosis
-
-- **Reviewed reuse.** `repro accept <targets> --reason '…'` records why current results stand without executing anything, including first registration and outputs from interactive runs; `--dry-run` previews. Valid acceptance reads as `fresh` and preserves the last actual run. Forced verification executes its selected steps; acceptance never claims a step ran again.
-- **Acceptance records are one portable file per step,** `repro-acceptance/<step>.json`. Branches that accept different steps merge cleanly, and two clones with different data roots or user names write byte-identical records. A record that does not parse disables only its own step, with a warning.
-  - `--apply`, `--evidence`, and the `upstream` record field are removed; records no longer carry `actor`, `recorded_at`, or evidence paths.
-  - `accept` skips steps already fresh and never rewrites an unchanged record.
-  - Revoking a producer's acceptance leaves a downstream record valid; `status` reports the consumer stale while the producer is not fresh.
-- **`.superra-repro/` stays on its machine.** superRA sets Dropbox's ignore flag on the folder, so another machine's in-progress run cannot mark a step failed here. Deleting the folder stales no step.
-- **`explain` states the facts the stale rule acts on.** Every lock or git source states its relation to HEAD (HEAD's version, N commits behind, or on another branch). Graph errors on the explained steps are listed and make `explain` exit 1. A file several steps read prints once. A task view prints diff excerpts only with `--diff`. A history cache in `.superra-repro/history.json` makes a repeat call run no `git log`.
-- **`impact` covers `superRA/config.yaml` and prints text by default,** one line per affected step with its last recorded duration and why it is affected; `--json` keeps the structured output.
-
-#### Agent workflow
-
-- **The `reproducibility` skill carries the everyday path and routes the rest.** `SKILL.md` defines the model (producer chain, saved input, external input), lists the core commands, and holds the gate for recording a result. Each other situation loads one reference: designing the graph, completion and Protect, the stale rule (rerun or accept), diagnosis, and adoption.
-- **The Skill-Load Manifest loads `reproducibility`** for any task that plans, produces, changes, records, or reviews a result computed by code. Interactive self-review walks every loaded skill's gates.
-- **The completion gate covers every step and asks before costly reruns:** `status .`, the stale rule, then `status .` again. It passes when every step reads `fresh`, by execution or acceptance, except steps reported to the researcher: those the stale rule left stale, and every `unverified` step. A tree with no steps passes only when no result rests on retained code. A subagent facing a costly rerun returns `DONE_WITH_CONCERNS` with the question in `## Results`.
-- **Protect asks which inputs are external;** it no longer selects completion targets. Planners name each artifact and its planned script in the producing task's `## Details`; the implementer registers the step.
-- **The edit hook catches every producer edit:** edits through any tool, paths built from `${VAR}` variables, files inside declared directory dependencies, and the first tool call of a session. A new script beside registered ones draws a softer reminder, and a `task.md` edit reports warnings for the edited tasks only.
-
-#### Dashboard
-
-- **The graph opens readable at 80%** on the selected task or step; Fit and Project overview still fit on request.
-- **Arrows carrying only `depends_on` edges are dashed.** A task whose declaration has an error gets a red outline and a link to its finding.
-- The unused search, trace, and scope modes and the `/dag` route are removed; legacy URLs open the full map. Each finding and edge travels once, cutting the 200-step fixture's payload by 38%.
-- **Hovering a file link previews the file:** its size and date, plus the first lines of a text file, an image, or a PDF's first page. This covers a step's inputs and outputs and file links in task text. Images and PDFs over 2 MiB show only their size, and nothing extra loads until you hover.
-- **A browser on another machine opens files inside the dashboard.** A phone, or a computer reaching an exposed `--host` server, gets a reading-pane view of the file instead of a `vscode://` link it cannot follow. The browser on the dashboard's own machine still opens files in their default application. That now holds even under `--host 0.0.0.0`, because the check is per browser rather than per bind.
-- **Files behind a symlink in the project, and outside paths a `## Reproduction` step declares, can be viewed and opened.** A path containing `..` is refused.
-- **Tree and Graph are alternative navigators** that share task selection, the reader, comments, and attachments. Expanding one task level exposes its own steps and child groups; selecting or expanding a node does not change scope.
-
-### Removed
-
-- The `external` step state. A step whose input no step produces and is absent now reads `unverified`; "external input" still names a file no step produces.
-- pytask and `pytask-parallel` as dependencies, the `_repro_hooks.py` plugin, and the `env_probe` and `code_roots` configuration keys, which now warn and are ignored. A lock's legacy probe fields are ignored on read.
+- **Tiers.** `repro tier` and `repro` commands given `--tier` stop with an error naming task targets as the replacement. The `task tree --tier` filter and badge are removed.
+- **pytask.** pytask and `pytask-parallel` are no longer dependencies, and the `_repro_hooks.py` plugin is gone. A lock's legacy probe fields are ignored on read.
+- **Selection flags.** `--force-all` is removed. `--upstream` is a hidden alias for the default producer-chain selection, so `status X --upstream` exits 3, where it exited 1, when a producer behind the targets is not fresh.
+- **Acceptance fields.** `accept --apply`, `--evidence`, and the `upstream` record field are removed; records no longer carry `actor`, `recorded_at`, or evidence paths.
+- **The `external` state.** A step whose input no step produces and is absent now reads `unverified`; "external input" still names a file no step produces.
+- **Graph modes.** The dashboard graph's search, trace, and scope modes are removed; their URLs open the full map.
 
 ### Release Prep
 
 - Claude plugin, marketplace, and Codex plugin manifests are synchronized at `0.5.0` through `scripts/bump-version.sh`.
-
-### Fixed
-
-- Dashboard sidebar is resizable by touch: the drag handle now shows on iPad and other coarse-pointer devices, in the pinned layout and on the open drawer, and the chosen width survives the drawer's width cap.
-- Dashboard CSS/JS URLs carry a content hash, so a page reload after a server relaunch fetches the current assets instead of the hour-cached copy.
 
 ## [0.4.1] - 2026-08-19
 

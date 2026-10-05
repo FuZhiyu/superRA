@@ -10,7 +10,7 @@ This tutorial walks you through installing superRA, pointing it at a project, an
 
 ### Prerequisite
 
-**git** is the one real prerequisite — as it is for any agentic coding workflow. Think of it as the rope in climbing: it lets you explore boldly, and it catches you when things go south. superRA is built around git, so use it.
+**git** is the most important prerequisite — as it is for any agentic coding workflow. Think of it as the rope in climbing: it lets you explore boldly, and it catches you when things go south. superRA is built around git, so use it.
 
 A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/03-utility-skills/07-worktree-data-sync) skill keeps non-git-controlled data in sync across those isolated worktrees.
 

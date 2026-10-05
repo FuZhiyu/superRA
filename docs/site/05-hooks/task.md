@@ -23,7 +23,7 @@ superRA's hooks run in the background of every agent session: they remind the ag
 | **ensure-communicate** | A main-agent Markdown write | Blocks until `communicate` is loaded. Subagents are exempt. | Yes | Yes |
 | **agent-model-guard** | A generic subagent dispatch | Blocks unless the dispatch names a model (and, on Codex, a reasoning effort). | Yes | Yes |
 | **guard-task-approval** | A `task.md` edit | Blocks `status: approved` while the task's review notes still hold a `[BLOCKING]` finding. | Yes | Yes |
-| **guard-foreign-checkout** | An Edit, Write, or `apply_patch` on a `task.md`, or a git history command, aimed at another checkout | Asks you first. Worktrees of the session's own repository pass. Other shell writes (`sed -i`, a heredoc) are not checked. | Yes | Yes |
+| **guard-foreign-checkout** | An Edit, Write, or `apply_patch` on a `task.md`, or a git history command, aimed at another checkout | Asks you first. Worktrees of the session's own repository pass. Other shell writes (`sed -i`, a heredoc) are not checked. | Yes | Yes (best-effort) |
 | **merge-guard** | `git merge`, `rebase`, or `cherry-pick` | Reminds the agent to use [semantic-merge](#/03-utility-skills/03-semantic-merge). | Yes | Yes |
 | **task-hook** | Any edit or shell command | Validates edited tasks and updates parent status; reminds the agent to follow `communicate` after Markdown edits under `superRA/`; names the [reproduction steps](#/03-utility-skills/02-reproducibility) an edit makes stale. | Yes | Yes (shell coverage best-effort) |
 | **exit-plan-mode** | Leaving Claude Code plan mode | Suggests turning the plan into a `superRA/` task tree. | Yes | — |

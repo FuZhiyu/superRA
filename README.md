@@ -57,7 +57,7 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 ### Upgrading
 
-**0.5.0:** every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance — an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then follow the [upgrade steps](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release).
+**0.5.0:** upgrade every coauthor on a shared project together. An older superRA has no `superra repro`, so a coauthor still on it cannot build, check, or accept the reproduction steps others register. On Codex, you may need to trust the superRA bundle again through `/hooks`. If you ran the reproduction pre-release, also follow its [migration steps](RELEASE-NOTES.md#upgrading-from-the-reproduction-pre-release).
 
 **Older projects:**
 
