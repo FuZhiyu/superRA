@@ -466,12 +466,13 @@ def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[N
 
 
 def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
-    """Nodes for the directory outs that cover this step's deps.
+    """Nodes for other steps' outs that cover, or lie inside, this step's deps.
 
-    `_repro._producing_step` reads a dep below a directory out as produced by
-    that directory, and the status cascade follows the resulting `step_edges`.
-    The engine bridge sees only per-path nodes, so without these it would carry
-    no edge and could run the consumer first.
+    `_repro._link` reads a dep below a directory out as produced by that
+    directory, and a directory dep as read from every out inside it; the status
+    cascade follows the resulting `step_edges`. The engine bridge sees only
+    per-path nodes, so without these it would carry no edge and could run the
+    consumer first.
     """
     covering: list[tuple[str, Node]] = []
     for owner in graph.steps:
@@ -499,6 +500,10 @@ def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
                     declared.add(node[0])
                     extra.append(node)
                 break
+        for path, node in covering:
+            if path.startswith(dep.resolved + "/") and node[0] not in declared:
+                declared.add(node[0])
+                extra.append(node)
     return extra
 
 

@@ -306,7 +306,7 @@ Agent-facing summary: [task-file contract §Records](task-file-contract.md#recor
 
 ### The lock
 
-The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived.
+The project-root `repro-lock.json` records each step's last successful build. `build` writes a step's entry atomically as the step succeeds and rewrites it only when a field changes; a failed or skipped step keeps its entry. A real build drops the entries of steps no longer in the tree, active or archived, and drops none while any task's declaration fails to register.
 
 Each step's entry is one line, keys sorted inside, steps in name order with a blank line between entries. Git merges whole lines, so an entry both branches changed always conflicts instead of line-merging into a mix no build produced; the blank lines let changes to neighbouring entries merge cleanly. A lock holding conflict markers reads as every entry on one side or identical on both, dropping the entries the sides disagree on so their steps read `missing`; any real build rewrites it without markers. A version `1` lock, one key per line, still reads, and any real build rewrites it in this layout. Lock history reads both.
 

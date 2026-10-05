@@ -83,7 +83,7 @@ def _check_status_recursive(
     # Check for stale review_status / integration_status in raw frontmatter
     task_md = task.dir_path / "task.md"
     if task_md.exists():
-        text = task_md.read_text(encoding="utf-8")
+        text = task_md.read_text(encoding="utf-8", errors="replace")
         fm, _ = parse_frontmatter(text)
         stale_fields = {"review_status", "integration_status"}
         for field_name in sorted(stale_fields & fm.keys()):
@@ -178,7 +178,7 @@ def check_sync_impact(root: Task) -> list[Finding]:
 def _check_sync_impact_recursive(task: Task, findings: list[Finding]) -> None:
     task_md = task.dir_path / "task.md"
     if task_md.exists():
-        text = task_md.read_text(encoding="utf-8")
+        text = task_md.read_text(encoding="utf-8", errors="replace")
         if _SYNC_IMPACT_HEADING.search(text):
             findings.append(Finding(
                 task_path=task.path,

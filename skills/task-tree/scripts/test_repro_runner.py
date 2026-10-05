@@ -761,6 +761,23 @@ def test_a_second_status_reads_no_file_content(project):
     assert second.full_reads == 0
 
 
+@pytest.mark.parametrize("broken", ["section", "step"])
+def test_a_build_keeps_the_lock_entry_of_a_step_that_failed_to_register(project, broken):
+    assert project.run("build", ".") == 0
+    task_x = project.read("superRA/03-x/task.md")
+    if broken == "section":
+        project.write("superRA/03-x/task.md", task_x.replace("steps:\n", "steps: [\n"))
+    else:
+        project.write("superRA/03-x/task.md", task_x.replace("    cmd: sh Code/x.sh\n", ""))
+    assert project.graph().unregistered
+    project.write("Code/a.sh", "mkdir -p output\necho changed > output/a.txt\n")
+    assert project.run("build", *CHAIN) == 0
+    assert "build-x" in read_lock(project.paths.lock_file)
+
+    project.write("superRA/03-x/task.md", task_x)
+    assert project.states("03-x") == {"build-x": "fresh"}
+
+
 def test_a_graph_error_blocks_the_build(project, capsys):
     project.write(
         "superRA/03-x/task.md", TASK_X.replace("name: build-x", "name: build-a")
@@ -815,6 +832,21 @@ def test_a_directory_out_orders_its_consumer(dir_project, jobs):
         "Code/gen.sh", "mkdir -p output/parts\necho v2 > output/parts/a.txt\n"
     )
     assert dir_project.run("build", ".", "-j", jobs) == 0
+    assert dir_project.read("output/used.txt") == "v2\n"
+    assert dir_project.states() == {"z-gen": "fresh", "a-use": "fresh"}
+
+
+@pytest.mark.parametrize("jobs", ["1", "2"])
+def test_a_directory_dep_waits_for_the_outs_inside_it(dir_project, jobs):
+    dir_project.write("superRA/01-gen/task.md", TASK_GEN.replace('"${OUT}/parts"', '"${OUT}/parts/a.txt"'))
+    dir_project.write("superRA/02-use/task.md", TASK_USE.replace('"${OUT}/parts/a.txt"', '"${OUT}/parts"'))
+    assert dir_project.run("build", ".", "-j", jobs) == 0
+    assert dir_project.read("output/used.txt") == "v1\n"
+    assert dir_project.states() == {"z-gen": "fresh", "a-use": "fresh"}
+
+    dir_project.write("Code/gen.sh", "mkdir -p output/parts\necho v2 > output/parts/a.txt\n")
+    assert dir_project.states()["a-use"] == "stale"
+    assert dir_project.run("build", "02-use", "-j", jobs) == 0
     assert dir_project.read("output/used.txt") == "v2\n"
     assert dir_project.states() == {"z-gen": "fresh", "a-use": "fresh"}
 

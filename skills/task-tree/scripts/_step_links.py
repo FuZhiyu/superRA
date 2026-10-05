@@ -16,7 +16,7 @@ def check_step_links(plan_root: Path, graph) -> list[Finding]:
     findings = []
     for source in _iter_contained_markdown(root, root):
         fence = None
-        for number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
+        for number, line in enumerate(source.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
             marker = re.match(r"^\s{0,3}(`{3,}|~{3,})", line)
             if marker:
                 value = marker.group(1)
