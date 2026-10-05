@@ -1,6 +1,6 @@
 # superRA Release Notes
 
-## [0.5.0] - Unreleased
+## [0.5.0] - 2026-10-04
 
 The reproduction upgrade: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced.
 
@@ -77,11 +77,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 - **Hovering a file link previews the file:** its size and date, plus the first lines of a text file, an image, or a PDF's first page. This covers a step's inputs and outputs and file links in task text. Images and PDFs over 2 MiB show only their size, and nothing extra loads until you hover.
 - **A browser on another machine opens files inside the dashboard.** A phone, or a computer reaching an exposed `--host` server, gets a reading-pane view of the file instead of a `vscode://` link it cannot follow. The browser on the dashboard's own machine still opens files in their default application. That now holds even under `--host 0.0.0.0`, because the check is per browser rather than per bind.
 - **Files behind a symlink in the project, and outside paths a `## Reproduction` step declares, can be viewed and opened.** A path containing `..` is refused.
-
-### In preparation
-
-- The dashboard workspace offers Tree and DAG as alternative navigators sharing task selection, the reader, comments, and attachments. Expanding one task level exposes its own steps and child groups; selecting or expanding a node does not change scope.
-- UI validation and existing-project compatibility evidence remain required before release. The development version does not imply publication.
+- **Tree and Graph are alternative navigators** that share task selection, the reader, comments, and attachments. Expanding one task level exposes its own steps and child groups; selecting or expanding a node does not change scope.
 
 ### Removed
 
@@ -90,7 +86,7 @@ The reproduction upgrade: task-declared build steps that superRA runs itself, co
 
 ### Release Prep
 
-- Claude plugin, marketplace, and Codex plugin manifests are synchronized at `0.5.0` through `scripts/bump-version.sh`; no release tag or publication is implied.
+- Claude plugin, marketplace, and Codex plugin manifests are synchronized at `0.5.0` through `scripts/bump-version.sh`.
 
 ### Fixed
 
