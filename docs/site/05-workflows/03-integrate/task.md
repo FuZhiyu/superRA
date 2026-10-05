@@ -8,34 +8,31 @@ created: 2026-06-17
 
 ## Objective
 
-The tasks are approved, so the work is correct, but correct work can still break when it lands on a shared base. INTEGRATE folds the work into your codebase so the results stay reproducible and coherent over time, then ships it. Say `superintegrate` to enter the phase. It runs as five stages, each described below.
+INTEGRATE lands approved work on your shared base branch (usually `main`) so its results stay reproducible and the codebase stays coherent. Say `superintegrate` to enter it. The phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
 
-### Protect — choose the permanent record and how to guard it
+## You decide twice
 
-Before permanent documentation is written, superRA surveys the provisional findings and proposes concrete choices: which results to keep or drop, what the final documentation and result files should look like, where they should live, how the affected task tree should consolidate, and how each kept result should be protected. You choose among those options while the work is still easy to reshape. You also agree which inputs are external, meaning files no step produces, such as a vendor download; the [reproducibility page](#/04-utility-skills/09-reproducibility) covers what that changes. The approved choices are recorded in a decision commit so later agents and resumed sessions share the same specification.
+1. **At Protect:** which results to keep, what the permanent documentation looks like, and how each result is protected.
+2. **At Integrate:** the finished permanent record together with one proposed refactoring task.
 
-Permanent results documentation can be sufficient protection. For a headline coefficient or another result where automated drift detection is valuable, you can also request a drift test: a small check that fails when a later sync or refactor moves the saved value. Existing protection checks continue to run throughout integration.
+The agent also stops to confirm the base branch if no earlier decision recorded it, and for a merge conflict that would change what your work means.
 
-### Sync — fold the base branch in by what the changes mean
+## Five stages
 
-The **base branch** is the shared branch your work will eventually land on — usually `main` or your repo's trunk. While you were working on your branch, other people kept advancing the base, so by the time you integrate, the base has changes your branch never saw. Sync brings those incoming changes into your branch before anything else.
+| Stage | What happens | Your part |
+|---|---|---|
+| **Protect** | The agent surveys the provisional findings and proposes what to keep or drop, where the documentation and result files live, how the task tree consolidates, and how each result is guarded. | Choose; the choices land in one decision commit. |
+| **Sync** | The agent merges the base branch's new changes by what they mean, not line by line ([semantic-merge](#/04-utility-skills/02-semantic-merge)). | Answer only if a conflict would change your work's meaning. |
+| **Mature & Consolidate** | One agent writes the agreed documentation and result files and tidies the task tree; a reviewer checks them against your Protect decision and drafts one temporary refactoring task, including what to prune. | — |
+| **Integrate** | Agents execute the approved refactoring task, and a reviewer checks the final diff. This is the one independent review of all accumulated work. | Approve the record and the task together, before execution. |
+| **Finish** | The agent re-checks that the base has not moved (looping back to Sync if it has), then opens a pull request or fast-forwards into the base, and removes the worktree if the work ran in one. | — |
 
-It does this **by intent, not by line**. A plain `git merge` resolves conflicts textually — it compares the two versions of each clashing region and you pick a side, with no understanding of why either side changed. Sync instead reads what the incoming changes *mean* and reconciles your work with that intent, so the merged result reflects both sides' purpose rather than whichever hunk happened to win the textual collision. If folding in the incoming intent would actually change the meaning of your work, it stops and asks rather than resolving silently.
+## Protection options
 
-### Mature & Consolidate — write the protected record and derive the refactoring task
+- **Documentation alone** is valid protection for most results.
+- **Add a drift test** for a headline coefficient or another result worth guarding automatically: a check that fails when a later sync or refactor moves the saved value ([result-protection](#/04-utility-skills/03-result-protection)).
+- **Name external inputs** — files no step produces, such as a vendor download ([reproducibility](#/04-utility-skills/09-reproducibility)).
 
-After Sync, one drafter creates the agreed user-facing documentation and result files, then consolidates the task tree and matures its `## Results` against those artifacts. A task whose output is a document points to that document instead of duplicating it; finished update scaffolding folds into its durable owner.
+## Changes after approval go back a step
 
-Together, the permanent documentation, result files, and mature task results are the protected record. One reviewer checks those paths against the recorded Protect decision, compares every in-scope change against that record, and writes one temporary task containing the automatic pruning list and other worthwhile consolidation or refactoring.
-
-### Integrate — approve and execute the refactoring task
-
-You review the completed record, mature task tree, and temporary task together once. After approval, agents execute it mechanically and the reviewer checks the final diff. A materially different protected result returns to maturation; a materially different refactoring action returns to the proposal gate.
-
-### Finish — re-check the base, then ship
-
-Integration takes time, and the base branch may have advanced again while you worked through the earlier stages. Finish re-checks that the base hasn't moved underneath you — if it has, it loops back to Sync before publishing. Once the base is current, it ships: opening a pull request, or fast-forwarding the work into the base for a local merge, and then cleaning up the worktree the work ran in.
-
-### What stays with you
-
-superRA asks for your input twice: first for the results, permanent documentation, and protection choices; later for the completed record and temporary refactoring task. It also stops for a missing base decision or an intent-changing conflict it will not resolve silently. The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
+A materially different protected result returns to Mature & Consolidate; a materially different refactoring action returns to your approval. Codebase-fit refactoring follows [refactor-and-integrate](#/04-utility-skills/04-refactor-and-integrate).

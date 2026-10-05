@@ -8,26 +8,37 @@ created: 2026-06-17
 
 ## Objective
 
-PLAN turns "I want to work on X" into a **task tree** — a small set of `task.md` files, one per unit of work, that holds the project's state in git instead of in an agent's context window. You get a structure you can read, approve, and steer before any code is written, and a record a fresh session can reopen later and see exactly what was scoped.
+PLAN turns "I want to work on X" into a **task tree**: one `task.md` per unit of work, committed under `superRA/` before any code runs. You review the structure up front, and a fresh session can reopen it later and see exactly what was scoped. The planning protocol is owned by [superplan](skills/superplan/SKILL.md); reading and editing a `task.md` is on the [task-tree page](#/04-utility-skills/01-task-tree).
 
-You enter the phase by saying `superplan` and describing the work in plain language:
+## Start by describing the work
+
+Say `superplan` and describe the work in plain language:
 
 ```text
 Using superRA, superplan a small analysis: simulate a monthly equity panel,
 sort firms into size and momentum portfolios, and report the long-short spread.
 ```
 
-The planner explores your project, identifies the domain so the right discipline applies, and proposes a decomposition — top-level tasks with their objectives, and child tasks with dependencies between them. You can also point it at work you have already done and have it build the tree retroactively.
+- **Depth scales with the work.** Small changes plan quickly; ask to "plan hard" or "explore thoroughly" for a complex or unfamiliar project, and parallel agents explore before the planner proposes a design.
+- **Work already done counts.** Point the planner at existing code or results and it builds the tree retroactively.
 
-Planning is autonomous about facts, not about decisions. Anything the project already holds — the codebase, the data, existing docs — the planner reads for itself. Anything genuinely yours — methodology choices, scope tradeoffs, sample definitions — comes to you as **grilling**: rounds of questions, each carrying the planner's recommended answer, until no unsettled decision remains. The same mechanism runs standalone — ask the agent to *grill* or *stress-test* a loose idea and you get the question rounds without a tree. Before execution the planner still stops and shows you the proposed tree. Read the objectives, adjust the scope or decomposition, and approve. The planner commits the tree to `superRA/`, so the structure is in git before any task runs. Reading and editing a `task.md` is covered on the [task-tree page](#/04-utility-skills/01-task-tree); how trees get scoped and decomposed is owned by [superplan](skills/superplan/SKILL.md).
+## You answer the decisions; the planner finds the facts
 
-**Planning is re-enterable.** When your scope shifts — a new finding, a task that turned out bigger than expected, a direction you want to drop — you return to `superplan` to revise the objective, add tasks, or restructure the tree. Finished work stays as it is; only the changed part replans.
+- **Facts:** the planner reads the codebase, data, and docs itself.
+- **Decisions:** methodology, scope tradeoffs, and sample definitions come to you as **grilling** — rounds of questions, each with the planner's recommended answer, until no decision is open.
+  - Grilling also runs standalone: ask the agent to *grill* or *stress-test* a loose idea.
 
-Revising raises a placement question: where does the new work go? superRA places it by **concern, not by title or recency**. It reads the objectives of the existing tasks and nests the new work under the workstream whose concern already owns it — widening an existing objective rather than spawning a fresh tree off to the side. A new top-level task is the exception, reserved for work that is genuinely unrelated to everything already in the tree. The result is that related work accretes under one home instead of fragmenting into parallel trees that drift apart.
+## The planner shows you the tree, then starts execution
 
-Over a long project, a tree still accumulates structural debt — overlapping tasks, stale objectives, temporary scaffolding that outlived its purpose. For that, superRA can make a **consolidation pass**: a deliberate cleanup that merges, prunes, and restructures the tree as a whole rather than patching one task at a time. It surveys the structure, proposes the merges and prunes, and applies them in a single commit once you approve the new shape.
+The planner shows the proposed tree with a dashboard link, commits it, and moves on to execution. Read the objectives and redirect or ask for changes to the scope or decomposition at any point.
 
-### When can I skip PLAN?
+## Replan when the scope shifts
 
-For small or exploratory work, yes. You can create a single `task.md` by hand, fill in its `## Objective`, and dispatch an implementer directly. The full three-phase cycle is the recommended path for work that spans multiple tasks or will need a PR; skipping PLAN on one self-contained task is reasonable.
+Say `superplan` again to revise an objective, add tasks, or restructure. Only the changed part replans.
 
+- **New work nests under the task whose concern owns it.** The planner widens an existing objective rather than starting a parallel tree; a new top-level task is reserved for unrelated work.
+- **Consolidation cleans up structural debt.** Over a long project, ask for a consolidation pass: the planner proposes merges and prunes across the whole tree, and applies them in one commit once you approve.
+
+## Skip PLAN for one small task
+
+For small or exploratory work, ask the agent to work it directly: it writes a single `task.md` and executes it with you (see [IMPLEMENT](#/05-workflows/02-implement)). Use the full cycle for work that spans several tasks or will need a PR.

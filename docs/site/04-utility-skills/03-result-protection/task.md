@@ -8,12 +8,24 @@ created: 2026-06-17
 
 ## Objective
 
-An agent does a clean refactor of the code behind your headline coefficient — renames a column, fixes a join, re-runs on a refreshed extract. The diff compiles, every existing test passes, and the coefficient quietly slides from 0.42 to 0.31. None of those tests looked at the number. A bare agent has no reason to guard a result it was never told mattered, so the change lands and the first person to notice is a referee.
+`result-protection` keeps your key results from moving unnoticed when later work refactors, merges, or reruns the code behind them. A refactor can pass every test while a headline coefficient slides from 0.42 to 0.31.
 
-`result-protection` helps decide what must survive and how to guard it. Permanent results documentation can be sufficient protection. A drift test adds automated protection when useful: it reads a saved output and checks it against a known-good value within a documented tolerance (scaled by domain reasoning — the band for a basis-point spread is not the band for a t-statistic).
+## Choose a guard per key result
 
-You normally meet the skill at the Protect step of integration: it surveys provisional findings and proposes which to keep or drop, where the final documentation should live, and whether each kept result needs documentation alone or an additional check. Standalone, point it at one result — "pin the spread in `analysis/term-structure` and guard it, tolerance 1 bp" or "review the drift tests in `test/` against the current key results".
+- **Permanent documentation** — the result recorded in its permanent home. Often enough on its own.
+- **Plus a drift test** — a check that reads the saved output and fails when the value leaves a tolerance. Worth it for a headline number.
+  - Tolerances follow the quantity: a basis-point spread and a t-statistic get different bands, each with a stated reason.
+  - Each test is proven to fail when the protected value is perturbed.
 
-Once a test exists it is part of the protected record: every later integration pass runs it, and a failure is never waved through. If the result genuinely moved, that is a research decision you fold into the task before updating the expectation — editing an expectation only to turn a red test green is the failure this guards against.
+## Where you meet it
 
-The red-green verification, scope gate, tolerance discipline, and full gated checklist live in [`result-protection`](skills/result-protection/SKILL.md).
+- **In INTEGRATE:** the [Protect stage](#/05-workflows/03-integrate) proposes what to keep and how to guard it; you choose.
+- **Standalone:**
+  - "pin the spread in `analysis/term-structure` and guard it, tolerance 1 bp"
+  - "review the drift tests in `test/` against the current key results"
+
+## A failing drift test waits for you
+
+Later integration runs the drift tests, and a failure blocks until resolved. If the result really moved, that is a research decision; the agent updates the expectation only after you make it.
+
+Drift tests register as check steps in the [reproduction graph](#/04-utility-skills/09-reproducibility). Details live in [result-protection](skills/result-protection/SKILL.md).

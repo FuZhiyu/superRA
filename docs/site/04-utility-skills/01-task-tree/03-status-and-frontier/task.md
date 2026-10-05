@@ -8,44 +8,45 @@ created: 2026-06-11
 
 ## Objective
 
-Status and the frontier are both computed from the tree. When you ask the agent to plan, implement, and review, the picture updates on its own — you read it, you do not maintain it.
+Agents update each task's status as they work; parent statuses and the frontier are computed from those. You read them; the only statuses you set are scope decisions.
 
-A leaf task moves through implementation and, when independently reviewed, the review cycle:
+## A leaf task moves through implementation and review
 
 ```
 not-started → in-progress → implemented → approved
                                         ↘ revise → implemented → approved
 ```
 
-A skipped review does not park a task: whoever orchestrates verifies the work and sets `approved`. `implemented` means the approval decision is still open — a review is running, or one is owed and deferred.
-
-The two statuses that are yours to set are scope decisions: tell the agent to drop a task and it becomes `archived` (removed with its subtree from the active graph; downstream consumers receive warnings); tell it to park a task and it becomes `postponed` (blocks its dependents until you reset it to `not-started`).
-
 | Status | What it means for you |
 |---|---|
-| `not-started` | Waiting to be dispatched. |
+| `not-started` | Waiting to be picked up. |
 | `in-progress` | An implementer is on it. |
-| `implemented` | Done; the approval decision is still open. |
+| `implemented` | Done; approval is still open — a review is running or deferred. |
 | `revise` | A reviewer sent it back with findings. |
-| `approved` | Signed off. |
-| `archived` | You dropped it from scope. |
-| `postponed` | You parked it. |
+| `approved` | Signed off, by a reviewer or, when review is skipped, by the orchestrating agent after verifying the work. |
+| `archived` | You dropped it: it leaves the active graph with its subtree, and downstream tasks get a warning. |
+| `postponed` | You parked it: it blocks its dependents until you set it back to `not-started`. |
 
-A branch task never carries a status you set — it is **rolled up** from its children: `approved` once all active children are, `revise` if any child needs revision, `in-progress` while work is underway or partially approved, `not-started` otherwise. Parked (`archived`/`postponed`) children are excluded. One leaf flips and every ancestor updates.
+Say "drop this task" or "park this task" and the agent sets `archived` or `postponed`.
 
-The **frontier** is what to work on next: tasks whose `depends_on` prerequisites, own or inherited, are `implemented`, `approved`, or `revise`; `not-started`, `in-progress`, and `postponed` prerequisites block. Files a task reads from other tasks' reproduction steps never block it. The frontier lists those inputs whose producer is `stale`, `missing`, or `failed` beside the task, and the agent decides whether to rebuild them first. Ask "what's ready next?" and the agent reads this list.
+## A parent's status rolls up from its children
 
-Task readiness does not certify an output. Reproduction freshness and selected checks provide that separate evidence; reviewed acceptance can establish freshness while preserving the last actual execution record.
+Archived and postponed children are left out. The first matching rule wins:
 
-The authoritative contract — transition ownership, the exact rollup algorithm, and edge cases — lives in [skills/task-tree/references/task-file-contract.md](skills/task-tree/references/task-file-contract.md).
+1. All children `approved` → `approved`.
+2. Any child `revise` → `revise`.
+3. All children `implemented` or `approved` → `implemented`.
+4. Any child `in-progress`, `implemented`, or `approved` → `in-progress`.
+5. Otherwise → `not-started`.
 
-### Commands, to inspect or repair the tree yourself
+One leaf flips and every ancestor updates. After bulk or manual edits leave parents out of sync, run `./superRA/superra task status fix`.
 
-The agent runs these under the hood; run them yourself to look at the frontier or fix stored statuses directly:
+## The frontier is what to work on next
 
-```bash
-./superRA/superra task frontier      # ready tasks, each with its inputs whose producer is stale, missing, or failed
-./superRA/superra task status fix    # recompute rollups from the leaves
-```
+Ask "what's ready next?", or run `./superRA/superra task frontier`. The frontier lists unfinished leaf tasks whose `depends_on` prerequisites, own or inherited from a parent, are all `implemented`, `approved`, or `revise`.
 
-Run `status fix` when bulk edits or direct file changes have left the stored rollups out of sync with the leaf statuses.
+- **Prerequisites still `not-started`, `in-progress`, or `postponed` block.**
+- **File inputs never block.** A file read from another task's [reproduction step](#/04-utility-skills/09-reproducibility) is listed beside the task when its producer is `stale`, `missing`, or `failed`, and the agent decides whether to rebuild it first.
+- **Ready is not current.** Whether an output is up to date is a separate check, owned by [reproducibility](#/04-utility-skills/09-reproducibility).
+
+The exact rules and edge cases are in the [task-file contract](skills/task-tree/references/task-file-contract.md#effective-dependencies).

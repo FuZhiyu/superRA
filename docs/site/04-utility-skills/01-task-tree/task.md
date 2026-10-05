@@ -8,37 +8,36 @@ created: 2026-06-17
 
 ## Objective
 
-You ask the agent to plan and work a project, and you want it to know what is actually left to do. Say "superra, plan this analysis" and the agent breaks the work into a tree of tasks; say "work the ready tasks" and it does them in dependency order. Ask "what's left on the holdings pipeline?" mid-project and the answer comes from recorded state, not from guessing.
+The task tree keeps your project's state — what is done, what is blocked, what each step found — in files under `superRA/` instead of the chat. Git versions it with your code, so a fresh session, or you a week later, resumes from the files rather than from scrollback.
 
-A bare agent keeps project state in the conversation — which steps are done, which are blocked, what the last run found — and that state evaporates when the session ends. The next session reconstructs it from scrollback and scattered TODOs, and gets it wrong in costly ways: a finished step gets redone, a task starts on an input its dependency never produced, or a load-bearing result is forgotten because it lived in a message that scrolled off.
+## Ask in plain language
 
-The task tree makes the filesystem the single source of truth instead. Every task is a directory holding a `task.md` with its objective, status, dependencies, and (once done) its results. Nesting a directory nests the task. Sibling names in `depends_on` decide when a task is ready; files a task reads from another task's reproduction steps are reported as its inputs and never hold it back. There is no database — the tree you see is the directory tree, and git versions it alongside your code, so a fresh agent (or you, a week later) resumes from the files alone.
+| Say | You get |
+|---|---|
+| "superra, plan this analysis" | The work broken into a tree of tasks for you to review |
+| "work the ready tasks" | Tasks done in dependency order |
+| "show me the tree" | The whole tree with rolled-up status |
+| "what can I start now?" | The **frontier**: tasks whose prerequisites are met |
+| "what's left on the holdings pipeline?" / "what's blocking the merge?" | An answer read from recorded state, not guessed |
+| "open the dashboard" | A live browser view of the tree and its reproduction graph |
 
-From that structure the agent computes answers you can ask for in plain language: "show me the tree" (whole tree with rollup status), "what can I start now?" (the **frontier** — tasks whose `depends_on` prerequisites are done, each with its inputs whose producer is `stale`, `missing`, or `failed`), "what's blocking the merge?" (its prerequisites and inputs), "open the dashboard" (live browser view of the tree and its reproduction graph).
+## The tree is the directory tree
 
-## What the agent runs, and what you can run yourself
+- **Each task is a directory holding a `task.md`** with its objective, status, prerequisites, and, once done, its results. Nesting a directory nests the task. There is no database.
+- **`depends_on` names the sibling tasks that must finish first.** Files a task reads from another task's [reproduction steps](#/04-utility-skills/09-reproducibility) are reported as inputs but never hold it back.
+- **A parent's status is computed from its children**, never set by hand.
 
-### One wrapper drives the tree
+## The agent edits; you can too
 
-The agent reads and edits the tree through a small committed script, `./superRA/superra`, that lives in your repo. It is a thin wrapper: every command in the subpages — `task tree`, `task frontier`, `task read` — is run through it. You can run the exact same commands yourself when you want to inspect the tree or steer the work by hand, so nothing the agent does to the tree is hidden behind a tool only it can reach. If a project does not have the wrapper yet, the agent writes it on first use, so you never set this up by hand.
+- **One committed wrapper, `./superRA/superra`, runs every command.** The agent writes it on first use; run the same commands yourself to inspect or steer the tree.
+- **Edit one field directly; restructure with the CLI.** Change a status or fix an objective by editing the `task.md`. Move or rename a task with `task move`, which carries the directory and repairs links and dependencies.
+- **Hooks check every edit.** After each agent edit to the tree, a harness hook validates the structure and recomputes rollups; see the [Hooks page](#/06-hooks).
 
-### Agents edit; hooks keep the tree honest
+## Reference pages
 
-The agent edits task files continuously as the work moves — flipping a status, appending a result, adding a dependency. A **hook** is a check your harness (Claude Code or Codex) runs automatically right after each edit to the tree — not a git hook, but part of the agent session; here it validates the structure (no dependency pointing at a task that does not exist, no status that contradicts its children) and recomputes the rolled-up status. The division is that the agent makes the edits and the hook catches the ones that would leave the tree inconsistent, so a careless write cannot quietly corrupt the project's recorded state. The hooks superRA ships are listed on the [Hooks page](#/06-hooks).
+- [**The task file**](#/04-utility-skills/01-task-tree/01-task-file) — frontmatter fields and body sections.
+- [**The CLI**](#/04-utility-skills/01-task-tree/02-cli-commands) — commands to read, query, and edit the tree.
+- [**Status and the frontier**](#/04-utility-skills/01-task-tree/03-status-and-frontier) — the status lifecycle, rollup, and what counts as ready.
+- [**The dashboard**](#/04-utility-skills/01-task-tree/04-dashboard) — the live browser view and its shareable export.
 
-### Status rolls up on its own
-
-**Rollup** means a parent task's status is computed from its children, never set by hand. Flip a leaf to `approved` and every directory above it recomputes: a parent reads `approved` only once all of its active children do, so the top of the tree always reflects what is actually finished underneath. You never edit a parent's status to match its children — the hook does it for you.
-
-### Set a field by hand; move a task with the CLI
-
-The split between editing a file directly and reaching for a command is worth knowing. Setting one field — marking a task `not-started`, fixing a typo in an objective — is a direct edit to that `task.md`, and the hook revalidates from there. Anything *structural* goes through the CLI instead. `task move` carries the task directory, repairs links, and refuses a move that would break `depends_on` before writing. Cross-parent moves report `depends_on` edges that cannot survive the move; file inputs follow their producers and consumers. Use the command for moves and renames, edit the file directly for everything else.
-
-This page is the conceptual top of the task-tree subtree. The operational detail lives one level down, each on its own page:
-
-- [**The task file**](#/04-utility-skills/01-task-tree/01-task-file) — the `task.md` anatomy: frontmatter fields and body sections.
-- [**The CLI**](#/04-utility-skills/01-task-tree/02-cli-commands) — the command surface for reading, querying, and editing the tree.
-- [**Status and the frontier**](#/04-utility-skills/01-task-tree/03-status-and-frontier) — the status lifecycle and how rollup and the frontier are computed.
-- [**The dashboard**](#/04-utility-skills/01-task-tree/04-dashboard) — the live browser view and its shareable static export.
-
-See [`task-tree`](skills/task-tree/SKILL.md) for the full skill.
+The full skill is [`task-tree`](skills/task-tree/SKILL.md).

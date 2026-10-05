@@ -8,15 +8,15 @@ created: 2026-06-17
 
 ## Objective
 
-A domain skill gives the agent the methodology for your kind of research and gives any independent reviewer the standard to hold the work to. With a data task loaded, the agent describes the panel before it builds a variable; with a theory task, it defines its symbols before it manipulates them. The discipline is the one you would apply by hand. superRA makes it run on every task and exposes the same gates to an independent reviewer.
+A domain skill is the methodology for one kind of research. The agent loads it automatically when the work matches — you never name it — and applies its checks on every task; an independent reviewer holds the work to the same checks.
 
-Four domain skills ship today.
+| Skill | Loads for | What it catches |
+|---|---|---|
+| [econ-data-analysis](#/03-domain-skills/01-econ-data-analysis) | merges, filters, variables, regressions, and figures on economic or financial data | a one-to-many merge fan-out or missing returns coded as zero, at the step that caused it |
+| [theory-modeling](#/03-domain-skills/02-theory-modeling) | first-order conditions, equilibria, proofs, comparative statics | one symbol meaning two things; an assumption back-filled after the algebra needs it |
+| [academic-writing](#/03-domain-skills/03-academic-writing) | reviewing, polishing, or drafting manuscript text | an "improve the writing" pass that rewrites your argument, claims, or terminology |
+| [slide-design](#/03-domain-skills/04-slide-design) | creating, revising, or reviewing slide decks | slides crammed with derivations and caveats instead of the takeaway |
 
-- [econ-data-analysis](#/03-domain-skills/01-econ-data-analysis) — enforces describe-before-transform on every data step (merges, filters, variable construction, regressions), so a silent one-to-many fan-out or a missing-as-zero coding gets caught at the step that caused it instead of in a draft.
-- [theory-modeling](#/03-domain-skills/02-theory-modeling) — runs derivations through four ordered gates (objects and notation, assumptions, derivations, verification), so one symbol can't quietly mean two things and an assumption can't be back-filled after the algebra needs it.
-- [academic-writing](#/03-domain-skills/03-academic-writing) — polishes prose while holding your argument, claims, and terminology sovereign, so an "improve the writing" pass tightens wording without rewriting what you said or leaking the chat into the draft.
-- [slide-design](#/03-domain-skills/04-slide-design) — builds slides as live communication, judging what the audience knows at each moment, so the main path lands the takeaway and the derivations, caveats, and expert detail move to backup instead of crowding the screen.
+## Literature review is next
 
-## On the roadmap
-
-Literature-review and simulation-verification verticals are planned. Each new vertical is a domain skill that composes with the same workflow and utility skills already in place.
+A literature-review domain skill is on the roadmap. The workflow is domain-neutral, so any new domain skill composes with the existing workflow and utility skills.

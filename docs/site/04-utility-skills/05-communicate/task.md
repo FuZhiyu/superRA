@@ -14,21 +14,23 @@ created: 2026-06-17
 Use communicate to rewrite analyses/example/RESULTS.md for a cold reader.
 ```
 
+## What the output looks like
+
 - The opening gives the answer or honest current state.
   - Evidence, caveats, and the next action follow.
   - Linked implementation details come last.
-- Short nested lists are the default pyramid.
+- Short nested lists are the default.
   - Headings and top-level bullets state the main points.
   - Paragraphs remain for connected reasoning, narrative, or causality.
-- Sentence style is direct and concrete, and lives in the always-loaded core.
-  - Each sentence names the actor and action, keeps relationships explicit, and uses one term per concept.
-- Rewriting preserves exact literals, meaning, claim strength, dependencies, and useful voice.
-  - The friction audit changes a pattern only when it makes text slower to understand; it does not try to detect AI authorship.
+- Sentences are direct and concrete: each names the actor and action and uses one term per concept.
+- A rewrite preserves exact literals, meaning, claim strength, and your voice. It changes a pattern only when that pattern makes the text slower to understand.
 
-Structure, sentence style, and the content test all live in the always-loaded core. On-demand references cover [rewriting and friction audits](skills/communicate/references/rewrite.md), [Markdown mechanics](skills/communicate/references/markdown.md), and [standalone Markdown files](skills/communicate/references/baseline-io.md). The Markdown checker still catches display-math and KaTeX failures:
+## Check Markdown math before it breaks
+
+The Markdown checker catches display-math and KaTeX failures that render silently broken:
 
 ```
 uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
 ```
 
-See [`communicate`](skills/communicate/SKILL.md) for the authoritative load map.
+`<skill-dir>` is the directory holding the skill's `SKILL.md`. The always-loaded core is [communicate](skills/communicate/SKILL.md); on-demand references cover [rewriting](skills/communicate/references/rewrite.md) and [Markdown mechanics](skills/communicate/references/markdown.md).

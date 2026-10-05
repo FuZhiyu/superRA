@@ -8,10 +8,23 @@ created: 2026-06-17
 
 ## Objective
 
-You sync a feature branch to main with `git merge main` (or `rebase`, or `cherry-pick`), resolve the conflicts the usual way, and commit once the build is green. A green build only proves no markers remain. It does not prove the sample filter you deliberately tightened on your branch is still tightened, or that the coefficient your branch protects still holds — a line-by-line resolution silently reverts exactly those when main touched the same region for an unrelated reason, and the regression surfaces weeks later as a table number that no longer matches its code. The same blindness leaves stale references behind: a variable renamed on one side still used under its old name on the other, a moved import path, a doc paragraph describing behavior the merge removed.
+`semantic-merge` runs a merge, rebase, or cherry-pick by what each side *meant*, not by which lines arrived last. A line-by-line resolution can silently revert a sample filter you tightened, and a conflict-free merge can still leave a renamed variable, moved path, or outdated doc behind.
 
-`semantic-merge` resolves by what each side *meant* instead of which lines arrived last. It reconstructs each side's intent from commit messages, diffs, and task context, synthesizes compatible changes so both survive, regenerates figures and tables the merge made stale, sweeps for stale references, and keeps your drift tests green. Anything that would change a data contract, a test expectation, or the meaning of a published result is escalated to you with the consequence stated, never resolved on the agent's own authority.
+## Ask for it instead of a bare merge
 
-Reach for it any time you would otherwise type a bare merge, rebase, or cherry-pick — naming the operation and the incoming ref: "sync this branch with main using semantic-merge", "rebase onto main, resolve conflicts by intent", "cherry-pick abc123 into this branch semantically". It infers the branch, merge base, and direction from the session and asks only when the direction is ambiguous or a resolution would change what the branch means. A dirty worktree is stashed reversibly, not clobbered, and a merge-guard hook flags a bare `git merge` and points you here. A trivial fast-forward with no overlap needs none of this; a plain `git merge` is fine.
+Name the operation and the incoming ref:
 
-For the modes, escalation rules, and the full Semantic Coherence Checklist — including the parallel-worktree exception — see [`semantic-merge`](skills/semantic-merge/SKILL.md).
+- "sync this branch with main using semantic-merge"
+- "rebase onto main, resolve conflicts by intent"
+- "cherry-pick abc123 into this branch semantically"
+
+In INTEGRATE, the [Sync stage](#/05-workflows/03-integrate) runs it for you. An agent that types a bare `git merge` gets a reminder from the [merge-guard hook](#/06-hooks).
+
+## What you see
+
+- **A question only when a resolution changes meaning:** the sides want different things, or the choice moves a sample filter, data contract, test expectation, or published result. The agent states the consequence, not raw diff chunks.
+- **A merge commit plus follow-up commits** that regenerate stale figures and tables and fix stale references. Commit bodies record what was kept, dropped, or combined, and your decisions.
+- **Tests and drift tests passing on every commit.** A moved result comes to you; it is never re-expected silently.
+- **A named stash** holding any unrelated uncommitted changes, reported so you can restore them.
+
+Modes, escalation rules, and the checklist live in [semantic-merge](skills/semantic-merge/SKILL.md).

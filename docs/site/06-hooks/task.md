@@ -8,38 +8,34 @@ created: 2026-06-11
 
 ## Objective
 
-superRA ships lifecycle hooks that run automatically in the background of your harness session.
-They act as guards and reminders. Enforcement is handled by the discipline system.
-Hook source files live in [hooks/](hooks/); harness-specific wiring is in [hooks/hooks.json](hooks/hooks.json) (Claude Code) and [hooks/hooks-codex.json](hooks/hooks-codex.json) (Codex).
+superRA's hooks run in the background of every agent session: they remind the agent of the right skill, block a few unsafe actions, and keep the task tree consistent after edits. They install with the plugin; you never call them.
 
-## Hook table
+## What you may notice
 
-| Hook | Trigger event | Purpose | Claude Code | Codex |
+- **An approval prompt** when the agent tries to change a task tree in a different checkout than the one the session started in (`guard-foreign-checkout`). Approve deliberate cross-checkout work; an unattended session stops there.
+- **A blocked action the agent retries**, after loading a missing skill or fixing the input (the "Blocks" rows below).
+- **Nothing else.** Reminders go to the agent, not to you.
+
+## Hook reference
+
+| Hook | Fires on | Effect | Claude Code | Codex |
 |---|---|---|:---:|:---:|
-| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Injects a reminder to load `superRA:using-superra` if the master skill has not loaded this session. | Yes | Yes |
-| **merge-guard** | `PreToolUse` on `Bash` commands matching `git merge/rebase/cherry-pick` | Reminds the agent to use `superRA:semantic-merge` instead of a bare merge command. | Yes | Yes |
-| **agent-model-guard** | `PreToolUse` on `Agent` (Claude) / `spawn_agent` (Codex) | Hard-denies a generic agent dispatch without explicit model controls (model on Claude; model and reasoning effort on Codex). Named agent types pass through. | Yes | Yes |
-| **guard-task-approval** | `PreToolUse` on `Edit`, `Write`, and `Bash` (plus `apply_patch` on Codex) targeting a `task.md` | Hard-denies setting `status: approved` while the task's `## Review Notes` still carries `[BLOCKING]`. Fails closed when the edit result cannot be reconstructed (unmatchable patches, in-place shell mutations) and the change sets `status: approved` onto blocking notes. | Yes | Yes |
-| **guard-foreign-checkout** | `PreToolUse` on `Edit`, `Write`, and `Bash` (plus `apply_patch` on Codex) | Asks before mutating a task tree outside the checkout the session was pointed at: a `task.md` write whose task root belongs to neither the session's cwd nor its repository, and a git history-writing command redirected (`cd`, `git -C`, `--work-tree`) into another task-tree checkout. Cross-checkout work you set up deliberately is approvable; an unattended session cannot proceed. Worktrees of the session's own repository never prompt, since dispatched implementers work there. | Yes | Yes |
-| **ensure-companion** | `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-denies a workflow-skill call until its companion skills are loaded, listing every missing one in a single deny: all three require `superRA:using-superra`; the two always-dispatching skills (`superimplement`, `superintegrate`) also require `superRA:agent-orchestration`. Paths that only sometimes dispatch — `superplan`, and the default interactive loop when you ask for a review — are ungated on orchestration and instruct the load at their own dispatch point. | Yes | — |
-| **ensure-communicate** | `PreToolUse` on `Edit`, `Write`, and `Bash` (plus `apply_patch` on Codex) targeting Markdown | Hard-denies main-thread Markdown writes until `superRA:communicate` is loaded. Subagents are exempt. | Yes | Yes |
-| **task-hook** | `PostToolUse` on `Edit`, `Write`, and `Bash` (plus `apply_patch` on Codex) | Reminds the agent to apply Communicate after Markdown edits under the task tree; reconciles direct task edits, `apply_patch` edits, and structural shell changes by validating status and propagating rollups. When an edit through any tool changes a script or input of a registered [reproduction step](#/04-utility-skills/09-reproducibility), it names the steps the edit makes stale and how long each last took to run. Codex shell interception is incomplete, so shell-side reconciliation is best effort. | Yes | Yes |
-| **exit-plan-mode** | `PostToolUse` on `ExitPlanMode` | Suggests materializing a proposed plan into a `superRA/` task tree when it will guide later work. | Yes | — |
-| **codex-plan-stop** | `Stop` while in plan mode (Codex only) | Codex equivalent of the plan-materialization reminder. | — | Yes |
+| **autoload-superra** | A prompt mentioning superRA or a phase name | Reminds the agent to load `using-superra`. | Yes | Yes |
+| **ensure-companion** | A call to `superplan`, `superimplement`, or `superintegrate` | Blocks until the phase's companion skills are loaded. | Yes | — |
+| **ensure-communicate** | A main-agent Markdown write | Blocks until `communicate` is loaded. Subagents are exempt. | Yes | Yes |
+| **agent-model-guard** | A generic subagent dispatch | Blocks unless the dispatch names a model (and, on Codex, a reasoning effort). | Yes | Yes |
+| **guard-task-approval** | A `task.md` edit | Blocks `status: approved` while the task's review notes still hold a `[BLOCKING]` finding. | Yes | Yes |
+| **guard-foreign-checkout** | A `task.md` write or git history command aimed at another checkout | Asks you first. Worktrees of the session's own repository pass. | Yes | Yes |
+| **merge-guard** | `git merge`, `rebase`, or `cherry-pick` | Reminds the agent to use [semantic-merge](#/04-utility-skills/02-semantic-merge). | Yes | Yes |
+| **task-hook** | Any edit or shell command | Validates edited tasks and updates parent status; reminds the agent to follow `communicate` after Markdown edits under `superRA/`; names the [reproduction steps](#/04-utility-skills/09-reproducibility) an edit makes stale. | Yes | Yes (shell coverage best-effort) |
+| **exit-plan-mode** | Leaving Claude Code plan mode | Suggests turning the plan into a `superRA/` task tree. | Yes | — |
+| **codex-plan-stop** | The end of a Codex plan-mode turn | Same suggestion, for Codex. | — | Yes |
 
-## Coverage notes
+Sources live in [hooks/](hooks/), wired by [hooks/hooks.json](hooks/hooks.json) (Claude Code) and [hooks/hooks-codex.json](hooks/hooks-codex.json) (Codex).
 
-Claude Code fires nine of the ten hooks: all except `codex-plan-stop`, which is the Codex-side replacement for `exit-plan-mode`.
-Codex does not intercept `Skill` calls or plan-mode exit, so the `ensure-companion` gate and `exit-plan-mode` are absent; `codex-plan-stop` covers the plan-materialization reminder instead, and Codex shell interception (`task-hook`) is incomplete, making task-tree reconciliation best-effort there.
+## Installing
 
-## Installing hooks
+- **Claude Code:** installing the plugin installs the hooks.
+- **Codex:** set `[features].plugin_hooks = true` in `~/.codex/config.toml` if your build has plugin hooks off, then run `/hooks` and trust the superRA bundle.
 
-Hooks are installed automatically when you install the superRA plugin.
-For Claude Code:
-
-```bash
-claude plugin install superRA@superRA
-```
-
-For Codex, enable plugin hooks in your config (`[features].plugin_hooks = true` in `~/.codex/config.toml`) and run `/hooks` to trust the superRA bundle.
-See the [Quickstart](#/02-quickstart) for install and setup, and the project [README](README.md) for the full per-harness procedure.
+Full setup is in the [Quickstart](#/02-quickstart) and [`docs/README.codex.md`](docs/README.codex.md).

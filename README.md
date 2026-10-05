@@ -4,31 +4,29 @@
 
 > ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
 
-**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) (one analysis end to end in ~20 min), then the [Domain Skills](http://fuzhiyu.me/superRA/#/03-domain-skills) and [Utility Skills](http://fuzhiyu.me/superRA/#/04-utility-skills) pages, the [Workflows](http://fuzhiyu.me/superRA/#/05-workflows) section, and a live task-tree [Showcase](http://fuzhiyu.me/superRA/#/07-showcase).
+**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart), which runs one analysis end to end.
 
 superRA turns an AI coding agent into a disciplined research assistant. It runs on Claude Code and Codex, and ships:
 
-1. A **task-tree dashboard** — a live task tree of your project that keeps every important piece of state committed in your repo rather than trapped in an agent's context, so you can monitor progress in real time and hand any unfinished task to a fresh agent without losing the thread. The [Showcase](http://fuzhiyu.me/superRA/#/07-showcase) links a live export of a real one.
-2. An adaptive **plan-implement-integrate workflow** with closely steered interactive execution by default, autonomous implementer–reviewer execution on request, and long-term reproducibility.
-3. **Domain skills** that teach agents the right discipline for the research at hand and enforce it as they go — currently data analysis, theory modeling, academic writing, and slide design, with literature review on the roadmap.
-4. **Utility skills** that teach agents practical mechanics — communicating dense results clearly, keeping every result [rebuildable from a declared graph](http://fuzhiyu.me/superRA/#/04-utility-skills/09-reproducibility), loading papers from Zotero, syncing data across worktrees, and more.
+1. A **task-tree dashboard.** Every task's objective, status, and results are committed files in your repo, not an agent's memory, so you can watch progress live and hand any unfinished task to a fresh agent. The [Showcase](http://fuzhiyu.me/superRA/#/07-showcase) links a live export of a real one.
+2. A **plan–implement–integrate [workflow](http://fuzhiyu.me/superRA/#/05-workflows)** — interactive by default, autonomous on request, with results kept reproducible.
+3. **[Domain skills](http://fuzhiyu.me/superRA/#/03-domain-skills)** that enforce the right discipline as the agent works: data analysis, theory modeling, academic writing, and slide design, with literature review on the roadmap.
+4. **[Utility skills](http://fuzhiyu.me/superRA/#/04-utility-skills)** for practical mechanics: keeping every result [rebuildable from a declared graph](http://fuzhiyu.me/superRA/#/04-utility-skills/09-reproducibility), merging branches by intent, loading papers from Zotero, syncing data across worktrees, and more.
 
 ![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
 
 ## Why superRA?
 
-AI agents are fast but undisciplined. They generate more code than anyone will carefully review. They drift as the context window fills, and starting fresh loses the thread of what was done and why. They drop half the sample before a regression runs, then report "everything looks good." superRA brings review discipline to every step, the domain skill enforces the right protocol as the work goes, and the integration phase folds each task into your codebase so what lands is coherent, not a pile of single-shot outputs.
+AI agents are fast but undisciplined. They write more code than anyone reviews, drift as their context fills, and drop half the sample before a regression, then report "everything looks good."
 
-Social-science research needs a different rhythm than software engineering: it is fluid and exploratory, ex-ante unit tests are often impossible to write, and the outputs need human judgement to evaluate. superRA adapts an agentic-coding workflow spine to that rhythm and keeps the human firmly in the loop.
+Agentic-coding frameworks target software engineering, where unit tests verify the work. Research is exploratory, rarely testable in advance, and judged by people. superRA keeps the workflow spine and keeps you in the loop — review at every step, domain discipline as the work goes, and an integration phase that folds each task into a coherent codebase.
 
 ## How it works
-
-A superRA project moves through three phases — **PLAN → IMPLEMENT → INTEGRATE**. In **PLAN**, the agent scopes your request and decomposes it into a *task tree* — a directory of small `task.md` files, each holding one unit of work — that you approve before any code is written. In **IMPLEMENT**, the main agent co-edits and executes with you, always self-reviewing and asking whether to run independent review now, defer it, or skip it; on request, autonomous subagent mode runs implementer and reviewer seats instead. In **INTEGRATE**, you first choose which results belong in the permanent record, how that record should look, and whether documentation or additional drift tests should protect each result. The agent syncs with your base branch, writes the permanent record, proposes pruning and other refactoring in one temporary task, asks you to approve the finished record and proposal together, then executes and ships.
 
 ```mermaid
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]
-    IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
+    IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>execute with you · self-review<br/>independent review where it earns its cost"]
     INTEGRATE["<b>INTEGRATE</b><br/>Choose results & protection<br/>Sync with base<br/>Mature documentation & task tree<br/>Review refactoring proposal<br/>Execute & finish"]
     FINISHED(["finished"])
 
@@ -45,9 +43,12 @@ flowchart TB
     class FINISHED terminal
 ```
 
-An existing project — even one without git — enters through the `onboarding` skill: the agent writes a task tree and reproduction graph for the work already done, touching nothing outside `superRA/` until you approve, then offers git and an isolated rerun that checks each result against its original.
+- **PLAN** — the agent scopes your request into a *task tree*: a directory of small `task.md` files, one per unit of work, that you review before execution starts.
+- **IMPLEMENT** — the agent works each task with you, self-reviews, and asks whether to run an independent review now, later, or not at all. On request, autonomous mode hands the tasks to implementer and reviewer subagents.
+- **INTEGRATE** — you choose which results enter the permanent record and how they are protected. The agent syncs with your base branch, writes the record, and proposes one refactoring task; once you approve, it executes and ships.
+- **Existing projects** — even without git — enter through the `onboarding` skill, which builds a task tree and reproduction graph for the work already done and changes nothing outside `superRA/` until you approve.
 
-Research is rarely this linear: an unanticipated issue mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving unrelated finished work untouched. Run `./superRA/superra dashboard` from a project terminal to watch and steer any of it through the Tree and Graph views. The [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) walks a full cycle end to end, covering re-entry, the autonomy-with-human-in-the-loop model, and the dashboard's live serve and branch-snapshot sharing.
+A surprise mid-implementation or a later scope change routes back to PLAN and resumes at the right point. Run `./superRA/superra dashboard` in a project to watch and steer the work; the [dashboard page](http://fuzhiyu.me/superRA/#/04-utility-skills/01-task-tree/04-dashboard) covers live serving and branch-snapshot sharing.
 
 ## Installation
 
@@ -73,9 +74,12 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 ### Upgrading
 
-For the unreleased 0.5.0 upgrade, every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance: an older superRA reads neither the new `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then run `superra task check` and a build; the build prints the `git rm` that retires `pytask.lock` and `repro-builds.json`. Leftover `tier:`, `env_probe`, and `code_roots` keys only warn and can be deleted. The [release notes](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release) give the steps in order.
+**0.5.0 (unreleased):** every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance — an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then follow the [upgrade steps](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release).
 
-0.4.0 retired the dedicated role agents in favor of role skills. A Codex session that finds the old globally installed named agents (`~/.codex/agents/superra_*.toml`) flags them as stale and deletes them with your confirmation — nothing replaces them; the skills bundle carries the roles. Projects still on the pre-0.3 `PLAN.md` / `RESULTS.md` model are detected at session start and offered onboarding, which migrates them (`superra task migrate from-plan`).
+**Older projects:**
+
+- **0.4.0** retired the dedicated role agents for role skills. A Codex session that finds stale `~/.codex/agents/superra_*.toml` files deletes them with your confirmation.
+- **Pre-0.3** `PLAN.md` / `RESULTS.md` projects are detected at session start and offered onboarding, which migrates them (`superra task migrate from-plan`).
 
 ## Contributing
 
@@ -83,7 +87,7 @@ Design principles, DRY / composability rules, skill-design patterns, and the ext
 
 ## Upstream
 
-superRA started as a fork of [Superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com). The upstream project provides the plugin infrastructure, skill system, and several general-purpose skills that superRA inherits and extends. Superpowers and similar agentic-coding frameworks are built for software engineering, where tasks are verifiable against unit tests or objective metrics; superRA adapts the same workflow spine to scientific research instead — exploratory, iterative, and fluid.
+superRA started as a fork of [Superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com). The upstream project provides the plugin infrastructure, skill system, and several general-purpose skills that superRA inherits and extends.
 
 ## License
 

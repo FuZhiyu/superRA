@@ -8,12 +8,18 @@ created: 2026-06-17
 
 ## Objective
 
-A superRA project moves through three phases — **PLAN**, **IMPLEMENT**, **INTEGRATE** — and you steer it through each one. PLAN scopes the work into a task tree you approve. IMPLEMENT runs those tasks with you by default, taking independent review where it earns its cost, and runs them autonomously through implementer and reviewer seats when you ask. INTEGRATE folds the finished work into your codebase so the results stay reproducible, then ships it. The [Quickstart](#/02-quickstart) walks one piece of work through all three end to end; these pages go one phase at a time, for when you want to understand a single phase on its own.
+A superRA project moves through three phases, and you steer each one. The [Quickstart](#/02-quickstart) walks one piece of work through all three; these pages cover one phase at a time.
 
-You start each phase by saying its word — `superplan`, `superintegrate`, and `superimplement` for autonomous execution — or `superra` to let the agent pick up wherever the work stands. The phases compose: run only the one you need. A small, self-contained task can skip PLAN; a throwaway experiment can stop after IMPLEMENT. Each page below says when its phase is reasonable to skip. A project with existing code, data, or results enters through [onboarding](skills/onboarding/SKILL.md) instead: ask the agent to bring the project into superRA, and it writes a task tree and [reproduction graph](#/04-utility-skills/09-reproducibility) for the work already done.
+| Phase | What it does | Say |
+|---|---|---|
+| **[PLAN](#/05-workflows/01-plan)** | Scopes the work into a task tree you review before any code is written. | `superplan` |
+| **[IMPLEMENT](#/05-workflows/02-implement)** | Runs the tasks with you, taking independent review where it earns its cost; autonomous on request. | ask to work a task, or `superimplement` for autonomous |
+| **[INTEGRATE](#/05-workflows/03-integrate)** | Protects the results you keep, syncs with your base branch, refactors, and ships. | `superintegrate` |
 
-The cycle is re-enterable. A discovery mid-implementation or a scope change after integration routes back to planning and resumes at the right point, leaving finished work untouched. Re-entering a phase as the work changes is how a project normally runs.
+Say `superra` to let the agent pick up wherever the work stands.
 
-- **[PLAN](#/05-workflows/01-plan)** — scope and decompose the work into a task tree you approve before any code is written.
-- **[IMPLEMENT](#/05-workflows/02-implement)** — run tasks with the agent at your cadence, or hand the frontier to autonomous implementer and reviewer seats.
-- **[INTEGRATE](#/05-workflows/03-integrate)** — choose the permanent record and its protection, sync with your base, approve one refactoring proposal, execute it, and open the PR.
+## Run only the phases you need
+
+- **Skip a phase when the work is small.** A self-contained task can skip PLAN; a throwaway experiment can stop after IMPLEMENT. Each phase page says when skipping is reasonable.
+- **Re-enter freely.** A discovery mid-implementation or a scope change after integration routes back to PLAN and resumes at the right point, leaving finished work untouched.
+- **Existing project: start with onboarding.** Ask the agent to bring the project into superRA; [onboarding](skills/onboarding/SKILL.md) writes a task tree and [reproduction graph](#/04-utility-skills/09-reproducibility) for the work already done.

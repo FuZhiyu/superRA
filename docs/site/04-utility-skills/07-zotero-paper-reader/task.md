@@ -8,28 +8,29 @@ created: 2026-06-17
 
 ## Objective
 
-Ask a bare agent to "read Reis (2021) and cite it here" and it has no path to your library: it fetches whatever it can off the web (often the wrong version or a summary confabulated from the title) and invents a BibTeX key that does not match your `.bib`. The bad key compiles cleanly and only surfaces as a dangling reference at submission.
+This skill lets the agent read and cite papers from your own Zotero library, with the citekeys your `.bib` already uses. Without it, an agent asked to "read Reis (2021) and cite it" summarizes whatever version it finds on the web and invents a key that dangles at compile time.
 
-This skill drives your real Zotero library through the local Desktop API (no credentials, falls back to the Web API when Desktop is closed) and resolves citekeys from your **Better BibTeX** plugin, so emitted keys match your master `.bib`. Ask in plain language; the agent picks the command.
+## Set up Zotero once
 
-### Why Better BibTeX
+- **Keep Zotero Desktop running, with the local API on:** Settings → Advanced → "Allow other applications on this computer to communicate with Zotero." No credentials needed.
+- **Install [Better BibTeX](https://retorque.re/zotero-better-bibtex/)** for citation work. It gives each item one stable citekey (the `key` in `\cite{key}`), so keys the agent emits match your master `.bib`.
+  - Without it, citing still works through Zotero's built-in exporter, but its keys differ from Better BibTeX's, and the agent warns you that they may not match your `.bib`.
+- **Optional Web API fallback** when Desktop is closed: set `ZOTERO_LIBRARY_ID` and `ZOTERO_API_KEY` in your environment or in `Notes/.env`. Better BibTeX keys need Desktop, so citations made in Web mode always carry the mismatch warning.
 
-A **citekey** is the short label you cite a paper by — the `key` in `\cite{key}` — and every entry in your `.bib` file carries one. The problem is that Zotero's built-in export does not assign these keys stably: the same paper can come out as a different key on different exports, so the key the agent emits today may not be the key already sitting in your master `.bib`, and the mismatch only surfaces as a dangling reference when you build the document.
+When access breaks, ask the agent to run `health`: it tells apart Zotero not running, the local API disabled, and Better BibTeX missing.
 
-[Better BibTeX](https://retorque.re/zotero-better-bibtex/) is a Zotero plugin that fixes this by giving each item one deterministic citekey — the same `Author_Year` form every time. That stability is what lets the agent cite a paper and have the key line up with the entry already in your `.bib`. Install it and keep Zotero Desktop running for any citation work. Without it the skill still works but falls back to Zotero's built-in translator, and it warns you that the keys it emits may not match your master `.bib`.
+## Ask in plain language
 
-### Reading and citing
+| You say | The agent |
+|---|---|
+| "Read the Du-Tepper-Verdelhan paper from my Zotero and summarize the identification strategy." | Finds the paper, converts its PDF with [`mistral-pdf-to-markdown`](#/04-utility-skills/08-mistral-pdf-to-markdown) into `Notes/PaperInMarkdown/`, and reads it section by section |
+| "Add Fama-French 1993 to `refs.bib`." | Appends the entry, skipping it if that citekey is already there |
+| "Cite Fama-French 1993 in `paper.tex`." | Appends `\cite{key}` to the draft (`[@key]` in Markdown) and adds the entry to your `.bib` |
+| "Cite it at `[CITE-FF]`." | Replaces that placeholder instead of appending; stops with an error if the placeholder is not found |
+| "Format these three papers in Chicago for my reading list." | Renders formatted references in any CSL style (APA by default) |
+| "Find papers tagged `term-structure`." | Searches metadata, full text, collections, tags, or DOIs |
 
-**Read a paper.** "Read the Du-Tepper-Verdelhan paper from my Zotero and summarize the identification strategy." The agent searches metadata or full text, disambiguates if several match, converts the PDF via [`mistral-pdf-to-markdown`](skills/mistral-pdf-to-markdown/SKILL.md), saves it under `Notes/PaperInMarkdown/`, and reads in sections rather than dumping the whole conversion into context. Analysis is grounded in the converted text, not the title.
+- **Your `.bib` is only ever appended to.** Existing entries are never reordered or rewritten, so asking twice leaves one entry.
+- **Group libraries work too.** Name the group, and the agent targets it instead of My Library.
 
-**Add an entry to your `.bib`.** "Add Fama-French 1993 to `refs.bib`" looks the paper up in your library and appends its bibliography entry to the file you name. The append is deduplicated by citekey: if an entry with that key is already in the file it is skipped, and existing entries are never reordered or rewritten. That makes the command idempotent — running it twice on the same paper leaves exactly one entry, so you can re-ask freely without worrying about double-adding.
-
-**Cite into a draft.** "Cite Fama-French 1993 in `paper.tex`" does two things at once: it inserts the `\cite{key}` into the draft *and* syncs that entry into your `.bib`, so a citation never lands without its bibliography entry. By default the `\cite{}` is appended at the end of the draft. If instead you have left a placeholder where the citation should go — say you typed `[CITE-FF]` while drafting — tell the agent to drop it at that marker, and it replaces the placeholder in place rather than appending. (If the placeholder text is not found it stops with an error rather than guessing a spot, so a typo cannot bury the citation somewhere wrong.)
-
-**Export references without a draft.** The same path also exports plain BibTeX on its own, and renders formatted reference strings for a reading list or a response letter. The formatting follows a **CSL style** — Citation Style Language, the standard that defines how a reference reads in APA, Chicago, and the other journal formats — defaulting to APA and switchable to any style Zotero or Better BibTeX knows.
-
-**Query the library.** Ask "find papers tagged `term-structure`" or "what's the Zotero key for this DOI" — list collections and tags, build a DOI-to-key map, inspect a record and its attachments.
-
-When access breaks, the agent runs `health` to distinguish Zotero-not-running from local-API-disabled from BBT-missing. Local mode needs the local API enabled (Settings → Advanced → "Allow other applications on this computer to communicate with Zotero"); Web-API mode needs `ZOTERO_LIBRARY_ID` and `ZOTERO_API_KEY` from your environment or a gitignored `Notes/.env`.
-
-The full command surface, flags, JSON fields, and troubleshooting live in [`zotero-paper-reader`](skills/zotero-paper-reader/SKILL.md).
+Commands, flags, and JSON output are in [`zotero-paper-reader`](skills/zotero-paper-reader/SKILL.md).

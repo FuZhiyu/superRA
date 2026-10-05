@@ -8,15 +8,7 @@ created: 2026-06-11
 
 ## Objective
 
-A `task.md` is the unit you read and edit. Each task is a directory holding one. You touch three places by hand; the rest is structure the tooling and agents maintain.
-
-The frontmatter field set is closed: `title` (the name shown in the tree and dashboard), `status` (where the task sits in the cycle — you set it when you park or resume work, and the tooling rolls a parent's status up from its children; see [Status and the frontier](#/04-utility-skills/01-task-tree/03-status-and-frontier)), and `depends_on` (sibling directory names — the only prerequisites that decide readiness; files read from other tasks' reproduction steps are reported as inputs). Any other key is dropped the next time the tooling rewrites the file — custom metadata belongs in a body section.
-
-Below the frontmatter, each `## ` section is owned by one role so two agents never fight over the same prose: you write `## Objective` (the goal, plus optional `### Context`/`### Conventions`/`### Constraints` the subtree inherits), and the planner may add `## Details` (leads worth passing on — candidate files, data quirks, suggested routes — informative, never binding); the implementer writes `## Results` (findings and the evidence verifying them); the reviewer's `## Review Notes` appears only while findings are open.
-
-A task can also carry a `## Reproduction` section declaring the steps it owns, including when it has child tasks. Adding a child preserves those steps; task status and output freshness remain separate.
-
-A scoped leaf looks like this:
+Each task is a directory holding one `task.md`: three frontmatter fields, then body sections each written by one role. You read it to see a task's goal and outcome, and edit it to steer.
 
 ```
 ---
@@ -36,4 +28,24 @@ Drop observations before 2000 and require non-missing returns.
 - Retained 3.8 M of 4.7 M rows after applying filters.
 ```
 
-The full field-by-field contract — every key, each section's ownership and shape, context-inheritance rules, and the stale-content checklist — lives in [skills/task-tree/references/task-file-contract.md](skills/task-tree/references/task-file-contract.md).
+## Frontmatter: three fields, no others
+
+| Field | Holds |
+|---|---|
+| `title` | The name shown in the tree and dashboard. |
+| `status` | Where the task sits in its lifecycle; a parent's is rolled up from its children. See [Status and the frontier](#/04-utility-skills/01-task-tree/03-status-and-frontier). |
+| `depends_on` | Sibling directory names that must finish before this task is ready. |
+
+Any other key is dropped the next time the tooling rewrites the file; put custom metadata in a body section.
+
+## Body sections: one owner each
+
+| Section | Written by | Holds |
+|---|---|---|
+| `## Objective` | Planner; you review and can edit | The goal, plus optional `### Context`, `### Conventions`, `### Constraints` that every descendant task inherits. Binding. |
+| `## Details` | Planner, optional | Leads worth passing on: candidate files, data quirks, a suggested route. Informative, never binding. |
+| `## Reproduction` | Implementer | The [reproduction steps](#/04-utility-skills/09-reproducibility) the task owns. |
+| `## Results` | Implementer | Findings and the evidence behind them. |
+| `## Review Notes` | Reviewer | Open findings; present only while any remain. |
+
+Every field and section rule is in the [task-file contract](skills/task-tree/references/task-file-contract.md).

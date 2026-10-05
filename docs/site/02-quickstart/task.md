@@ -8,46 +8,38 @@ created: 2026-06-11
 
 ## Objective
 
-This tutorial walks you through installing superRA, pointing it at a project, and pushing one piece of work through a full PLAN → IMPLEMENT → INTEGRATE cycle: plan a small task tree, run a task and review it, watch progress and read results in the dashboard, and integrate the result.
+Install superRA, then take one study through PLAN → IMPLEMENT → INTEGRATE. Each step shows what to tell the agent and what you see on the dashboard. The running example is a public asset-pricing study: CAPM and the Fama-French three-factor model on Ken French's 25 size–book-to-market portfolios, with the Gibbons-Ross-Shanken (GRS) joint test of whether either model prices the cross-section.
 
-### Prerequisite
+### Before you start
 
-**git** is the one real prerequisite — as it is for any agentic coding workflow. Think of it as the rope in climbing: it lets you explore boldly, and it catches you when things go south. superRA is built around git, so use it.
+- **git.** superRA keeps all project state in your repo and commits as it works. Work on a branch: agents commit atomically, so a run produces many small commits.
+  - Optional: `git worktree` lets you run several fronts in parallel; [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) keeps non-git data in step across worktrees.
+- **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli).** This page uses Claude Code. On Codex only the install and the way you invoke agents differ; see the [Codex install notes](docs/README.codex.md).
+- **[`uv`](https://docs.astral.sh/uv/)**, to launch the dashboard.
 
-A branch-and-PR workflow is recommended but not required. To get the most out of superRA, `git worktree` lets you push on several fronts at once while an agent runs in the background; the [`worktree-data-sync`](#/04-utility-skills/06-worktree-data-sync) skill keeps non-git-controlled data in sync across those isolated worktrees.
+### Install, then onboard a project you already have
 
-superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)).
-
-You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard.
-
-The dashboard doubles as a launcher into your own machine: a task's `Open` button and any file link in a task body open in whatever application you already use for that file type, and a header button opens the task's file in the VS Code window already holding that worktree. Opened from another device, such as a phone, the same links show the file inside the dashboard. Convenient, but not required.
-
-### Install + set up a project
-
-Install the plugin into Claude Code as a marketplace, then restart your session:
+Install the plugin and restart your session:
 
 ```bash
 claude plugin marketplace add FuZhiyu/superRA
 claude plugin install superRA@superRA
 ```
 
-The quickest way to try superRA is to point it at work you already have. Start Claude Code in an existing project and ask:
+The fastest first run uses existing work. Start Claude Code in a project and ask:
 
 ```text
 Use superRA to onboard this project and show me the dashboard.
 ```
 
-The agent follows the [onboarding](skills/onboarding/SKILL.md) skill. It builds a task tree from the work already there and a reproduction graph of the scripts behind your results, then offers to set up git and to rerun the project in an isolated copy to confirm it reproduces. It stops after each stage for your approval, and it changes nothing outside `superRA/` until you agree.
+- The agent follows the [onboarding](skills/onboarding/SKILL.md) skill: it builds a task tree from the work already there and a reproduction graph of the scripts behind your results, then offers to set up git and to rerun the project in an isolated copy to confirm it reproduces.
+- It stops after each stage for your approval and changes nothing outside `superRA/` until you agree.
 
-The trigger is the word **`superra`**: with it in the prompt, the agents follow the workflow instead of improvising.
+Put the word **superRA** in a prompt to make the agent follow the workflow instead of improvising.
 
-### A typical workflow
+### Plan: review a task tree before any code
 
-The rest of this page walks one piece of work through all three phases. The example below is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section.
-
-#### Superplan
-
-Tell Claude what you want to work on in plain language and ask it to `superplan`. (Don't use your harness's built-in `plan` mode — in Claude Code or Codex it blocks the file writes the planner needs.)
+Describe the work in plain language and ask for `superplan`, not your harness's built-in plan mode:
 
 ```text
 Using superRA, superplan an asset-pricing study on public Ken French data:
@@ -56,34 +48,36 @@ Fama-French 3-factor model, and run the GRS joint test. Keep it to a handful
 of tasks.
 ```
 
-Claude loads the `superplan` skill, explores the project, and proposes a small **task tree** — here, three tasks under one root: build the panel, run the regressions and the GRS test, and write up the result. The task tree holds the project's state. Instead of keeping the plan in one agent's context window or a temporary plan file, superRA writes it as a committed tree of small `task.md` files — one directory per unit of work — that the agents read and write as they go. The state is plain files in git, so a fresh agent session, or you next week, can reopen the repo and see exactly what was planned, done, and left.
+- The planner explores the project and proposes a **task tree**: here, three tasks under one root — build the panel, run the regressions and the GRS test, write up the result.
+  - Each task is a committed `task.md` file, so a fresh session, or you next week, sees exactly what was planned, done, and left.
+- Decisions it cannot settle from the project come to you as rounds of questions, each with a recommended answer.
+- You read the proposed tree on the **dashboard**. Ask the agent to show it, or run from a project terminal:
 
-Decisions the planner cannot settle from the project come to you as rounds of questions, each with a recommended answer; before any code is written, it also shows you the proposed plan and waits. You read the task tree on the **dashboard** — ask the agent to show it, or launch it yourself from a project terminal:
+  ```bash
+  ./superRA/superra dashboard
+  ```
 
-```bash
-./superRA/superra dashboard
-```
-A live, auto-updating dashboard opens in your browser. The default **Tree** view shows the tree, with a colored status pill on each task.
+  - A live dashboard opens in your browser. The **Tree** view shows each task with a colored status pill; click one to read its objective.
+  - To change it, leave a comment on the dashboard and ask the agent to revise.
+  - In a browser on the same machine, a task's `Open` button and file links open files in your default app, and the header `VS Code` button opens the task file in the window holding that worktree.
 
-Here is this study right after planning — three tasks under one root, every one `not-started` (grey), so the root rolls up to `not-started` too. Open it and click a task to read the objective the planner wrote. Read the objectives and approve — or leave a comment on the dashboard and ask the agent to revise.
+[Open the freshly planned tree →](showcase-after-planning.html) Every task is `not-started` (grey), so the root rolls up to `not-started`.
 
-[Open the freshly-planned tree →](showcase-after-planning.html)
+### Implement: work a task with the agent, review when it pays
 
-#### Implement
-
-Now run a task. Ask Claude to work it:
+Ask the agent to work the tree:
 
 ```text
 Work @superRA/showcase-analysis.
 ```
 
-By default the main agent does the work itself, with you: it executes the task, records results in the task file, commits, and pauses often for your feedback. When a task lands it asks whether to run an independent review — now, deferred, or skipped — and recommends a depth and focus. For a broad, parallelizable, or context-heavy frontier, ask for `superimplement` (or accept the agent's recommendation of it) and the run goes **autonomous**: the main agent dispatches implementer and reviewer seats to subagents, which keeps its own context window clean so it stays sharp far longer.
+- **Interactive, by default.** The main agent works the task with you: it executes, records results in the task file, commits, and pauses often for your feedback.
+  - When a task lands, it asks whether to run an independent review now, defer it, or skip it, and recommends a depth and focus.
+  - The review is a separate agent reading the committed files, diff, and outputs, so it does not share the implementer's blind spots.
+- **Autonomous, on request.** Ask for `superimplement`, or accept the agent's recommendation of it for a broad, parallelizable, or context-heavy frontier. The main agent then dispatches implementer and reviewer subagents, which keeps its own context clean over a long run.
+- [IMPLEMENT](#/05-workflows/02-implement) covers when review earns its cost; the role protocols are in [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md).
 
-Either way, the work — here, building the monthly panel from the Ken French data — is recorded in the task's `## Results` section, and an independent review is a *separate* agent reading the committed result.
-
-That independence is the point. An agent reviewing its own work shares its own blind spots: drop half the sample, and it reports everything looks fine. A fresh reviewer reads the committed evidence — the files, the diff, the outputs — at a depth and focus named in the dispatch, and reports what it finds rather than filtering to what it judges serious. That is what catches the silent bad merge, the wrong aggregation, the unreproducible output. Review runs where it earns its cost: on a result you want a second read of, on work the planner flagged as high-stakes, or whenever the implementer comes back uncertain. The full role behavior is in the [implement-task](skills/implement-task/SKILL.md) and [review-task](skills/review-task/SKILL.md) skills.
-
-The implementer writes its findings straight into the task file, so the panel task's `## Results` reads like this:
+Results land in the task's `## Results`. The panel task reads:
 
 ```text
 ## Results
@@ -101,33 +95,32 @@ and is fresh in repro-lock.json.
   market volatility 4.46%/mo — so downstream regressions start from clean data.
 ```
 
-During implementation, agents commit atomically by default, so every step is tracked in git. Because that produces many small commits, it is recommended to work on a separate branch rather than directly on your default branch.
+[Open the study mid-implement →](showcase-mid-implement.html) The panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) with its review decision open, the writeup is `not-started` (grey), and the root has rolled up to `in-progress`.
 
-The dashboard shows the loop in flight. Open this study mid-run — the panel task is `approved` (green), the regression-and-GRS task is `implemented` (yellow) with its approval decision still open, the writeup is still `not-started` (grey), and the parent has rolled up to `in-progress`. Click the implemented task to see the results already written:
+### Read results on the dashboard as they land
 
-[Open the study mid-implement →](showcase-mid-implement.html)
+The dashboard updates as the agents work. When a task is approved, the agent picks up the next task whose dependencies are met; when every task is approved, the whole tree turns `approved` (green), ready for INTEGRATE.
 
-#### Watch progress and read results
+- [Open the finished study →](showcase-analysis-tree.html) Click any task to read its objective and the results the reviewer checked.
+- [Read the finished regression task →](showcase-analysis-tree.html#/02-analysis) It opens on its objective math and the results.
 
-The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out. As one task is approved, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task is approved, the whole tree is `approved` (green) — the state INTEGRATE picks up:
+The results live in committed task files such as `superRA/showcase-analysis/01-data/task.md`, not in the chat, so no session can lose them. [The Task File](#/04-utility-skills/01-task-tree/01-task-file) gives a task's field-by-field anatomy; [the dashboard page](#/04-utility-skills/01-task-tree/04-dashboard) covers comments and shareable snapshots.
 
-[Open the finished study →](showcase-analysis-tree.html)
+### See which results are current
 
-This is the completed tree, every task green. Click any task to read its objective and results in place — the same `## Objective` the implementer worked to, and the `## Results` it wrote and the reviewer checked. The regression-and-GRS task opens straight to its objective math and the results the implementer wrote and the reviewer checked:
-
-[Read the finished regression task →](showcase-analysis-tree.html#/02-analysis)
-
-Because the results live in committed task files rather than the chat, they are the durable handoff: nothing of value sits in a context window waiting to be lost. Each task is a plain markdown file (`superRA/showcase-analysis/01-data/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also lets you share a branch snapshot. The full field-by-field anatomy of a `task.md` is in [The Task File](#/04-utility-skills/01-task-tree/01-task-file).
-
-#### See which results are current
-
-Each task that produces results also declares the scripts that produce them, and superRA records what each script read and wrote at its last successful run. Switch the finished study to the **Graph** view (the switch at the top of the page) to see this reproduction graph: one card per script, called a *step*, and an arrow wherever one step reads a file another step writes.
+Each task declares the scripts that produce its results, and superRA records what each script read and wrote at its last successful run. Switch the finished study to the **Graph** view (the switch at the top of the page) to see this reproduction graph: one card per script, called a *step*, with an arrow wherever one step reads a file another writes.
 
 ![The showcase study in the Graph view: build-panel in the data task feeds estimate-test-plot in the analysis task, whose GRS results feed the check-grs-headline check; all three steps read fresh](attachments/showcase-graph.png)
 
 [Open the study's graph →](showcase-analysis-tree.html#/?repro=%7B%22expanded%22%3A%5B%2201-data%22%2C%2202-analysis%22%5D%2C%22layout%22%3A%22graph%22%7D)
 
-`build-panel` turns the committed Ken French CSVs into the panel, `estimate-test-plot` runs the regressions and the GRS test and draws the figures, and `check-grs-headline` fails if the headline GRS result stops holding. Each card's mark says whether its outputs still match the code and data that produced them, and all three read `fresh`. An edit to `01_build_panel.py`, even to a comment, turns `build-panel` and the two steps downstream of it `stale`. In your own dashboard, hovering a stale card shows which file changed, and each task and step card has a **Build** button that reruns the steps that are not fresh. The published pages here are snapshots, so they show the marks without the button.
+- **All three steps read `fresh`:** their outputs still match the code and data that produced them.
+  - `build-panel` turns the committed Ken French CSVs into the panel.
+  - `estimate-test-plot` runs the regressions and the GRS test and draws the figures.
+  - `check-grs-headline` fails if the headline GRS result stops holding.
+- **An edit to `01_build_panel.py`, even to a comment, turns `build-panel` and both downstream steps `stale`.**
+  - On your own dashboard, hover a stale card to see which file changed, and use a card's **Build** button to rerun the steps that are not fresh.
+  - The published pages here are snapshots: they show the marks without the button.
 
 Before an edit, ask the agent what it will touch:
 
@@ -137,45 +130,40 @@ Which results does an edit to 01_build_panel.py affect?
 
 Here the answer is all three steps. Nothing reruns until you or the agent asks for a build. [Reproducibility](#/04-utility-skills/09-reproducibility) explains how freshness is decided, what a build runs, and when the agent accepts a result instead of rerunning it.
 
-#### Superintegrate
+### Integrate: land the result safely
 
-The tasks are done and approved, but a correct result still has to be landed safely. The INTEGRATE phase folds the work into your codebase so the results stay reproducible and coherent over the long term. Trigger it the same way: ask Claude to `superintegrate`.
+Once the tasks are approved, ask the agent to `superintegrate`. INTEGRATE folds the work into your codebase so the results stay reproducible and coherent, in five stages:
 
-Superintegration consists of five stages, and each stage guards against a different way good work goes wrong after it is done:
+| Stage | What the agent does | What you decide |
+|---|---|---|
+| **Protect** | Proposes permanent documentation and task-tree consolidation | Which results to keep, and whether documentation alone or also a drift test protects each |
+| **Sync** | Folds in base-branch changes by their intent, never by a bare `git merge` | The target base, if not already recorded; any conflict that changes intent |
+| **Mature & Consolidate** | Writes the permanent record, matures the task tree, and drafts one temporary refactoring task | — |
+| **Integrate** | Executes and verifies the refactoring task | Approve the finished record and the refactoring task together |
+| **Finish** | Runs a final freshness check, then ships by PR or merge | — |
 
-1. **Protect** — review the agent’s proposed permanent documentation and task-tree consolidation, choose which provisional results to keep or drop, and decide whether documentation alone or an additional drift test should protect each kept result. The approved specification is committed for later agents and resumed sessions.
-2. **Sync** — when the base branch has moved (a coauthor pushed while you worked, say), fold those changes in **semantically**: superRA reads the intent behind each incoming change and reconciles it, rather than resolving conflicts line by line — never a bare `git merge`.
-3. **Mature & Consolidate** — one drafter creates the user-facing documentation and matures the task tree; one reviewer verifies that protected record and writes the temporary pruning-and-refactoring task.
-4. **Integrate** — let you review that task with the finished record, then execute and verify it.
-5. **Finish** — ship by PR or merge.
+[INTEGRATE](#/05-workflows/03-integrate) walks through each stage; the agent follows [superintegrate](skills/superintegrate/SKILL.md).
 
-The full phase is owned by [superintegrate](skills/superintegrate/SKILL.md).
+### Change the tree at any point
 
-#### Composable and iterative
-
-Research is rarely linear, and superRA does not force it to be. The phases form a cycle, not a one-way pipeline: a discovery mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving finished work untouched. The tree is a living structure you steer, not a plan you lock in up front.
-
-In practice that means you can edit the tree at any time, in plain language. Add a task to a tree that is already running:
+The phases form a cycle: a discovery mid-implementation, or a scope change after integration, routes back to planning and resumes at the right point, leaving finished work untouched. Edit the tree in plain language. Add a task to a running tree:
 
 ```text
 Using superplan, add a task under showcase-analysis for a robustness check
 on the post-2000 subsample, depending on the regression task.
 ```
 
-Revise a task's objective as your understanding shifts:
+Or revise a task's objective:
 
 ```text
 Using superplan, update the regression task to also report Newey-West
 standard errors.
 ```
 
-Or bring in work you have already done: the onboarding prompt at the top of this page builds its task tree and reproduction graph retroactively.
-
 ### Where to go next
 
-You have run a full cycle. Two further pieces of discipline each have a page — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on:
-
-- **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, academic writing, and more, and how a domain skill loads on top of any phase.
-- **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: result protection, semantic merge, the task-tree tooling, and others.
-
-For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. For lookups, the task-tree detail pages have the exact definitions: [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier). To open and click through the finished study this page walked you through — the live task tree with its regression tables, figures, and full review history — go to the [Showcase](#/07-showcase).
+- **[Domain Skills](#/03-domain-skills)** — the discipline superRA enforces for data analysis, theory, academic writing, and slides, on top of any phase.
+- **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow uses: result protection, semantic merge, the task-tree tooling, and others.
+- **[Workflows](#/05-workflows)** — each phase on its own: what it does for you and what you decide.
+- **Task-tree lookups** — [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier).
+- **[Showcase](#/07-showcase)** — the finished study with its regression tables, figures, and full review history.
