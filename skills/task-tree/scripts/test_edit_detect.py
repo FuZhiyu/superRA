@@ -61,6 +61,20 @@ def _bash(project: Path, command: str = HEREDOC, env: dict | None = None, **extr
     return json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
 
 
+def _seed_event(project: Path) -> None:
+    result = _hook(project, {"hook_event_name": "UserPromptSubmit", "prompt": "go"})
+    assert result.returncode == 0 and result.stdout.strip() == ""
+
+
+def _pre_bash(project: Path, command: str = HEREDOC, env: dict | None = None) -> None:
+    result = _hook(
+        project,
+        {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}},
+        env,
+    )
+    assert result.returncode == 0 and result.stdout.strip() == "" and result.stderr == ""
+
+
 STEPS = """
 ## Reproduction
 
@@ -146,15 +160,34 @@ class TestBashMadeEdits:
         os.utime(task_md, ns=(1, 1))
         assert _bash(project) == ""
 
-    def test_edit_in_a_sibling_worktree_is_found_through_the_command(self, tmp_path):
+    def test_first_edit_in_a_sibling_worktree_is_found_through_the_command(self, tmp_path):
+        """A worktree created mid-session has no baseline: the PreToolUse seed
+        takes one before the command runs, so its first edit is seen."""
         session = _checkout(tmp_path / "session")
+        _seed_event(session)
         sibling = tmp_path / "sibling"
         _git(session, "worktree", "add", "-q", "-b", "sibling", str(sibling))
         command = f"cd {sibling} && {HEREDOC}"
-        assert _bash(session, command) == ""
+        _pre_bash(session, command)
         _rewrite(sibling / "superRA" / "01-first" / "task.md", "in-progress", "approved")
         assert "Markdown edited" in _bash(session, command)
         assert "status: approved" in (sibling / "superRA" / "task.md").read_text(encoding="utf-8")
+
+    def test_payload_cwd_in_a_sibling_worktree_names_its_tree(self, tmp_path):
+        session = _checkout(tmp_path / "session")
+        sibling = tmp_path / "sibling"
+        _git(session, "worktree", "add", "-q", "-b", "sibling", str(sibling))
+        env = {"CLAUDE_PROJECT_DIR": str(session)}
+        _pre_bash(sibling, HEREDOC, env=env)
+        _rewrite(sibling / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+        assert "Markdown edited" in _bash(sibling, HEREDOC, env=env)
+        assert "status: approved" in (sibling / "superRA" / "task.md").read_text(encoding="utf-8")
+
+    def test_pre_tool_seed_keeps_an_existing_baseline(self, project):
+        assert _bash(project) == ""
+        _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+        _pre_bash(project)
+        assert "Markdown edited" in _bash(project)
 
     def test_a_foreign_checkout_is_left_alone(self, tmp_path):
         """Naming a path in another repository's checkout must not rewrite its
@@ -184,6 +217,63 @@ class TestBashMadeEdits:
         assert _dirty(foreign) == {"superRA/01-first/task.md"}
         assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
         assert not (foreign / _edit_detect.STATE_DIRNAME).exists()
+
+
+class TestUnfinishedMerge:
+    def test_conflicted_merge_validates_without_rewriting_parents(self, tmp_path):
+        session = _checkout(tmp_path / "session")
+        first = session / "superRA" / "01-first" / "task.md"
+        second = session / "superRA" / "02-second" / "task.md"
+        _git(session, "checkout", "-q", "-b", "other")
+        _rewrite(first, "in-progress", "approved")
+        _rewrite(second, "Do Second.", "Do Second, theirs.")
+        _git(session, "commit", "-qam", "other")
+        _git(session, "checkout", "-q", "-")
+        _rewrite(second, "Do Second.", "Do Second, ours.")
+        _git(session, "commit", "-qam", "ours")
+        assert _bash(session) == ""  # seeds
+        merge = subprocess.run(["git", "merge", "other"], cwd=session, capture_output=True, text=True)
+        assert merge.returncode != 0 and (session / ".git" / "MERGE_HEAD").exists()
+
+        context = _bash(session, "git merge other")
+        assert "validated only" in context
+        assert "status: in-progress" in (session / "superRA" / "task.md").read_text(encoding="utf-8")
+
+    def test_conflict_markers_alone_freeze_writes(self, project):
+        assert _bash(project) == ""
+        first = project / "superRA" / "01-first" / "task.md"
+        _rewrite(first, "in-progress", "approved")
+        first.write_text(
+            first.read_text(encoding="utf-8") + "\n<<<<<<< Updated upstream\na\n=======\nb\n>>>>>>> Stashed changes\n",
+            encoding="utf-8",
+        )
+        assert "validated only" in _bash(project)
+        assert "status: in-progress" in (project / "superRA" / "task.md").read_text(encoding="utf-8")
+
+
+class TestBoundedFeedback:
+    def test_many_integrity_issues_collapse_to_a_count(self, project):
+        from _task_validate import OUTPUT_CAP
+        assert _bash(project) == ""
+        for i in range(30):
+            _task(project / "superRA" / "01-first" / f"{i:02d}-child" / "task.md", f"Child {i}",
+                  "in-progress", "\n$$\na\n$$\n$$\nb\n$$\n")
+        context = _bash(project)
+        assert context.count("render-integrity issue in") == OUTPUT_CAP
+        assert f"{60 - OUTPUT_CAP} more render-integrity issue(s)" in context
+        assert "check_markdown.py" in context
+
+    def test_errors_are_listed_before_warnings_are_capped(self, project):
+        from _task_validate import OUTPUT_CAP
+        notes = "\n## Revision Notes\n\nleftover\n"
+        for i in range(OUTPUT_CAP + 2):
+            _task(project / "superRA" / f"{i + 10:02d}-done" / "task.md", f"Done {i}", "approved", notes)
+        _task(project / "superRA" / "99-broken" / "task.md", "Broken", "in-progress",
+              "\n## Reproduction\n\n```yaml\nsteps:\n  - cmd: echo\n```\n")
+        context = _bash(project, "mkdir -p superRA/99-broken/attachments")
+        assert "[ERROR]" in context
+        assert "more validation warning(s)" in context
+        assert "`superra task check --all`" in context
 
 
 class TestReproductionReminder:
@@ -263,11 +353,6 @@ def var_project(project):
     (project / "Code" / "est.jl").write_text("# est\n", encoding="utf-8")
     (project / "Code" / "lib" / "helper.jl").write_text("# helper\n", encoding="utf-8")
     return project
-
-
-def _seed_event(project: Path) -> None:
-    result = _hook(project, {"hook_event_name": "UserPromptSubmit", "prompt": "go"})
-    assert result.returncode == 0 and result.stdout.strip() == ""
 
 
 class TestEveryProducerEdit:

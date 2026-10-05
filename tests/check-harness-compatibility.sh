@@ -58,6 +58,10 @@ for harness, registry in (("Claude", claude_events), ("Codex", events)):
     agent_groups = [group for group in registry["PreToolUse"] if group.get("matcher") == "Agent"]
     assert len(agent_groups) == 1, f"{harness} must wire one PreToolUse(Agent) group"
     assert any("agent-model-guard" in hook["command"] for hook in agent_groups[0]["hooks"]), f"{harness} Agent group must run agent-model-guard"
+    assert any(
+        group.get("matcher") == "Bash" and any("task-hook" in h["command"] for h in group["hooks"])
+        for group in registry["PreToolUse"]
+    ), f"{harness} PreToolUse(Bash) must run task-hook to seed worktrees created mid-session"
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
 post_tool_groups = events["PostToolUse"]
 post_tool_matchers = {group.get("matcher", "") for group in post_tool_groups}

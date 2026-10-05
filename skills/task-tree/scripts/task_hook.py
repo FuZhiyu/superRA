@@ -22,8 +22,11 @@ files no step produces or reads (`_implemented_coverage_reminder`).
 It does not write the dashboard; a static dashboard is produced only on
 explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
 A UserPromptSubmit event only seeds the session's edit baseline, so an edit in
-the session's first tool call is still seen. A task.md edit reports validation
-warnings for the edited task only. Validation warnings and non-fatal reconcile failures are injected through
+the session's first tool call is still seen; a PreToolUse Bash event seeds only
+task trees with no baseline yet. A task.md edit reports validation warnings for
+the edited task only. During an unfinished merge, cherry-pick, revert, or
+rebase, or when an edited task.md has conflict markers, it validates without
+writing. Validation warnings and non-fatal reconcile failures are injected through
 PostToolUse JSON on stdout; successful/ignored paths stay silent except in
 Codex empty-JSON mode, where no-feedback paths emit `{}` because Codex
 requires parseable hook JSON.
@@ -43,9 +46,11 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import warnings
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -121,18 +126,26 @@ def _markdown_integrity_feedback(file_path: Path) -> list[str]:
         issues = md_integrity.check(text)
     except Exception:
         return []
-    if not issues:
-        return []
-    feedback = [
+    return [
         f"Markdown render-integrity issue in {file_path}:{it.line} "
         f"[{it.rule}] {it.message}"
         for it in issues
     ]
-    feedback.append(
+
+
+def _integrity_feedback(issues: list[str]) -> list[str]:
+    """Capped render-integrity issues across every changed file, then the fix pointer."""
+    if not issues:
+        return []
+    checker = _scripts_dir().parent.parent / "communicate" / "scripts" / "check_markdown.py"
+    return _capped(
+        issues,
+        f"{{n}} more render-integrity issue(s); `uv run --script {checker} <file>...` "
+        "lists every issue in the named files.",
+    ) + [
         "Load the `superRA:communicate` skill and its `references/markdown.md` "
         "for the correct form before fixing these."
-    )
-    return feedback
+    ]
 
 
 def _communicate_reminder(file_paths: list[Path]) -> list[str]:
@@ -537,8 +550,72 @@ def _exit_success(feedback: list[str] | None = None) -> None:
     sys.exit(0)
 
 
+# Present in the git dir while a merge, cherry-pick, revert, or rebase is unfinished.
+_GIT_OPERATION_MARKERS = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply")
+_CONFLICT_START_RE = re.compile(r"^<{7}(?: |$)", re.MULTILINE)
+_CONFLICT_END_RE = re.compile(r"^>{7}(?: |$)", re.MULTILINE)
+
+
+@lru_cache(maxsize=16)
+def _git_operation_in_progress(plan_root: Path) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--absolute-git-dir"],
+            cwd=str(plan_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    raw = result.stdout.strip()
+    if result.returncode != 0 or not raw:
+        return False
+    git_dir = Path(raw)
+    return any((git_dir / marker).exists() for marker in _GIT_OPERATION_MARKERS)
+
+
+def _has_conflict_markers(task_md: Path) -> bool:
+    try:
+        text = task_md.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return bool(_CONFLICT_START_RE.search(text) and _CONFLICT_END_RE.search(text))
+
+
+def _writes_frozen(plan_root: Path, task_paths: list[str] | None = None) -> bool:
+    """True while the tree's checkout is mid-merge/cherry-pick/revert/rebase, or
+    an edited task file carries conflict markers: the hook then validates only."""
+    if _git_operation_in_progress(plan_root.resolve()):
+        return True
+    return any(
+        _has_conflict_markers((plan_root / path if path else plan_root) / "task.md")
+        for path in task_paths or []
+    )
+
+
+def _frozen_note(plan_root: Path) -> str:
+    return (
+        f"{plan_root} is mid-merge, cherry-pick, revert, or rebase, or an edited task "
+        "file has conflict markers: validated only, no task file rewritten. Once "
+        "resolved, run `superra task status propagate`."
+    )
+
+
+def _capped(lines: list[str], more: str) -> list[str]:
+    """At most `OUTPUT_CAP` lines, then *more* with `{n}` set to the elided count."""
+    _ensure_scripts_on_path()
+    from _task_validate import OUTPUT_CAP
+    if len(lines) <= OUTPUT_CAP:
+        return lines
+    return lines[:OUTPUT_CAP] + [more.replace("{n}", str(len(lines) - OUTPUT_CAP))]
+
+
 def _reconcile(
-    plan_root: Path, task_path: str | None, scope: list[str] | None = None
+    plan_root: Path,
+    task_path: str | None,
+    scope: list[str] | None = None,
+    propagate: bool = True,
 ) -> list[str]:
     """Validate and propagate parent status for a plan tree.
 
@@ -547,11 +624,11 @@ def _reconcile(
     whose precise location is unknown), parent status is recomputed across the
     whole tree rather than along a single ancestor chain. `scope` (the edited
     task paths) limits the validation warnings to those tasks; None reports the
-    whole tree. The dashboard is not
-    regenerated here; it is produced only on explicit `superra dashboard export`.
+    whole tree. `propagate=False` validates without writing any task file.
+    The dashboard is not regenerated here; it is produced only on explicit
+    `superra dashboard export`.
     """
     global _RECONCILED
-    _RECONCILED = True
     _ensure_scripts_on_path()
     import _task_io as task_io
     import _task_validate as task_validate
@@ -559,20 +636,25 @@ def _reconcile(
 
     # Propagate parent status first so validation below describes the state
     # this run produced, not the pre-rollup tree. Best-effort, never fail.
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            propagation_warnings: list[str] = []
-            if task_path is None:
-                _propagate_whole_tree(task_io, plan_root, propagation_warnings)
-            else:
-                task_io.propagate_parent_status(
-                    plan_root, task_path, feedback=propagation_warnings
-                )
-        for w in propagation_warnings:
-            feedback.append(f"Status propagation warning in {plan_root}: {w}")
-    except Exception as exc:
-        feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
+    if propagate:
+        _RECONCILED = True
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                propagation_warnings: list[str] = []
+                if task_path is None:
+                    _propagate_whole_tree(task_io, plan_root, propagation_warnings)
+                else:
+                    task_io.propagate_parent_status(
+                        plan_root, task_path, feedback=propagation_warnings
+                    )
+            feedback.extend(_capped(
+                [f"Status propagation warning in {plan_root}: {w}" for w in propagation_warnings],
+                "{n} more status propagation warning(s) in " + str(plan_root)
+                + "; run `superra task check --category rollup --all` to see them.",
+            ))
+        except Exception as exc:
+            feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
 
     # Validate — collect warnings for model-visible JSON feedback.
     try:
@@ -589,14 +671,17 @@ def _reconcile(
                 validation_warnings = [w for w in validation_warnings
                                        if w.split(": ", 1)[0] in wanted]
                 findings = [f for f in findings if f.task_path in scope]
-            validation_warnings.extend(f.to_text() for f in findings)
-        for w in validation_warnings[:task_validate.OUTPUT_CAP]:
-            feedback.append(f"Validation warning in {plan_root}: {w}")
-        if len(validation_warnings) > task_validate.OUTPUT_CAP:
-            feedback.append(
-                f"{len(validation_warnings) - task_validate.OUTPUT_CAP} more validation "
-                f"warning(s) in {plan_root}; run `superra task check` to see them."
+            # Errors first, so the cap below never drops one behind a warning.
+            ordered = (
+                [f.to_text() for f in findings if f.severity == "error"]
+                + validation_warnings
+                + [f.to_text() for f in findings if f.severity != "error"]
             )
+        feedback.extend(_capped(
+            [f"Validation warning in {plan_root}: {w}" for w in ordered],
+            "{n} more validation warning(s) in " + str(plan_root)
+            + "; run `superra task check --all` to see them.",
+        ))
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 
@@ -786,14 +871,24 @@ def _bash_structural_feedback(data: dict) -> list[str]:
     # the generic reconcile) — those need a human decision, never a silent guess.
     rewire_feedback: list[str] = []
     rename = _detect_same_parent_rename(command, cwd, task_io)
+    if rename is not None and _writes_frozen(rename[0]):
+        rename = None  # validated below like any other structural change
     if rename is not None:
         parent_dir, old_slug, new_slug = rename
         try:
             updated = task_io.cascade_depends_on_rename(parent_dir, old_slug, new_slug)
             if updated:
+                from _task_validate import OUTPUT_CAP
+                names = sorted(updated)
+                listed = ", ".join(names[:OUTPUT_CAP])
+                if len(names) > OUTPUT_CAP:
+                    listed += (
+                        f", and {len(names) - OUTPUT_CAP} more "
+                        f"(`git status --short {parent_dir}` lists them)"
+                    )
                 rewire_feedback.append(
                     f"Auto-rewired depends_on '{old_slug}' -> '{new_slug}' in "
-                    f"sibling task(s): {', '.join(sorted(updated))}."
+                    f"sibling task(s): {listed}."
                 )
         except Exception as exc:
             rewire_feedback.append(
@@ -853,7 +948,10 @@ def _bash_structural_feedback(data: dict) -> list[str]:
     for plan_root in plan_roots:
         if not (plan_root / "task.md").exists() and not plan_root.is_dir():
             continue
-        feedback.extend(_reconcile(plan_root, task_path=None))
+        frozen = _writes_frozen(plan_root)
+        if frozen:
+            feedback.append(_frozen_note(plan_root))
+        feedback.extend(_reconcile(plan_root, task_path=None, propagate=not frozen))
 
     return feedback
 
@@ -947,7 +1045,9 @@ def _repro_watch(plan_root: Path) -> tuple[list[str], list[list]]:
     return files, [[path, suffix] for path, suffix in dirs.items()]
 
 
-def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[Path]:
+def _detected_paths(
+    data: dict, tool_name: str, tool_paths: list[Path], seed_only: bool = False
+) -> list[Path]:
     """Watched files changed on disk since this session's baseline. Fails open."""
     try:
         _ensure_scripts_on_path()
@@ -970,8 +1070,14 @@ def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[
                 watch[root] = _repro_watch(root)
             return watch[root]
 
+        # The payload cwd also names a root: an agent that `cd`-ed into a sibling
+        # worktree edits it by relative path. A foreign one is dropped.
+        payload_cwd = data.get("cwd")
         for plan_root in _edit_detect.plan_roots(
-            anchor, tool_paths, command if isinstance(command, str) else ""
+            anchor,
+            tool_paths,
+            command if isinstance(command, str) else "",
+            [Path(payload_cwd)] if isinstance(payload_cwd, str) and payload_cwd else [],
         ):
             try:
                 changed.extend(
@@ -981,6 +1087,7 @@ def _detected_paths(data: dict, tool_name: str, tool_paths: list[Path]) -> list[
                         lambda root=plan_root: watched(root)[0],
                         lambda root=plan_root: watched(root)[1],
                         _CREATED,
+                        seed_only=seed_only,
                     )
                 )
             except Exception:
@@ -1000,6 +1107,7 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
     """
     feedback: list[str] = list(_communicate_reminder(file_paths))
     integrity: list[str] = []
+    implemented: list[str] = []
     task_edits: dict[Path, tuple[Path, list[str]]] = {}
 
     for file_path in file_paths:
@@ -1011,6 +1119,9 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
         task_edits.setdefault(plan_root.resolve(), (plan_root, []))[1].append(task_path)
 
     for plan_root, task_paths in task_edits.values():
+        frozen = _writes_frozen(plan_root, task_paths)
+        if frozen:
+            feedback.append(_frozen_note(plan_root))
         # One edited task reconciles along its ancestor chain; several recompute
         # the whole tree once.
         feedback.extend(
@@ -1018,13 +1129,19 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
                 plan_root,
                 task_path=task_paths[0] if len(task_paths) == 1 else None,
                 scope=task_paths,
+                propagate=not frozen,
             )
         )
         for task_path in task_paths:
             _clear_reproduction_markers_for_task(plan_root, task_path)
-            feedback.extend(_implemented_coverage_reminder(plan_root, task_path))
+            implemented.extend(_implemented_coverage_reminder(plan_root, task_path))
 
-    feedback.extend(integrity)
+    feedback.extend(_capped(
+        implemented,
+        "{n} more task(s) reached implemented with uncovered results; run "
+        "`superra task check --category reproduction --all` to see them.",
+    ))
+    feedback.extend(_integrity_feedback(integrity))
     feedback.extend(_reproduction_reminder(data, file_paths))
     return feedback
 
@@ -1054,6 +1171,14 @@ def main() -> None:
         data = {}
 
     tool_name = data.get("tool_name", "") or data.get("tool", "")
+    if data.get("hook_event_name") == "PreToolUse":
+        # Seed any task tree this command reaches that has no baseline yet — a
+        # worktree created mid-session — so its first Bash edit is still seen.
+        if tool_name == "Bash":
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                _detected_paths(data, tool_name, [], seed_only=True)
+        _exit_success()
     if data.get("hook_event_name") == "UserPromptSubmit":
         # Seed the session's edit baseline so the first tool call is compared
         # against it; never reports.

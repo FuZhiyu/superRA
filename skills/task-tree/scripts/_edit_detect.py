@@ -100,11 +100,13 @@ def _plan_root_above(start: Path) -> Path | None:
         current = current.parent
 
 
-def plan_roots(cwd: Path, tool_paths: Iterable[Path], command: str) -> list[Path]:
-    """Task roots to check: the session cwd's, the tool-supplied paths', and
-    those of absolute paths the command names (an agent working in a sibling
-    worktree addresses it by absolute path). The command is read only to learn
-    where to look, never what changed.
+def plan_roots(
+    cwd: Path, tool_paths: Iterable[Path], command: str, dirs: Iterable[Path] = ()
+) -> list[Path]:
+    """Task roots to check: the session cwd's, the tool-supplied paths', those
+    of `dirs`, and those of absolute paths the command names (an agent working
+    in a sibling worktree addresses it by absolute path). The command is read
+    only to learn where to look, never what changed.
 
     A root in a foreign checkout is dropped: detection leads to a reconcile, and
     a session must not rewrite task files in a checkout it was not pointed at.
@@ -114,6 +116,7 @@ def plan_roots(cwd: Path, tool_paths: Iterable[Path], command: str) -> list[Path
     """
     starts: list[Path] = [cwd]
     starts.extend(p.parent for p in tool_paths)
+    starts.extend(dirs)
     for match in list(_ABS_PATH_RE.finditer(command))[:_MAX_PATH_HINTS]:
         hinted = Path(match.group(1))
         while not hinted.exists() and hinted.parent != hinted:
@@ -235,10 +238,12 @@ def detect(
     extra_files: Callable[[], list[str]],
     watch_dirs: Callable[[], list[list]] | None = None,
     created: set[str] | None = None,
+    seed_only: bool = False,
 ) -> list[Path]:
     """Files under watch whose content changed since this session's baseline.
 
-    The first call of a session seeds the baseline and reports nothing.
+    The first call of a session seeds the baseline and reports nothing;
+    `seed_only` leaves an existing baseline untouched.
     `extra_files` supplies the watched files outside the task root (reproduction
     deps); it is called only when no cached list exists or a `task.md` or
     `config.yaml` changed, since only those can alter the list. A file newly
@@ -252,11 +257,13 @@ def detect(
     that did not exist in the previous baseline.
     """
     plan_root = plan_root.resolve()
+    baseline_dir = plan_root.parent / STATE_DIRNAME / BASELINE_SUBDIR
+    state_path = baseline_dir / f"{session_key}.json"
+    if seed_only and state_path.exists():
+        return []
     tree = _tree_files(plan_root)
     if tree is None:
         return []
-    baseline_dir = plan_root.parent / STATE_DIRNAME / BASELINE_SUBDIR
-    state_path = baseline_dir / f"{session_key}.json"
     old = _load(state_path)
     seeding = old is None
     old_files: dict = {} if seeding else old["files"]
