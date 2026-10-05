@@ -16,7 +16,7 @@ Frameworks such as [Superpowers](https://github.com/obra/superpowers) target sof
 
 ## What you get
 
-- **[A dashboard for the whole project.](http://fuzhiyu.me/superRA/#/04-utility-skills/01-task-tree/04-dashboard)**
+- **[A dashboard for the whole project.](http://fuzhiyu.me/superRA/#/04-utility-skills/01-task-tree)**
   - **Persistent history.** Each task's objective, decisions, results, and reviews are committed files. Any session or coauthor resumes from them; one exported HTML file shares them.
   - **Task management.** A task tree with status, dependencies, and what is ready next. Pin a comment to a task to steer it.
   - **The project's stage at a glance.** Status rolls up the tree: planned, in progress, awaiting your call, done.

@@ -115,4 +115,4 @@ The agent runs these; you can run them through `./superRA/superra` to inspect or
 ./superRA/superra repro accept showcase-analysis/01-data --reason 'Comment-only edit; diff reviewed'
 ```
 
-The [dashboard](#/04-utility-skills/01-task-tree/04-dashboard) graph view shows each step's state and last run. Flags are in [commands.md](skills/task-tree/references/commands.md#reproduction); when to register, rerun, or accept a step is in the [reproducibility skill](skills/reproducibility/SKILL.md).
+The [dashboard](#/04-utility-skills/01-task-tree) graph view shows each step's state and last run. Flags are in [commands.md](skills/task-tree/references/commands.md#reproduction); when to register, rerun, or accept a step is in the [reproducibility skill](skills/reproducibility/SKILL.md).

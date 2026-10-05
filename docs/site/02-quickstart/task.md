@@ -117,7 +117,7 @@ This is the completed tree, every task green. Click any task to read its objecti
 
 [Read the finished regression task →](showcase-analysis-tree.html#/02-analysis)
 
-Because the results live in committed task files rather than the chat, they are the durable handoff: nothing of value sits in a context window waiting to be lost. Each task is a plain markdown file (`superRA/showcase-analysis/01-data/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The dashboard also lets you [share a branch snapshot](#/04-utility-skills/01-task-tree/04-dashboard). The full field-by-field anatomy of a `task.md` is in [The Task File](#/04-utility-skills/01-task-tree/01-task-file).
+Because the results live in committed task files rather than the chat, they are the durable handoff: nothing of value sits in a context window waiting to be lost. Each task is a plain markdown file (`superRA/showcase-analysis/01-data/task.md`) you can open or edit directly, but the dashboard is the intended way to read it. The [task-tree page](#/04-utility-skills/01-task-tree) covers the anatomy of a `task.md`, the rest of the dashboard, and sharing a branch snapshot.
 
 #### See which results are current
 
@@ -173,9 +173,13 @@ Or bring in work you have already done: the onboarding prompt at the top of this
 
 ### Where to go next
 
-You have run a full cycle. Two further pieces of discipline each have a page — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on:
+You have run a full cycle. Start with the infrastructure everything above rests on:
+
+- **[The task tree](#/04-utility-skills/01-task-tree)** — how tasks, task files, and companion files are organized, what each status means, how to read and steer the dashboard, and how the reproduction graph tells you which results are current.
+
+Two further pieces of discipline each have a page — the domain skill that enforces the right protocol for each kind of research, and the utility skills the workflow leans on:
 
 - **[Domain Skills](#/03-domain-skills)** — what discipline superRA enforces for data analysis, theory, academic writing, and more, and how a domain skill loads on top of any phase.
-- **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: result protection, semantic merge, the task-tree tooling, and others.
+- **[Utility Skills](#/04-utility-skills)** — the domain-neutral tools the workflow reaches for: reproducibility, result protection, semantic merge, and others.
 
-For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. For lookups, the task-tree detail pages have the exact definitions: [task-file fields](#/04-utility-skills/01-task-tree/01-task-file), [CLI commands](#/04-utility-skills/01-task-tree/02-cli-commands), and the [status lifecycle](#/04-utility-skills/01-task-tree/03-status-and-frontier). To open and click through the finished study this page walked you through — the live task tree with its regression tables and figures — go to the [Showcase](#/07-showcase).
+For more on the three phases — what each does for you and what you decide along the way — see the [Workflows](#/05-workflows) section. To open and click through the finished study this page walked you through — the live task tree with its regression tables and figures — go to the [Showcase](#/07-showcase).

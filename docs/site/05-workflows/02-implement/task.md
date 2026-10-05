@@ -6,7 +6,7 @@ depends_on:  []
 
 ## Objective
 
-IMPLEMENT works through the **frontier** — every task whose dependencies are satisfied — and records each result in its `task.md` as it lands. By default the agent does the work itself, with you; on request it runs autonomously. Watch progress on the [dashboard](#/04-utility-skills/01-task-tree/04-dashboard) rather than in the chat.
+IMPLEMENT works through the **frontier** — every task whose dependencies are satisfied — and records each result in its `task.md` as it lands. By default the agent does the work itself, with you; on request it runs autonomously. Watch progress on the [dashboard](#/04-utility-skills/01-task-tree) rather than in the chat.
 
 ## Work a task together (default)
 
@@ -19,7 +19,7 @@ Work @superRA/showcase-analysis/01-data.
 The agent co-edits the task file with you, executes it, checks its own work, commits, and pauses often for feedback. This is **interactive mode** (`direct` is an alias), owned by [interactive-mode.md](skills/using-superra/references/interactive-mode.md).
 
 - **Your edit is the instruction.** Edit the task file alongside the agent and it applies the change without asking again; a passing remark in chat that would change scope gets confirmed first.
-- **Explore first, write up after.** Say "write up what I just did" and the agent records the work as a task: results first, then `approved` if verified or `implemented` if review is still open. Exploratory scripts and figures go in the task's [`attachments/`](#/04-utility-skills/01-task-tree/01-task-file).
+- **Explore first, write up after.** Say "write up what I just did" and the agent records the work as a task: results first, then `approved` if verified or `implemented` if review is still open. Exploratory scripts and figures go in the task's [`attachments/`](#/04-utility-skills/01-task-tree).
 
 ## Choose review per task
 
