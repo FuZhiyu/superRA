@@ -10,7 +10,7 @@ Load before planning, creating, reviewing, integrating, or maturing any file kep
 
 ## Place
 
-Every retained companion goes in `attachments/`; only `task.md` and child-task directories occupy the task directory itself. A directory containing `task.md` is a subtask; `attachments/` is an asset container even when a generated bundle inside it contains a file named `task.md`. Companion files are not task-tree, dependency, status-rollup, frontier, or Kanban nodes.
+Every retained companion goes in `attachments/`; only `task.md` and child-task directories occupy the task directory itself. A directory containing `task.md` is a subtask; `attachments/` is an asset container even when a generated bundle inside it contains a file named `task.md`. Companion files are not task-tree, dependency, status-rollup, or frontier nodes.
 
 ## Record and Reproduce
 

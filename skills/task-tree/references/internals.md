@@ -128,7 +128,7 @@ The reproduction YAML subset ([contract](task-file-contract.md#the-yaml-subset))
 
 **Lenient parse, strict check.** `parse_task()` warns on an invalid status enum and preserves the raw value (never crashes a tree walk). `task check` (`check_status_validity`) reports an invalid enum as `[ERROR]`.
 
-**Codex / Cursor coverage.** Codex shell interception is incomplete — `Bash` coverage is best-effort, not an enforcement boundary. Cursor does not wire `task_hook.py`.
+**Codex coverage.** Codex shell interception is incomplete — `Bash` coverage is best-effort, not an enforcement boundary.
 
 ## Migration: `plan_migrate.py`
 
