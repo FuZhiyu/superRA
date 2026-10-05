@@ -125,6 +125,19 @@ expect 'asks on git -C into a foreign task-tree checkout' ask "$out"
 out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "git --git-dir=$victim/.git --work-tree=$victim commit -am wip")")
 expect 'asks on git --git-dir/--work-tree into a foreign task-tree checkout' ask "$out"
 
+# A `..` climbs out of the session checkout while the lexical path still starts under it.
+out=$(run_hook "$GUARD" "$session" Edit "$(edit_payload "$session/../victim/superRA/escaped-task/task.md" '(empty)' 'x')")
+expect 'asks on an Edit reaching a foreign task.md through ..' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" apply_patch "$(bash_payload "$(printf '*** Begin Patch\n*** Update File: ../victim/superRA/escaped-task/task.md\n@@\n-(empty)\n+x\n*** End Patch\n')")")
+expect 'asks on an apply_patch reaching a foreign task.md through ..' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "git -C ../victim commit -am wip")")
+expect 'asks on git -C .. into a foreign task-tree checkout' ask "$out"
+
+out=$(run_hook "$GUARD" "$session" Bash "$(bash_payload "cd $session/../victim && git commit -am wip")")
+expect 'asks on a git commit redirected by cd through ..' ask "$out"
+
 out=$(run_hook "$GUARD" "$TMPROOT/nowhere" Edit "$(edit_payload "$victim_task" '(empty)' 'x')")
 expect 'asks on a foreign task.md write from a session with no repository' ask "$out"
 
@@ -140,6 +153,9 @@ assert 'the victim checkout keeps its in-flight diff uncommitted' \
 
 out=$(run_hook "$GUARD" "$session" Edit "$(edit_payload "$session/superRA/own-task/task.md" '(empty)' 'Real results.')")
 expect 'permits an Edit of the session own task tree' allow "$out"
+
+out=$(run_hook "$GUARD" "$session" Edit "$(edit_payload "$victim/../session/superRA/own-task/task.md" '(empty)' 'Real results.')")
+expect 'permits an Edit of the session own task tree reached through ..' allow "$out"
 
 worktree="$TMPROOT/worktrees/parallel"
 (cd "$session" && $GIT worktree add -q -b parallel "$worktree") >/dev/null 2>&1
