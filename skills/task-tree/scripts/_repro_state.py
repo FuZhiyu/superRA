@@ -1464,6 +1464,10 @@ def unread_file_lines(rows: list[tuple], command: str, then: Iterable[str] = ())
     return out
 
 
+STALE_RULE = ("decide build, accept, or leave-and-report by the stale rule "
+              "(superRA:reproducibility references/rerun-or-accept.md)")
+
+
 def repro_command(verb: str, targets: Iterable[str], *flags: str) -> str:
     """A `superra repro` command line for *targets*, as a capped list's count line names it."""
     return " ".join(["superra repro", verb, *(shlex.quote(t) for t in (list(targets) or ["."])), *flags])
@@ -1573,7 +1577,9 @@ def format_status(report: StatusReport) -> str:
     stale = {e.step.name for e in entries if e.status != "fresh"}
     pointed = [t for t in (report.targets or ["."]) if stale & set(select_steps(report.graph, [t])[0])]
     if pointed:
-        lines.append("Why not fresh: " + capped_join([f"superra repro explain {shlex.quote(t)}" for t in pointed], command))
+        lines.append(f"Not fresh — before building, {STALE_RULE}:")
+        lines.append(f"  cost `{repro_command('build', pointed[:OUTPUT_CAP], '--dry-run')}`; cause "
+                     + capped_join([f"`superra repro explain {shlex.quote(t)}`" for t in pointed], command))
     return "\n".join(lines)
 
 

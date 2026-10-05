@@ -321,7 +321,7 @@ def test_default_status_and_build_output_stays_within_the_cap(tmp_path, capsys):
     chain.write("Code/seed.sh", "mkdir -p output\necho changed > output/s01.txt\n")
     assert chain.run("status", "02-end") == 3
     text = capsys.readouterr().out
-    assert len(text.strip().splitlines()) <= OUTPUT_CAP + 6
+    assert len(text.strip().splitlines()) <= OUTPUT_CAP + 7  # + the stale-rule decision lines
     assert f"{length - 1} producer(s) behind them: {length - 1} stale" in text
     assert re.search(r"~ s01\s+stale\s+dependency Code/seed.sh changed", text)  # where staleness starts, first
     assert (f"  … and {length - 1 - OUTPUT_CAP} more producer(s) not fresh; "

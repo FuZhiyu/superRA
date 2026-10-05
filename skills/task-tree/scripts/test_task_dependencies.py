@@ -63,7 +63,8 @@ def test_file_edge_informs_but_never_gates_readiness(tmp_path):
     assert item["consumers"] == ["a-consumer#consumer", "a-consumer#second"]
     human = run(root, "task", "frontier").stdout
     assert ("input data.txt from z-source#source: missing (never built) — not blocking; "
-            "rebuild before relying on it: superra repro build a-consumer") in human
+            "decide before relying on it") in human
+    assert "by the stale rule" in human and "superra repro build <task> --dry-run" in human
     current = read(root, "a-consumer")
     assert current["dependencies"] == [] and current["readiness"]["ready"] is True
     assert current["readiness"]["inputs"][0]["file"] == "data.txt"

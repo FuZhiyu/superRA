@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_snapshot import format_input, frontier_rows
+from _task_snapshot import format_input, frontier_rows, input_footer
 from _repro import Graph, build_graph
 from _task_io import (
     TASK_ROOT_DIRNAME,
@@ -274,6 +274,8 @@ def main(argv: list[str] | None = None) -> None:
                     print(f"    {format_input(item)}")
             if not rows:
                 print("No tasks on the frontier (all approved, blocked, or parked).")
+            elif any(row["inputs"] for row in rows):
+                print(input_footer())
         errors = sum(f.severity == "error" and f.category == "reproduction" for f in graph.findings)
         if errors:
             print(f"Note: {errors} reproduction error(s) leave file inputs unknown; "

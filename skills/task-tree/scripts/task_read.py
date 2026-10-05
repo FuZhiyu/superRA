@@ -5,13 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
 from _repro import REPRO_SECTION, build_graph
-from _task_snapshot import CURRENT, format_input, input_producers, step_states, task_inputs
+from _task_snapshot import CURRENT, format_input, input_footer, input_producers, step_states, task_inputs
 from _task_io import (
     Task,
     autodetect_plan_root,
@@ -353,6 +354,7 @@ def render_human(
             parts.append("")
             parts.append("=== Inputs Not Fresh ===\n")
             parts.extend(f"- {format_input(row)}" for row in pending)
+            parts.append(input_footer(shlex.quote(target_task.path or ".")))
         if current:
             parts.append(f"{current} {'other ' if pending else ''}input(s) fresh")
 

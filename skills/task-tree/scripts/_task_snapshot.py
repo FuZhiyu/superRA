@@ -4,10 +4,11 @@ from __future__ import annotations
 import sys
 
 from _repro import build_graph
+from _repro_state import STALE_RULE
 from _task_dependencies import task_index
 from _task_io import walk_plan
 
-INPUT_NOTE = "not blocking; rebuild before relying on it"
+INPUT_NOTE = "not blocking; decide before relying on it"
 CURRENT = {"fresh", "saved", "unverified"}  # a build never runs an unverified producer
 
 
@@ -107,8 +108,14 @@ def format_input(row):
     if row["reason"] and row["reason"] != row["state"]:
         line += f" ({row['reason']})"
     if row["state"] not in CURRENT:
-        line += f" — {INPUT_NOTE}" + (f": {row['build']}" if row["build"] else "")
+        line += f" — {INPUT_NOTE}"
     return line
+
+
+def input_footer(task="<task>"):
+    """The one decision line under a list of inputs that are not fresh."""
+    return (f"Before building on them, {STALE_RULE}: cost `superra repro build {task} --dry-run`, "
+            f"cause `superra repro explain {task}`.")
 
 
 def frontier_rows(graph, plan_root):
