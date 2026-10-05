@@ -23,7 +23,7 @@ Mode determines the loaded references and therefore the authority grant. Do not 
 - `SKILL.md` owns unconditional principles, mode routing, before-start discipline, project-convention categories, and workflow coupling.
 - `references/review.md` owns review-mode workflow and fix tiers.
 - `references/polish.md` owns polish-mode input shapes, triage, edit/propose/ask behavior, and intent-comment handling.
-- `references/draft.md` owns draft-mode input gathering, structure-first drafting, and draft intent comments.
+- `references/draft.md` owns draft-mode input gathering and structure-first drafting.
 - `references/style.md` owns sentence- and paragraph-level style heuristics.
 - `references/structure.md` owns structure-level heuristics and is loaded only when drafting or authorized restructuring is in scope.
 - `references/consistency/*.md` owns dimension-specific review checks and output details.
