@@ -109,6 +109,8 @@ The dashboard shows the loop in flight. Open this study mid-run — the panel ta
 
 The dashboard auto-updates in real time as the agents work, so it is the default way to both watch the run and read what came out. As each task lands, the next one becomes ready: the agent picks up the next task whose dependencies are satisfied, and you watch the order unfold on the dashboard. Once every task is approved, the whole tree is `approved` (green) — the state INTEGRATE picks up:
 
+![The live Tree view mid-study: the data task approved, the analysis task implemented with its review decision open, the writeup in progress, and the analysis task's objective with its math in the reading pane. Each row counts its build steps by state.](attachments/showcase-tree.webp)
+
 [Open the finished study →](showcase-analysis-tree.html)
 
 This is the completed tree, every task green. Click any task to read its objective and results in place — the same `## Objective` the implementer worked to, and the `## Results` it wrote and the reviewer checked. The regression-and-GRS task opens straight to its objective math and the results the implementer wrote and the reviewer checked:
@@ -121,19 +123,19 @@ Because the results live in committed task files rather than the chat, they are 
 
 Each task that produces results also declares the scripts that produce them, and superRA records what each script read and wrote at its last successful run. Switch the finished study to the **Graph** view (the switch at the top of the page) to see this reproduction graph: one card per script, called a *step*, and an arrow wherever one step reads a file another step writes.
 
-![The showcase study in the Graph view: build-panel in the data task feeds estimate-test-plot in the analysis task, whose GRS results feed the check-grs-headline check; all three steps read fresh](attachments/showcase-graph.png)
+![The live Graph view after an edit to 02_analysis.py: build-panel reads fresh, estimate-test-plot reads stale with a hover card naming the changed file, and check-grs-headline reads stale through it. Task and step cards carry Build buttons; the analysis task's figures fill the reading pane.](attachments/showcase-graph.webp)
 
 [Open the study's graph →](showcase-analysis-tree.html#/?repro=%7B%22expanded%22%3A%5B%2201-data%22%2C%2202-analysis%22%5D%2C%22layout%22%3A%22graph%22%7D)
 
-`build-panel` turns the committed Ken French CSVs into the panel, `estimate-test-plot` runs the regressions and the GRS test and draws the figures, and `check-grs-headline` fails if the headline GRS result stops holding. Each card's mark says whether its outputs still match the code and data that produced them, and all three read `fresh`. An edit to `01_build_panel.py`, even to a comment, turns `build-panel` and the two steps downstream of it `stale`. In your own dashboard, hovering a stale card shows which file changed, and each task and step card has a **Build** button that reruns the steps that are not fresh. The published pages here are snapshots, so they show the marks without the button.
+`build-panel` turns the committed Ken French CSVs into the panel, `estimate-test-plot` runs the regressions and the GRS test and draws the figures, and `check-grs-headline` fails if the headline GRS result stops holding. Each card's mark says whether its outputs still match the code and data that produced them. An edit to `02_analysis.py`, even to a comment, turns `estimate-test-plot` stale and `check-grs-headline` stale through it, while `build-panel` stays fresh. In your own dashboard, hovering a stale card shows which file changed, and each task and step card has a **Build** button that reruns the steps that are not fresh. The published pages here are snapshots of the finished study: every step reads `fresh`, and there is no Build button.
 
 Before an edit, ask the agent what it will touch:
 
 ```text
-Which results does an edit to 01_build_panel.py affect?
+Which results does an edit to 02_analysis.py affect?
 ```
 
-Here the answer is all three steps. Nothing reruns until you or the agent asks for a build. [Reproducibility](#/04-utility-skills/09-reproducibility) explains how freshness is decided, what a build runs, and when the agent accepts a result instead of rerunning it.
+Here the answer is `estimate-test-plot` and `check-grs-headline`. Nothing reruns until you or the agent asks for a build. [Reproducibility](#/04-utility-skills/09-reproducibility) explains how freshness is decided, what a build runs, and when the agent accepts a result instead of rerunning it.
 
 #### Superintegrate
 
