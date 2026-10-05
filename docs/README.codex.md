@@ -57,19 +57,10 @@ The Codex hook list should include `autoload-superra`, `agent-model-guard`,
 
 ## Hook Coverage
 
-Codex does not expose the same hook events as Claude Code, so the Codex hook set
-uses Codex-native events. Runtime-specific coverage limits are documented per hook:
+What each hook does, and which run on Codex, is on the [hooks page](site/06-hooks/task.md). Codex uses its own events (`hooks/hooks-codex.json`), with these limits:
 
-| Hook | Codex event | Notes |
-|------|-------------|-------|
-| `autoload-superra` | `UserPromptSubmit` | Injects a reminder to load `superRA:using-superra` on superRA prompts. |
-| `agent-model-guard` | `PreToolUse` on `Agent` | Rejects generic dispatches unless their raw call explicitly sets both `model` and `reasoning_effort`. Codex CLI 0.147.0 starts `spawn_agent` without emitting this event, so that runtime cannot enforce the gate; deterministic manifest tests still protect the documented hook contract. |
-| `guard-task-approval` | `PreToolUse` on `Edit\|Write\|Bash\|apply_patch` | Hard-denies setting `status: approved` on a task whose `## Review Notes` retains `[BLOCKING]`. Fails closed when the mutation result cannot be reconstructed (unmatchable patches, in-place shell mutations) and the change sets `status: approved` onto blocking notes. |
-| `guard-foreign-checkout` | `PreToolUse` on `Edit\|Write\|Bash\|apply_patch` | Returns `ask` for a `task.md` write whose task root belongs to neither the session's cwd nor its repository, and for a git history-writing command redirected (`cd`, `git -C`, `--work-tree`) into another task-tree checkout, so deliberate cross-checkout work is approvable while an unattended session cannot proceed. Worktrees of the session's own repository are not foreign. A runtime that does not honor `ask` falls through to allow, and Codex shell interception is incomplete, so the `Bash` half is best-effort there. |
-| `ensure-communicate` | `PreToolUse` on `Edit\|Write\|Bash\|apply_patch` | Hard-denies main-thread Markdown mutations until `superRA:communicate` is loaded; only read evidence in the transcript (a skill load or a read of the SKILL.md) clears it. Subagents are exempt. |
-| `merge-guard` | `PreToolUse` on `Bash` | Reminds agents to use `superRA:semantic-merge` before bare merge/rebase/cherry-pick commands. Codex shell interception is incomplete, so this is advisory coverage. |
-| `task-tree` | `PostToolUse` on `Edit\|Write\|Bash\|apply_patch` | Reconciles `.plan/` or `superRA/` task trees after direct task edits (`Edit`/`Write`/`apply_patch`) and structural shell changes (`Bash`). Codex shell interception remains incomplete, so shell-side coverage is best-effort reconcile rather than a complete enforcement boundary. |
-| `codex-plan-stop` | `Stop` in plan mode | Replaces Claude Code's `ExitPlanMode` hook with a continuation prompt. |
-
-Claude-only `Skill` gates are not installed in Codex because Codex does not
-document skill loads as a `PreToolUse` surface.
+- **Skill gates** (`ensure-companion`) are not installed: Codex does not expose skill loads as a `PreToolUse` surface.
+- **`agent-model-guard`** cannot enforce on Codex CLI 0.147.0, which starts `spawn_agent` without emitting `PreToolUse`; manifest tests still cover the hook contract.
+- **Shell interception is incomplete**, so the `Bash` side of `guard-foreign-checkout`, `merge-guard`, and the task-tree hook is best-effort.
+- **`guard-foreign-checkout`** falls through to allow on a runtime that does not honor `ask`.
+- **`codex-plan-stop`** replaces Claude Code's `ExitPlanMode` hook with a continuation prompt at the end of a plan-mode turn.
