@@ -110,7 +110,7 @@ The reproduction YAML subset ([contract](task-file-contract.md#the-yaml-subset))
 - **Structural Bash** — a command that references `superRA` or `.plan` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`) additionally gets the whole-tree reconcile and the rename cascade below, which need the command's semantics.
 - Detection fails open: any error is silence. Codex's matcher covers `apply_patch`; `task_hook.py` also accepts `tool_name: "apply_patch"` payloads.
 
-**Reconcile.** On a match the hook runs `validate_plan` and `propagate_parent_status`, each in its own try/except, never blocking, always exit 0. A `task.md` edit reports validation warnings for the edited tasks only; a structural Bash command reports the whole tree.
+**Reconcile.** On a match the hook runs `validate_plan` and `propagate_parent_status`, each in its own try/except, never blocking, always exit 0. A `task.md` edit reports validation warnings for the edited tasks only; a structural Bash command reports the whole tree. Either way at most `OUTPUT_CAP` warnings are listed, then a count pointing to `superra task check`.
 
 **Communicate reminder and render-integrity check.** Every changed `.md` under a task root emits one non-blocking reminder to apply `superRA:communicate` when the text is user-facing. The same files run through `_markdown_integrity_feedback` (imports `check()` from `communicate/scripts/md_integrity.py`): findings (display `$$` blocks not blank-line separated, TeX-only KaTeX macros) merge into that payload, followed by a line telling the agent to load `communicate`. Checker failure is swallowed and never breaks the hook.
 

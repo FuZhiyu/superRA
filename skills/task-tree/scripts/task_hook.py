@@ -488,9 +488,13 @@ def _implemented_coverage_reminder(plan_root: Path, task_path: str) -> list[str]
         marker.touch()
     except OSError:
         pass
+    from _task_validate import OUTPUT_CAP as cap
+    listed = ", ".join(files[:cap])
+    if len(files) > cap:
+        listed += f", and {len(files) - cap} more"
     return [
         f"Reproduction: task {task_path or '(root)'} is implemented and its "
-        f"## Results links {', '.join(files)}, which no step produces or reads. "
+        f"## Results links {listed}, which no step produces or reads. "
         "Register the producer step, or leave it if the file has none — "
         "`superRA:reproducibility` has the call."
     ]
@@ -586,9 +590,13 @@ def _reconcile(
                                        if w.split(": ", 1)[0] in wanted]
                 findings = [f for f in findings if f.task_path in scope]
             validation_warnings.extend(f.to_text() for f in findings)
-        if validation_warnings:
-            for w in validation_warnings:
-                feedback.append(f"Validation warning in {plan_root}: {w}")
+        for w in validation_warnings[:task_validate.OUTPUT_CAP]:
+            feedback.append(f"Validation warning in {plan_root}: {w}")
+        if len(validation_warnings) > task_validate.OUTPUT_CAP:
+            feedback.append(
+                f"{len(validation_warnings) - task_validate.OUTPUT_CAP} more validation "
+                f"warning(s) in {plan_root}; run `superra task check` to see them."
+            )
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 

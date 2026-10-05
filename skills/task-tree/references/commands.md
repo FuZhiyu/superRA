@@ -78,6 +78,7 @@ The PostToolUse hook still revalidates raw filesystem moves and keeps the same-p
 ```bash
 superra task check                    # validate full tree; prints findings grouped by task
 superra task check --category status  # limit to one category: status, dependency, rollup, sync-impact, reproduction
+superra task check --all               # list every finding; the default caps each category and severity, then counts the rest
 superra task status fix               # repair branch status fields to match child rollups
 superra task status propagate         # re-run parent status rollup after bulk edits
 ```

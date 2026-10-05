@@ -3175,6 +3175,28 @@ class TestTaskHook:
         second = self._run_hook_result(payload, cwd=tmp_path)
         assert "out/fig.png" not in (second.stdout or "")
 
+    def test_implemented_reminder_caps_file_list(self, tmp_path):
+        """Uncovered files past the output cap collapse to a count."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        cap = _task_validate.OUTPUT_CAP
+        names = [f"out/fig{i:02d}.png" for i in range(cap + 3)]
+        task_dir = self._write_implemented_task(
+            plan_root, "".join(f"[f](../../{n})\n" for n in names)
+        )
+        self._write_artifacts(tmp_path, *names)
+
+        payload = {
+            "session_id": "s1",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(task_dir / "task.md")},
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        assert names[cap - 1] in context
+        assert names[cap] not in context
+        assert "and 3 more" in context
+
 # --- results-coverage check (task_check `reproduction` category) ---
 
 
@@ -3886,6 +3908,23 @@ class TestForwardCompatibleReading:
 
 
 class TestTaskCheck:
+    def test_text_output_caps_each_group_errors_first(self):
+        cap = _task_validate.OUTPUT_CAP
+        findings = [
+            _task_validate.Finding("t", "reproduction", "warning", f"w{i}")
+            for i in range(cap + 5)
+        ] + [_task_validate.Finding("t", "status", "error", "bad")]
+        text = task_check.format_text(findings)
+        lines = text.splitlines()
+        assert lines[2].startswith("[ERROR] [status]")
+        assert sum(line.startswith("[WARNING]") for line in lines) == cap
+        assert (
+            "5 more reproduction warning(s); list them with "
+            "`superra task check --category reproduction --all`"
+        ) in text
+        full = task_check.format_text(findings, limit=None)
+        assert sum(line.startswith("[WARNING]") for line in full.splitlines()) == cap + 5
+
     def test_clean_tree_no_findings(self, tmp_path):
         """A valid tree produces no findings."""
         root_dir = tmp_path / "superRA"
@@ -4771,3 +4810,14 @@ class TestTreeHookInvariants:
         # Propagation lands the parent at approved before validation runs, so
         # the leftover Revision Notes warning appears in the same run.
         assert any("Revision Notes" in w for w in feedback)
+
+    def test_reconcile_caps_validation_warnings(self, tmp_path, monkeypatch):
+        root, _parent = self._tree(tmp_path)
+        cap = _task_validate.OUTPUT_CAP
+        monkeypatch.setattr(
+            _task_validate, "validate_plan",
+            lambda _root: [f"t{i}: warning {i}" for i in range(cap + 4)],
+        )
+        feedback = task_hook._reconcile(root, task_path=None)
+        assert sum("Validation warning in" in w for w in feedback) == cap
+        assert any("4 more validation warning(s)" in w for w in feedback)

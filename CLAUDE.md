@@ -66,6 +66,17 @@ Three tests, applied in order — each asks "what's actually new here?" against 
 
 **Maintenance cost is the tell.** Every restated rule is a place where the two copies can drift. When in doubt, delete the copy furthest from the authoritative source.
 
+### Bounded Agent-Facing Output
+
+Hook feedback and the default output of any CLI command an agent runs land in its context window. Their size must stay fixed however large or messy the task tree gets.
+
+- **Cap by default.** Default text output and hook feedback list at most a fixed number of items per group: `OUTPUT_CAP` in `skills/task-tree/scripts/_task_validate.py`, or a tighter local cap such as `REPRO_REMINDER_CAP`. Full lists are opt-in (`--all`, `--json`).
+- **Count and point.** Elided items collapse to one line giving their count and the exact command that lists them. Never drop silently.
+- **Errors first.** Truncation never hides an error behind advisories.
+- **Scope to the change.** Hooks report on what the tool call touched — the edited task, the changed file. Whole-tree audits are an explicit command.
+- **Remind once.** A reminder fires once per session or status transition (marker files), not on every call.
+- **Every warning has an exit.** An advisory must be clearable by fixing it or recording a decision. A warning the agent is told to "leave" recurs on every run and buries the findings that matter.
+
 ## Terminology
 
 **"Plan" is the verb, not the noun.** "Planning" refers to the superplan process — scoping and decomposing work. Everything in `superRA/` is a **task** — top-level tasks sit directly under `superRA/`, nested tasks are their dispatchable children. `superRA/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `superRA/` artifact, "planning" when referring to the process.
@@ -182,6 +193,7 @@ Before proposing structural changes to skills, workflow phases, or agent orchest
 - Can the mechanism be entered, re-entered, or used standalone where appropriate?
 - Are gates still enforced once a workflow/task is entered?
 - Is the instruction placed where only the agents/stages that need it will load it?
+- Does any new hook message or CLI default output stay bounded (§Bounded Agent-Facing Output)?
 - For every line you added, does removing it change what the agent would *do*, or only what it would *understand*? If only understand, delete it.
 - Is any harness-specific behavior isolated in an adapter reference?
 - Are generated files left untouched or regenerated from their sources?

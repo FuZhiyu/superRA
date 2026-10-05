@@ -42,6 +42,7 @@ from _task_io import (
     walk_plan,
 )
 from _task_validate import (
+    OUTPUT_CAP,
     Finding,
     invalid_status_message,
     validate_review_notes,
@@ -216,6 +217,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=["status", "dependency", "rollup", "sync-impact", "reproduction", "links"],
         help="Only run a specific check category",
     )
+    parser.add_argument(
+        "--all", action="store_true", dest="show_all",
+        help=f"List every finding (default text output lists {OUTPUT_CAP} per category and severity)",
+    )
     return parser.parse_args(argv)
 
 
@@ -248,20 +253,33 @@ def run_checks(
     return findings
 
 
-def format_text(findings: list[Finding]) -> str:
-    """Format findings as human-readable text."""
+def format_text(findings: list[Finding], limit: int | None = OUTPUT_CAP) -> str:
+    """Format findings as human-readable text, errors first.
+
+    Each (severity, category) group lists at most *limit* findings and counts
+    the rest with the command that lists them; None lists every finding.
+    """
     if not findings:
         return "All checks passed. No issues found."
 
-    lines: list[str] = []
     errors = [f for f in findings if f.severity == "error"]
     warnings = [f for f in findings if f.severity == "warning"]
+    lines = [
+        f"Found {len(findings)} issue(s): {len(errors)} error(s), {len(warnings)} warning(s).",
+        "",
+    ]
 
-    lines.append(f"Found {len(findings)} issue(s): {len(errors)} error(s), {len(warnings)} warning(s).")
-    lines.append("")
-
-    for finding in findings:
-        lines.append(finding.to_text())
+    groups: dict[tuple[str, str], list[Finding]] = {}
+    for finding in sorted(findings, key=lambda f: f.severity != "error"):
+        groups.setdefault((finding.severity, finding.category), []).append(finding)
+    for (severity, category), group in groups.items():
+        shown = group if limit is None else group[:limit]
+        lines.extend(finding.to_text() for finding in shown)
+        if len(group) > len(shown):
+            lines.append(
+                f"... {len(group) - len(shown)} more {category} {severity}(s); "
+                f"list them with `superra task check --category {category} --all`"
+            )
 
     return "\n".join(lines)
 
@@ -296,7 +314,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.as_json:
         print(format_json(findings))
     else:
-        print(format_text(findings))
+        print(format_text(findings, limit=None if args.show_all else OUTPUT_CAP))
 
     sys.exit(1 if findings else 0)
 

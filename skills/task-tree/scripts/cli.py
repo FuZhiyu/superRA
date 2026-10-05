@@ -268,6 +268,8 @@ def _run_check(args: argparse.Namespace) -> None:
     argv = _root_args(args.root)
     if args.as_json:
         argv.append("--json")
+    if args.show_all:
+        argv.append("--all")
     _append_optional(argv, "--category", args.category)
     _module_main("task_check", argv)
 
@@ -591,6 +593,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     check.add_argument("--json", action="store_true", dest="as_json", help="Output JSON")
     check.add_argument("--category", choices=["status", "dependency", "rollup", "sync-impact", "reproduction", "links"], help="Check one category")
+    check.add_argument("--all", action="store_true", dest="show_all", help="List every finding instead of a capped list per category")
     _set_runner(check, _run_check)
 
     create = task_sub.add_parser("create", help="Create a task directory")
