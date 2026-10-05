@@ -80,13 +80,19 @@ def same_dir(left: Path | None, right: Path | None) -> bool:
         return left == right
 
 
+def normalized(path: Path) -> Path:
+    """*path* made absolute with every `..` and symlink resolved, so a lexical
+    parent walk cannot pass through the session dir on the way out of it."""
+    try:
+        return path.resolve()
+    except (OSError, RuntimeError):
+        return Path(os.path.abspath(path))
+
+
 def within(path: Path, root: Path) -> bool:
     """Is *path* at or under *root*? Walks with samefile so /tmp vs /private/tmp,
     case-insensitive volumes, and symlinked checkouts all compare correctly."""
-    try:
-        current = path.absolute()
-    except OSError:
-        return False
+    current = normalized(path)
     for candidate in [current, *current.parents]:
         if same_dir(candidate, root):
             return True
@@ -104,6 +110,7 @@ def nearest_existing_dir(path: Path) -> Path | None:
 
 def is_foreign(path: Path, cwd: Path) -> bool:
     """True when *path* belongs to neither the session's cwd nor its repository."""
+    path = normalized(path)
     if within(path, cwd):
         return False
     anchor = nearest_existing_dir(path)
