@@ -48,6 +48,8 @@ from _repro_state import (  # noqa: E402
     LockEntry,
     ReproStateError,
     RunnerPaths,
+    STATUSES,
+    StatusReport,
     absolute,
     capped,
     capped_join,
@@ -395,11 +397,27 @@ def _report(build: Build, name: str) -> None:
           + "".join(f"\n  {line}" for line in detail.splitlines()), flush=True)
 
 
-def _will_run(build: Build) -> list[str]:
-    """Steps their own state or a force sets to run; one stale only through upstream decides at its start."""
+def _will_run(build: Build) -> tuple[list[str], StatusReport]:
+    """Steps their own state or a force sets to run, and the report that decided it.
+
+    One stale only through upstream decides at its start.
+    """
     report = compute_status(build.graph, build.paths, targets=[build.target(build.graph.step(n)) for n in build.names],
                             cache=build.cache, completed_locks=build.completed, scope=build.names)
-    return [n for n in build.names if n in build.forced or report.entry(n).local_status in BLOCKING]
+    return [n for n in build.names if n in build.forced or report.entry(n).local_status in BLOCKING], report
+
+
+def _scope_line(build: Build, report: StatusReport) -> str:
+    """The selection counted by status; only steps not plainly fresh are named."""
+    groups: dict[str, list[str]] = {}
+    for name in build.names:
+        status = "forced" if name in build.forced else report.entry(name).status
+        groups.setdefault(status, []).append(name)
+    command = build.command("status", "--json")
+    parts = [f"{len(groups.pop('fresh'))} fresh"] if "fresh" in groups else []
+    parts += [f"{len(groups[k])} {k}: {capped_join(groups[k], command)}"
+              for k in ("forced", *STATUSES) if k in groups]
+    return f"Execution scope: {len(build.names)} step(s): " + "; ".join(parts)
 
 
 def _gate(build: Build, will_run: list[str]) -> str | None:
@@ -466,7 +484,6 @@ def run_build(
                   dry_run=dry_run, requested=set(names if requested is None else requested),
                   targets=list(targets or ()), only=only)
     boundary = boundary_inputs(graph, names, paths, cache)
-    print(f"Execution scope: {len(names)} step(s): {capped_join(list(names), build.command('status', '--json'))}")
     saved = [f"Saved input: {item['logical']} from {item['producer']} ({item['provenance']}; upstream not verified)"
              for item in boundary]
     if saved:
@@ -484,7 +501,8 @@ def run_build(
     )
     interrupted = False
     with mutation_lock(paths), _interrupt_on_termination():
-        will_run = _will_run(build)
+        will_run, report = _will_run(build)
+        print(_scope_line(build, report))
         gate = _gate(build, will_run)
         if gate and not dry_run:
             raise ReproStateError(gate)

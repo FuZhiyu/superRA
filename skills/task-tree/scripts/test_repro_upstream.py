@@ -113,14 +113,17 @@ def test_a_default_build_reruns_a_stale_producer_and_skips_fresh_and_unverified_
     assert _changed(before, fan.run_times()) == {"p-stale", "use"}
     out = capsys.readouterr().out
     assert re.search(r"Also building 1 producer\(s\) the targets read:\n  p-stale  \d+\.\ds\n", out)
-    assert "p-fresh" not in out.split("Also building")[1]  # skipped producers are only counted
+    assert "p-fresh" not in out  # fresh steps are only counted
+    assert "Execution scope: 4 step(s): 1 fresh; 2 stale: p-stale, use; 1 unverified: p-unv" in out
     assert "4 step(s): 2 executed, 1 unchanged, 1 unverified" in out
 
 
-def test_force_reruns_the_targets_only(fan):
+def test_force_reruns_the_targets_only(fan, capsys):
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
     before = fan.run_times()
+    capsys.readouterr()
     assert fan.run("build", "02-use", "--force") == 0
+    assert "Execution scope: 4 step(s): 2 fresh; 1 forced: use; 1 stale: p-stale" in capsys.readouterr().out
     assert _changed(before, fan.run_times()) == {"p-stale", "use"}  # p-fresh untouched
     before = fan.run_times()
     assert fan.run("build", "02-use", "--force") == 0
@@ -307,6 +310,7 @@ def test_default_status_and_build_output_stays_within_the_cap(tmp_path, capsys):
     assert chain.run("build", "02-end") == 0
     out = capsys.readouterr().out
     scope = next(line for line in out.splitlines() if line.startswith("Execution scope:"))
+    assert scope.startswith(f"Execution scope: {length} step(s): {length} missing: s01, ")
     assert scope.endswith(f"and {length - OUTPUT_CAP} more (`superra repro status 02-end --json` lists them)")
     preview = out.split("Also building")[1].split("✓")[0].strip().splitlines()
     assert preview[0] == f"{length - 1} producer(s) the targets read:"
@@ -336,3 +340,4 @@ def test_default_status_and_build_output_stays_within_the_cap(tmp_path, capsys):
     assert chain.run("build", "02-end") == 0  # only s01 reruns; identical copies downstream rerun as inputs change
     out = capsys.readouterr().out
     assert "Also building 1 producer(s)" in out
+    assert f"Execution scope: {length} step(s): {length} stale: s01, " in out  # the cascade lifts every consumer of s01
