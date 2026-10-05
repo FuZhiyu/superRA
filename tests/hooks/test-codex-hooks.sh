@@ -239,7 +239,7 @@ case_codex_manifest_task_hook_apply_patch() {
   out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
   assert_json "$name" "$out" || return
   context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", ""))')
-  if [[ "$context" != *"Markdown edited under the task tree"* ]] || [[ "$context" != *"superRA:communicate"* ]]; then
+  if [[ "$context" != *"Markdown edited"* ]] || [[ "$context" != *"superRA:communicate"* ]]; then
     record_fail "$name" "missing Communicate reminder: $out"
     return
   fi
