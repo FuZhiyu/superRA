@@ -50,7 +50,7 @@ superRA turns an AI coding agent into a disciplined research assistant. It runs 
 
 ## What you get
 
-- A **task-tree dashboard.** Every task's objective, status, and results are committed files in your repo, not an agent's memory, so you can watch progress live and hand any unfinished task to a fresh agent. This site is built on the same dashboard; the [Showcase](#/07-showcase) shows a real research tree.
+- A **task-tree dashboard.** Every task's objective, status, and results are committed files in your repo, not an agent's memory, so you can watch progress live and hand any unfinished task to a fresh agent. This site is built on the same dashboard; the [Showcase](#/07-showcase) shows an example research tree.
 - A **plan–implement–integrate [workflow](#/05-workflows)** — interactive by default, autonomous on request, with results kept reproducible.
 - **[Domain skills](#/03-domain-skills)** that enforce the right discipline as the agent works: data analysis, theory modeling, academic writing, and slide design.
 - **[Utility skills](#/04-utility-skills)** for practical mechanics: tracing each result to the code that produced it, merging branches by intent, loading papers from Zotero, syncing data across worktrees, and more.
@@ -132,7 +132,7 @@ Research is rarely this linear. Each phase also runs alone; a surprise mid-imple
 | Learn the task tree, intent-aware merging, and result protection | [Utility Skills](#/04-utility-skills) |
 | Know which tables and figures are out of date after an edit | [Reproducibility](#/04-utility-skills/09-reproducibility) |
 | Understand one phase and what you decide in it | [Workflows](#/05-workflows) |
-| See a real task tree | [Showcase](#/07-showcase) |
+| See an example task tree | [Showcase](#/07-showcase) |
 | Install, upgrade, or contribute | [README](README.md) |
 
 superRA is open source and built for researchers comfortable with git and an AI harness.

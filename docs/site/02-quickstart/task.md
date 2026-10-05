@@ -41,7 +41,7 @@ The trigger is the word **`superra`**: with it in the prompt, the agents follow 
 
 ### A typical workflow
 
-The rest of this page walks one piece of work through all three phases. The example below is a real empirical asset-pricing study: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section.
+The rest of this page walks one piece of work through all three phases. The example below is a small empirical asset-pricing study on public data: estimate CAPM and the Fama-French three-factor model on Ken French's 25 portfolios sorted by size and book-to-market, then run the Gibbons-Ross-Shanken (GRS) joint test to ask whether either model prices the cross-section.
 
 #### Superplan
 

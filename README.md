@@ -1,67 +1,48 @@
 # superRA
 
-> **0.5.0 is unreleased.** The reproduction upgrade: superRA runs task-declared build steps itself and reruns only what changed. Coauthors on a shared project upgrade together; see [Upgrading](#upgrading) and [release notes](RELEASE-NOTES.md#050---unreleased).
+> ⚠️ **Beta.** superRA updates often; please [report bugs](https://github.com/FuZhiyu/superRA/issues). **Upgrading to 0.5.0:** coauthors on a shared project upgrade together ([Upgrading](#upgrading)).
 
-> ⚠️ **Beta testing stage.** superRA is under active development and updates land frequently. Bug reports are welcome — please [open an issue](https://github.com/FuZhiyu/superRA/issues).
+**superRA turns AI agents into research assistants whose work you can see, steer, and reproduce.** It brings a plan–implement–integrate workflow, domain discipline, and a reproduction graph that traces every table and figure to the code that made it. A live dashboard ties them together: every task, decision, and result is a committed file, so you see where the work stands and which results are current. It runs on Claude Code and Codex.
 
-**[📖 Read the documentation →](http://fuzhiyu.me/superRA/)** — start with the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart), which runs one analysis end to end.
+**[📖 Documentation](http://fuzhiyu.me/superRA/)** · **[Explore an example project →](http://fuzhiyu.me/superRA/showcase-analysis-tree.html)**
 
-superRA turns an AI coding agent into a disciplined research assistant. It runs on Claude Code and Codex, and ships:
-
-1. A **task-tree dashboard.** Every task's objective, status, and results are committed files in your repo, not an agent's memory, so you can watch progress live and hand any unfinished task to a fresh agent. The [Showcase](http://fuzhiyu.me/superRA/#/07-showcase) links a live export of a real one.
-2. A **plan–implement–integrate [workflow](http://fuzhiyu.me/superRA/#/05-workflows)** — interactive by default, autonomous on request, with results kept reproducible.
-3. **[Domain skills](http://fuzhiyu.me/superRA/#/03-domain-skills)** that enforce the right discipline as the agent works: data analysis, theory modeling, academic writing, and slide design, with literature review on the roadmap.
-4. **[Utility skills](http://fuzhiyu.me/superRA/#/04-utility-skills)** for practical mechanics: keeping every result [rebuildable from a declared graph](http://fuzhiyu.me/superRA/#/04-utility-skills/09-reproducibility), merging branches by intent, loading papers from Zotero, syncing data across worktrees, and more.
-
-![The superRA dashboard rendering a task tree — sidebar hierarchy, a task's objective and conventions, and its subtasks with status.](docs/assets/task-tree-dashboard.png)
+![The superRA dashboard: the live Graph view of an asset-pricing study after an edit to the analysis script. The data step reads fresh; the analysis step reads stale, with a hover card naming the changed file; its downstream check is stale through it. The selected task's results and figures sit beside the graph.](docs/site/02-quickstart/attachments/showcase-graph.webp)
 
 ## Why superRA?
 
-AI agents are fast but undisciplined. They write more code than anyone reviews, drift as their context fills, and drop half the sample before a regression, then report "everything looks good."
+Research is exploratory, rarely testable in advance, and judged by people, so the researcher has to stay in the loop. Agent work makes that hard because it lives in the chat, not in a record. The reasoning vanishes when the session ends, the project's stage is invisible, and nothing logs which script and inputs produced each result, so no one can tell whether a table still comes from the current code and data.
 
-Agentic-coding frameworks target software engineering, where unit tests verify the work. Research is exploratory, rarely testable in advance, and judged by people. superRA keeps the workflow spine and keeps you in the loop — review at every step, domain discipline as the work goes, and an integration phase that folds each task into a coherent codebase.
+Frameworks such as [Superpowers](https://github.com/obra/superpowers) target software, where unit tests verify the work and the goal is to take the human out of the loop. superRA keeps you in it: the project lives where you and the agent both see it.
 
-## How it works
+## What you get
 
-```mermaid
-flowchart TB
-    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>superRA/ task tree"]
-    IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>execute with you · self-review<br/>independent review where it earns its cost"]
-    INTEGRATE["<b>INTEGRATE</b><br/>Choose results & protection<br/>Sync with base<br/>Mature documentation & task tree<br/>Review refactoring proposal<br/>Execute & finish"]
-    FINISHED(["finished"])
+- **[A dashboard for the whole project.](http://fuzhiyu.me/superRA/#/04-utility-skills/01-task-tree/04-dashboard)**
+  - **Persistent history.** Each task's objective, decisions, results, and reviews are committed files. Any session or coauthor resumes from them; one exported HTML file shares them.
+  - **Task management.** A task tree with status, dependencies, and what is ready next. Pin a comment to a task to steer it.
+  - **The project's stage at a glance.** Status rolls up the tree: planned, in progress, awaiting your call, done.
+- **[Know which results are current.](http://fuzhiyu.me/superRA/#/04-utility-skills/09-reproducibility)** Each table and figure traces to the script that made it. After an edit, the Graph view marks what went stale and rebuilds only that.
+- **[An agent that works with you.](http://fuzhiyu.me/superRA/#/05-workflows)** It edits the task file with you as a live canvas, pauses for feedback, and asks before spending on a review. Autonomous runs on request.
+- **Discipline as the work goes.** [Domain skills](http://fuzhiyu.me/superRA/#/03-domain-skills) for data analysis, theory, writing, and slides; independent review where it earns its cost; an integration step that lands the work as clean, protected code.
+- **Quality-of-life utilities.** [Utility skills](http://fuzhiyu.me/superRA/#/04-utility-skills) that read and cite papers from Zotero, convert PDFs to Markdown, merge branches by intent, and sync data across worktrees.
 
-    PLAN --> IMPLEMENT
-    IMPLEMENT --> INTEGRATE
-    INTEGRATE --> FINISHED
-
-    IMPLEMENT -. "plan change" .-> PLAN
-    INTEGRATE -. "plan change" .-> PLAN
-
-    classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
-    classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
-    class PLAN,IMPLEMENT,INTEGRATE phase
-    class FINISHED terminal
-```
-
-- **PLAN** — the agent scopes your request into a *task tree*: a directory of small `task.md` files, one per unit of work, that you review before execution starts.
-- **IMPLEMENT** — the agent works each task with you, self-reviews, and asks whether to run an independent review now, later, or not at all. On request, autonomous mode hands the tasks to implementer and reviewer subagents.
-- **INTEGRATE** — you choose which results enter the permanent record and how they are protected. The agent syncs with your base branch, writes the record, and proposes one refactoring task; once you approve, it executes and ships.
-- **Existing projects** — even without git — enter through the `onboarding` skill, which builds a task tree and reproduction graph for the work already done and changes nothing outside `superRA/` until you approve.
-
-A surprise mid-implementation or a later scope change routes back to PLAN and resumes at the right point. Run `./superRA/superra dashboard` in a project to watch and steer the work; the [dashboard page](http://fuzhiyu.me/superRA/#/04-utility-skills/01-task-tree/04-dashboard) covers live serving and branch-snapshot sharing.
-
-## Installation
+## Get started
 
 ### Claude Code
 
-Claude Code (v2.1+) can install plugins directly from a GitHub repo. Add superRA as a marketplace and install the plugin:
+Requires Claude Code v2.1+:
 
 ```bash
 claude plugin marketplace add FuZhiyu/superRA
 claude plugin install superRA@superRA
 ```
 
-That's it — restart Claude Code (or start a new session) and the skills and hooks are available.
+Restart Claude Code, then in a project ask:
+
+```text
+Use superRA to onboard this project and show me the dashboard.
+```
+
+Onboarding builds a task tree and reproduction graph for the work already there, and changes nothing outside `superRA/` until you approve. For new work, the [Quickstart](http://fuzhiyu.me/superRA/#/02-quickstart) runs one study end to end.
 
 To update later:
 
@@ -74,7 +55,7 @@ For Codex setup and a local-clone install (to track or modify superRA itself), s
 
 ### Upgrading
 
-**0.5.0 (unreleased):** every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance — an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then follow the [upgrade steps](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release).
+**0.5.0:** every coauthor on a shared project upgrades superRA before anyone commits a 0.5 build or acceptance — an older superRA reads neither `repro-lock.json` nor `repro-acceptance/`, so its steps read stale or missing. Then follow the [upgrade steps](RELEASE-NOTES.md#upgrading-a-project-that-used-the-reproduction-pre-release).
 
 **Older projects:**
 

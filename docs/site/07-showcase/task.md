@@ -1,12 +1,12 @@
 ---
-title: "Showcase: A Real Task Tree"
+title: "Showcase: An Example Task Tree"
 status: not-started
 depends_on:  []
 ---
 
 ## Objective
 
-Open a real, finished superRA task tree and click around. It is the same dashboard you get when you run superRA — this documentation site is one too.
+Open a finished example superRA task tree and click around. It is the same dashboard you get when you run superRA — this documentation site is one too.
 
 [Open the asset-pricing study →](showcase-analysis-tree.html)
 
