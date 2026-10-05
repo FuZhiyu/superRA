@@ -33,6 +33,8 @@ Step citations: [task-file contract §Step references](../task-tree/references/t
 
 ## Skill-Load Manifest
 
+**Durable artifacts:** before planning, writing, changing, or reviewing a retained script or a result computed by code, load `superRA:reproducibility` — at any stage, in any role.
+
 At each stage of superRA workflow, agents load additional skills along three axes; all apply independently. After loading a skill, follow its body's stage- and role-scoped reference load map.
 
 1. **Role** — `superRA:implement-task` or `superRA:review-task`, named by the dispatch. A seat the main agent fills itself loads the same skill.
@@ -58,7 +60,6 @@ At each stage of superRA workflow, agents load additional skills along three axe
 | `theory-modeling` (`superRA:theory-modeling`) | derives, solves, verifies, or proves anything mathematical |
 | `academic-writing` (`superRA:academic-writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
 | `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
-| `reproducibility` (`superRA:reproducibility`) | plans, produces, changes, records, or reviews a result computed by code — a new script, an edited one, or an existing script's output |
 
 **Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent`), consult the adapter reference for the current harness under `references/`.
 

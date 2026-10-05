@@ -46,7 +46,7 @@
       "id": "LC002",
       "area": "manifest-stage-loads",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L44-L51"
+        "skills/using-superra/SKILL.md#L46-L53"
       ],
       "trigger": "Dispatch includes Stage: planning-review, implementation, protection, sync, integration, or maturation.",
       "expected_evidence": [
@@ -76,11 +76,11 @@
       "id": "LC003",
       "area": "manifest-domain-loads",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L55-L61"
+        "skills/using-superra/SKILL.md#L57-L62"
       ],
-      "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, slide-design work, or a result computed by code.",
+      "trigger": "Task content touches data analysis, mathematical modeling, writing/prose, or slide-design work.",
       "expected_evidence": [
-        "structured table parse finds the five domain rows",
+        "structured table parse finds the four domain rows",
         "fixture prompts can include unambiguous task text for each domain",
         "live transcript shows every matching domain skill loaded, including multiple matches when applicable"
       ],
@@ -105,7 +105,7 @@
       "id": "LC004",
       "area": "harness-adapter-routing",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L63-L63",
+        "skills/using-superra/SKILL.md#L64-L64",
         "skills/using-superra/references/codex-instructions.md#L64-L77"
       ],
       "trigger": "A loaded superRA instruction names Claude-oriented tools or Codex is the active harness.",
@@ -184,7 +184,7 @@
       "id": "LC007",
       "area": "stage-planning-review",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L46-L46",
+        "skills/using-superra/SKILL.md#L48-L48",
         "skills/superplan/references/planning-review.md#L1-L24",
         "skills/review-task/SKILL.md#L20-L20"
       ],
@@ -215,7 +215,7 @@
       "id": "LC008",
       "area": "stage-protection",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L48-L48",
+        "skills/using-superra/SKILL.md#L50-L50",
         "skills/result-protection/SKILL.md#L10-L23",
         "skills/reproducibility/SKILL.md#L26-L26"
       ],
@@ -246,7 +246,7 @@
       "id": "LC009",
       "area": "stage-sync",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L49-L49",
+        "skills/using-superra/SKILL.md#L51-L51",
         "skills/semantic-merge/SKILL.md#L12-L20"
       ],
       "trigger": "Dispatch has Stage: sync, or semantic-merge is invoked directly.",
@@ -276,7 +276,7 @@
       "id": "LC010",
       "area": "stage-integration",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L50-L50",
+        "skills/using-superra/SKILL.md#L52-L52",
         "skills/refactor-and-integrate/SKILL.md#L16-L17",
         "skills/refactor-and-integrate/SKILL.md#L47-L58"
       ],
@@ -307,7 +307,7 @@
       "id": "LC023",
       "area": "stage-maturation",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L51-L51",
+        "skills/using-superra/SKILL.md#L53-L53",
         "skills/task-tree/SKILL.md",
         "skills/superplan/SKILL.md",
         "skills/academic-writing/SKILL.md"
@@ -339,7 +339,7 @@
       "id": "LC011",
       "area": "domain-econ-data-analysis",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L57-L57",
+        "skills/using-superra/SKILL.md#L59-L59",
         "skills/econ-data-analysis/SKILL.md#L11-L22",
         "skills/econ-data-analysis/SKILL.md#L130-L133"
       ],
@@ -370,7 +370,7 @@
       "id": "LC012",
       "area": "domain-theory-modeling",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L58-L58",
+        "skills/using-superra/SKILL.md#L60-L60",
         "skills/theory-modeling/SKILL.md#L11-L22"
       ],
       "trigger": "Task derives, solves, verifies, or proves mathematical/modeling content.",
@@ -400,7 +400,7 @@
       "id": "LC013",
       "area": "domain-academic-writing",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L59-L59",
+        "skills/using-superra/SKILL.md#L61-L61",
         "skills/academic-writing/SKILL.md#L58-L86"
       ],
       "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
@@ -430,7 +430,7 @@
       "id": "LC014",
       "area": "domain-slide-design",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L60-L60",
+        "skills/using-superra/SKILL.md#L62-L62",
         "skills/slide-design/SKILL.md#L11-L25",
         "skills/slide-design/SKILL.md#L86-L92"
       ],
@@ -459,14 +459,14 @@
     },
     {
       "id": "LC024",
-      "area": "domain-reproducibility",
+      "area": "durable-artifact-reproducibility",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L61-L61",
+        "skills/using-superra/SKILL.md#L36-L36",
         "skills/reproducibility/SKILL.md#L20-L30"
       ],
-      "trigger": "Task plans, produces, changes, records, or reviews a result computed by code, at any stage.",
+      "trigger": "Agent plans, writes, changes, or reviews a retained script or a result computed by code, at any stage and in any role.",
       "expected_evidence": [
-        "structured table parse confirms the domain is present in the manifest",
+        "the manifest's durable-artifact rule names superRA:reproducibility at any stage and in any role",
         "fixture task with result-from-code wording should lead transcript to load reproducibility",
         "the implementation-stage over-load check does not count a reproducibility load as an over-load"
       ],
@@ -476,7 +476,7 @@
       ],
       "covered_by": {
         "ci_safe_static": [
-          "test_contract.py::test_skill_load_manifest_tables_match_contract (reproducibility domain row)"
+          "test_contract.py::test_durable_artifact_rule_loads_reproducibility_outside_the_axes"
         ],
         "fixture_unit": [
           "test_domain_loads_live.py (domain evaluator + schema/domain-ID artifact)",
@@ -485,7 +485,7 @@
         "manual_live_claude": [
           "domain_loads_live.py DOMAIN_ROWS[reproducibility] (Skill tool, superRA:-qualified)"
         ],
-        "notes": "Claude live-verified 2026-09-29: the reproducibility-worded fixture task loads reproducibility before its first edit."
+        "notes": "Claude live-verified 2026-09-29: the reproducibility-worded fixture task loads reproducibility before its first edit. Moved from a Domain-table row to the manifest's durable-artifact rule (2026-10-02); the live fixture wording is unchanged."
       }
     },
     {
@@ -774,7 +774,7 @@
       "severity": "major",
       "area": "stage-terminology",
       "source_paths": [
-        "skills/using-superra/SKILL.md#L48-L48",
+        "skills/using-superra/SKILL.md#L50-L50",
         "skills/result-protection/SKILL.md#L16-L18",
         "skills/theory-modeling/SKILL.md#L17-L19",
         "skills/agent-orchestration/SKILL.md#L221-L224"

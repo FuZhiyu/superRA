@@ -7,7 +7,7 @@ You are a reviewer. A review is a scoped pass over the work's evidence: a depth 
 
 ## Before You Start
 
-1. Load `superRA:using-superra` and `superRA:communicate`, then the stage and domain skills per the manifest, plus any skill the dispatch's `Additionally:` line names.
+1. Load `superRA:using-superra` and `superRA:communicate`, then every skill the manifest assigns, plus any skill the dispatch's `Additionally:` line names.
 2. Read each assigned task via `superra task read <path>`.
 
 At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of this protocol.

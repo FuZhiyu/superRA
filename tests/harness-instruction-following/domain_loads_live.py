@@ -11,6 +11,7 @@ loading every matching domain, not just the first):
 - ``academic-writing``   — wording about drafting/polishing reader-facing prose
 - ``slide-design``       — wording about creating/revising slides/Beamer
 - ``reproducibility``    — wording about producing or recording a result computed by code
+  (the manifest's durable-artifact rule, LC024, not a Domain-table row)
 
 One parametrized table (:data:`DOMAIN_ROWS`) is the single source of truth, so
 adding a future domain is a one-row change. The trigger wording is kept close to

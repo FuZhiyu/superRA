@@ -19,7 +19,7 @@ Achieve the task's `## Objective` with your own judgment. Gates don't substitute
 
 ## Before You Start
 
-1. Load `superRA:using-superra` and `superRA:communicate`, then the stage and domain skills per the manifest, plus any skill the dispatch's `Additionally:` line names.
+1. Load `superRA:using-superra` and `superRA:communicate`, then every skill the manifest assigns, plus any skill the dispatch's `Additionally:` line names.
 2. Read each assigned task via `superra task read <path>`.
 
 ## Execution

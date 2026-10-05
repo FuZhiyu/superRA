@@ -134,8 +134,9 @@ STAGE_ROWS: tuple[StageRow, ...] = (
 # All stage skill names, for the negative-case "no stage skill loaded" check.
 # Flattens every positive skill-channel row's expected_skills, including the
 # multi-skill maturation row, so a maturation skill loaded on the negative stage
-# is caught as an over-load. A skill the Domain table also loads (reproducibility)
-# is a correct conditional load at any stage, so it is not an over-load.
+# is caught as an over-load. A skill the manifest also loads by wording at any
+# stage (reproducibility, via its durable-artifact rule) is a correct conditional
+# load, so it is not an over-load.
 ALL_STAGE_SKILLS: frozenset[str] = frozenset(
     skill
     for row in STAGE_ROWS

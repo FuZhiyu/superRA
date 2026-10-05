@@ -354,8 +354,8 @@ def test_red_negative_stage_loaded_a_stage_skill():
 
 
 def test_green_negative_stage_loaded_a_domain_row_skill():
-    # reproducibility is also a Domain row, so an implementation-stage task that
-    # records a result computed by code loads it correctly: not an over-load.
+    # reproducibility also loads by the manifest's durable-artifact rule, so an
+    # implementation-stage task that records a result computed by code loads it correctly: not an over-load.
     row = stage_row("implementation")
     evidence = evidence_from_hook_records(
         skill_tool_events=[("superRA:reproducibility", 0)],

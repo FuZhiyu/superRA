@@ -132,6 +132,7 @@ What each agent loads in a session. This section documents the architecture for 
 | One `superintegrate/references/<step>.md` | INTEGRATE step entry (protect / sync / integrate / mature-consolidate / finish) | Mandatory per step |
 | `task-tree` | session-start wrapper + dashboard, tree surgery, migration | Typical |
 | Domain skill(s) per the manifest | when the work touches that domain | Typical |
+| `reproducibility` | manifest durable-artifact rule: planning, writing, changing, or reviewing a retained script or a code-computed result | Typical |
 | `superplan/references/task-tree-design.md` | planning, replan, consolidation screening | Typical |
 | `agent-orchestration/references/parallel-dispatch.md` | only when parallel-dispatching or isolating a worktree | On demand |
 
@@ -143,6 +144,7 @@ What each agent loads in a session. This section documents the architecture for 
 | `using-superra` + `communicate` | role-skill §Before You Start load instruction | Mandatory |
 | Stage reference per the manifest `Stage:` row | manifest | Mandatory when the row lists one |
 | Domain skill(s) per the manifest | manifest | Typical |
+| `reproducibility` | manifest durable-artifact rule | Typical |
 | Helper skills named in the dispatch `Additionally:` line or the task's ancestor chain | dispatch | On demand |
 
 Outside `Stage: maturation`, subagents never load `task-tree` or `task-tree-design.md`: their task-file interface is `using-superra` §Task Interface plus their role skill, and the tree references serve tree deciders — the planner and the main agent. Maturation dispatches are the exception because that stage's work *is* tree work; its manifest row loads `task-tree` and `superplan` into the subagent. `task-file-contract.md` §Reproduction Section is the second exception: `reproducibility` routes there for the section schema, so any subagent registering a step reads that section. `agent-orchestration` is never subagent-loaded.

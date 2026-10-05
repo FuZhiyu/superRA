@@ -18,7 +18,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 ## Role — what a dispatched seat does
 
-Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same one. Both pull the always-loaded `using-superra` plus the manifest's stage and domain skills.
+Carry the protocol for one seat on a task. A dispatch prompt's first line names the role skill; a seat the main agent fills itself loads the same one. Both pull the always-loaded `using-superra` plus every skill the manifest assigns.
 
 | Skill | Seat | Role |
 |---|---|---|
@@ -50,7 +50,7 @@ Agent-facing and standalone-invokable; called by workflow skills and role skills
 | Skill | What it provides |
 |---|---|
 | `result-protection` | Tools for choosing permanent documentation, drift tests, or artifact-appropriate checks to protect key results. Loaded by Protect / `Stage: protection` agents. |
-| `reproducibility` | Discipline for the task-declared reproduction graph — what earns a step, graph and script design, step retirement, external inputs, check steps, the stale-step judgment, diagnosis, graph review, and the Protect and IMPLEMENT-completion duties, routed one reference per moment. Section schema, `superra repro` CLI, and hook mechanics live in `task-tree`. Loaded per its Skill-Load Manifest Stage and Domain rows in `using-superra`. |
+| `reproducibility` | Discipline for the task-declared reproduction graph — what earns a step, graph and script design, step retirement, external inputs, check steps, the stale-step judgment, diagnosis, graph review, and the Protect and IMPLEMENT-completion duties, routed one reference per moment. Section schema, `superra repro` CLI, and hook mechanics live in `task-tree`. Loaded per the Skill-Load Manifest's durable-artifact rule and `protection` row in `using-superra`. |
 | `refactor-and-integrate` | Tools for **codebase coherence** — executing a reviewed refactoring task against the protected record, convention fit, utility reuse, consolidation, PR-friendly diffs, Project Doc Audit, and minimum net diff. Loaded by integration-phase agents. |
 | `communicate` | Human-facing writing, rewriting, distillation, and review across conversation, task files, reports, reviews, and handoffs. Always loaded with `using-superra`; the skill body owns structure, form choice, and sentence style, and two load-on-demand references own restructuring rewrites and Markdown mechanics. Academic manuscripts compose it with `academic-writing`. |
 | `semantic-merge` | Tools for **semantic coherence** in branch integration. Provides mode references for workflow sync authoring, workflow sync review, and standalone merge; resolves conflicts by intent, escalates intent-changing decisions to the user, detects and resolves stale references within the merge's reach, lands a merge commit plus propagation commits as needed to reach semantic coherence (every commit leaves existing protection passing), and records the approved post-sync diff in the git log (commit messages) plus a temporary task-local `## Sync Impact` section on each affected task. Loaded by Sync / `Stage: sync` agents. |
