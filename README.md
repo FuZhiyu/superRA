@@ -27,6 +27,8 @@ Frameworks such as [Superpowers](https://github.com/obra/superpowers) target sof
 
 ## Get started
 
+superRA is built and tested on macOS. Linux should mostly work; Windows is untested. Some conveniences, like the dashboard's open-in-app links and cheap copy-on-write data copies, are macOS-specific.
+
 ### Claude Code
 
 Requires Claude Code v2.1+:

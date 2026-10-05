@@ -16,6 +16,8 @@ A branch-and-PR workflow is recommended but not required. To get the most out of
 
 superRA runs on **[Claude Code](https://docs.claude.com/en/docs/claude-code) or [Codex](https://developers.openai.com/codex/cli)**. This walkthrough uses Claude Code; everything applies to Codex too — only the install step and the way you invoke agents differ (see the [Codex install notes](docs/README.codex.md)).
 
+superRA is built and tested on macOS. Linux should mostly work; Windows is untested. Some conveniences, like the dashboard's open-in-app links and cheap copy-on-write data copies, are macOS-specific.
+
 You also need [`uv`](https://docs.astral.sh/uv/) to launch the dashboard.
 
 The dashboard doubles as a launcher into your own machine: a task's `Open` button and any file link in a task body open in whatever application you already use for that file type, and a header button opens the task's file in the VS Code window already holding that worktree. Opened from another device, such as a phone, the same links show the file inside the dashboard. Convenient, but not required.
