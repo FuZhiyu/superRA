@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from task_check import run_checks
 
 
@@ -31,3 +33,13 @@ def test_step_citations_check_owner_and_ignore_examples(tmp_path):
     assert any("'absent'" in f.message for f in findings)
     assert any("report/task.md" in f.message for f in findings)
 
+
+
+@pytest.mark.filterwarnings("ignore:Unreadable")
+def test_check_survives_non_utf8_markdown(tmp_path):
+    root = tmp_path / "superRA"
+    source = task(root, "report", "write-report", "caf� [missing step](task.md#step-absent)")
+    source.write_bytes(source.read_bytes().replace("�".encode(), b"\xe9"))
+    (root / "report" / "notes.md").write_bytes(b"caf\xe9 [x](task.md#step-absent)\n")
+    findings = run_checks(root)
+    assert sum("'absent'" in f.message for f in findings) == 2

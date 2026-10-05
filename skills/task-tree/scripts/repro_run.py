@@ -517,7 +517,8 @@ def run_build(
             _schedule(build, n_workers)
         except KeyboardInterrupt:
             interrupted = True
-        if not dry_run and not interrupted:
+        # A step that failed to register is unknown, not gone: keep every entry.
+        if not dry_run and not interrupted and not graph.unregistered:
             prune_lock(paths, {s.name for s in graph.steps} | {s.name for s in graph.archived_steps})
     cache.flush()
     if dry_run:

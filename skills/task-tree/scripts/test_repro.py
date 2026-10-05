@@ -349,6 +349,55 @@ class TestIncludeClosure:
         assert found == ["scripts/run_estimates.jl", "src/model.jl"]
         assert warnings_out == []
 
+    def test_an_include_through_a_symlinked_directory_keeps_its_written_path(self, tmp_path):
+        project, shared = tmp_path / "proj", tmp_path / "shared"
+        (project / "Code").mkdir(parents=True)
+        shared.mkdir()
+        (shared / "io.jl").write_text("# leaf\n", encoding="utf-8")
+        (project / "Code" / "lib").symlink_to(shared)
+        (project / "Code" / "run.jl").write_text('include("lib/io.jl")\n', encoding="utf-8")
+        found, warnings_out = include_closure(project / "Code" / "run.jl", project)
+        assert found == ["Code/lib/io.jl"]
+        assert warnings_out == []
+
+    def test_an_include_outside_the_root_takes_a_variable_root_or_warns(self, tmp_path):
+        project, shared = tmp_path / "proj", tmp_path / "shared"
+        (project / "Code").mkdir(parents=True)
+        shared.mkdir()
+        (shared / "io.jl").write_text("# leaf\n", encoding="utf-8")
+        (project / "Code" / "run.jl").write_text('include("../../shared/io.jl")\n', encoding="utf-8")
+        found, warnings_out = include_closure(
+            project / "Code" / "run.jl", project, {"SHARED": str(shared), "OUT": "output"}
+        )
+        assert found == ["${SHARED}/io.jl"]
+        assert warnings_out == []
+
+        found, warnings_out = include_closure(project / "Code" / "run.jl", project)
+        assert found == []
+        assert "outside the project root" in warnings_out[0]
+
+    def test_a_variable_rooted_include_is_a_portable_dep(self, tmp_path):
+        shared = tmp_path / "shared"
+        shared.mkdir()
+        (shared / "io.jl").write_text("# leaf\n", encoding="utf-8")
+        (tmp_path / "proj").mkdir()
+        plan = _plan(tmp_path / "proj")
+        (plan / "config.yaml").write_text(
+            f"reproduction:\n  vars:\n    SHARED: {shared}\n", encoding="utf-8"
+        )
+        code = tmp_path / "proj" / "Code"
+        code.mkdir()
+        (code / "run.jl").write_text('include("../../shared/io.jl")\n', encoding="utf-8")
+        _write_repro_task(
+            plan / "01-run", "Run",
+            "steps:\n  - name: run\n    cmd: julia Code/run.jl\n    deps: [Code/run.jl]\n",
+        )
+        step = build_graph(plan, project_root=tmp_path / "proj").step("run")
+        assert [(d.logical, d.resolved) for d in step.deps] == [
+            ("Code/run.jl", "Code/run.jl"),
+            ("${SHARED}/io.jl", (shared / "io.jl").as_posix()),
+        ]
+
     def test_dynamic_include_warns(self, tmp_path):
         code = tmp_path / "Code"
         code.mkdir()
@@ -535,6 +584,42 @@ class TestEdges:
         graph = _graph(plan)
         assert graph.step_edges == [("build", "paper", "output/figures/fig1.pdf")]
         assert graph.external_inputs == []
+
+    def test_a_directory_dep_is_read_from_every_out_inside_it(self, tmp_path):
+        plan = _plan(tmp_path)
+        _write_repro_task(
+            plan / "01-build",
+            "Build",
+            "steps:\n"
+            "  - name: fig\n    cmd: sh fig.sh\n    outs: [output/figures/fig1.pdf]\n"
+            "  - name: tab\n    cmd: sh tab.sh\n    outs: [output/figures/tab1.tex]\n",
+        )
+        _write_repro_task(
+            plan / "02-paper",
+            "Paper",
+            "steps:\n"
+            "  - name: paper\n"
+            "    cmd: latexmk paper.tex\n"
+            "    deps: [output/figures]\n"
+            "    outs: [output/paper.pdf]\n",
+        )
+        graph = _graph(plan)
+        assert graph.step_edges == [
+            ("fig", "paper", "output/figures"),
+            ("tab", "paper", "output/figures"),
+        ]
+        assert graph.external_inputs == []
+
+    def test_an_out_inside_another_steps_out_is_an_error(self, tmp_path):
+        plan = _plan(tmp_path)
+        _write_repro_task(
+            plan / "01-build",
+            "Build",
+            "steps:\n"
+            "  - name: all\n    cmd: sh all.sh\n    outs: [output/figures]\n"
+            "  - name: one\n    cmd: sh one.sh\n    outs: [output/figures/fig1.pdf]\n",
+        )
+        assert _has(_graph(plan), "error", "lies inside an out of step 'all'")
 
     def test_a_dep_no_step_produces_is_an_external_input(self, tmp_path):
         graph = _graph(_two_task_pipeline(tmp_path))

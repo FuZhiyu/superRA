@@ -148,8 +148,8 @@ A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selec
 | `name` | Slug, unique across the active graph. Archived name/output conflicts are diagnostic only and cannot replace an active producer. |
 | `cmd` | Shell string, run from the project root. Mutually exclusive with `runner`. |
 | `runner` + `script` | Expands a runner template from config; the script is added to `deps` automatically. |
-| `deps` | Files or directories the step reads. With `cmd`, list the script here. |
-| `outs` | Files or directories the step writes. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge. |
+| `deps` | Files or directories the step reads. With `cmd`, list the script here. A directory dep reads every out inside it, so each producing step gets an edge. |
+| `outs` | Files or directories the step writes. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge; no other step's out may lie inside it. |
 | `kind` | `build` (default) or `check`. A `check` step declares no `outs` and reruns when its deps change. |
 | `params` | Flat mapping hashed into the step's definition. |
 
@@ -194,7 +194,7 @@ reproduction:
 - **A changed root** invalidates through changed content or resolved command text; relocation to identical bytes preserves freshness.
 - **An external input** is hashed like any dep: a redelivered extract restales its consumers.
 - **An `env_deps` file** that changes invalidates every step.
-- **A Julia `.jl` dep** expands to every file it reaches through a statically resolvable `include`, so a helper edit invalidates its consumers without being listed. An `include` that does not resolve is reported for hand declaration.
+- **A Julia `.jl` dep** expands to every file it reaches through a statically resolvable `include`, so a helper edit invalidates its consumers without being listed. Each included file keeps the path as written, below the project root or a `${VAR}` directory. An `include` that does not resolve, or reaches a file outside both, is reported for hand declaration.
 - **Identical output stops the cascade.** A rerun that regenerates its outs byte for byte leaves its descendants fresh.
 - **A failed forced rerun** stays `failed` until a successful retry, which the next build attempts even with unchanged inputs.
 
@@ -215,12 +215,12 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 **`[ERROR]`**
 
 - **Text:** prose outside the fence; YAML outside the subset, in a section or in `config.yaml`.
-- **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out.
+- **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out; one step's out inside another step's directory out.
 - **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
 - **Dependencies:** step cycles, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved or lies outside the project root and every `${VAR}` directory; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
 
 **Unregistered results artifact** — an advisory `[WARNING]` that never blocks, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 

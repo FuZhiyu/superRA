@@ -710,7 +710,8 @@ def _label(s) -> str:
         at_head = f"in HEAD's lock, {'entry' if len(names) == 1 else 'entries'} " + _capped(names, ENTRIES_SHOWN)
         return f"lock {s['rev']} ({s['author']}, {s['date']}; {_relation(s, at_head)})"
     if kind == 'git':
-        return f"git {s['rev']} ({_relation(s, "HEAD's version")})"
+        relation = _relation(s, "HEAD's version")
+        return f"git {s['rev']} ({relation})"
     if kind == 'uncommitted':
         return 'uncommitted'
     if kind == 'working-lock':

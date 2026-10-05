@@ -712,20 +712,27 @@ def _include_target(arg: str) -> list[tuple[str, str]] | None:
 
 
 def include_closure(
-    entry: Path, project_root: Path
+    entry: Path, project_root: Path, variables: dict[str, str] | None = None
 ) -> tuple[list[str], list[str]]:
     """Return (transitive included files, warnings) for a Julia entry point.
 
-    Paths come back project-root-relative and POSIX-separated, sorted, and
-    exclude *entry* itself. An ``include`` whose argument is not statically
-    resolvable, or whose target is missing on disk, is reported as a warning
-    rather than dropped silently.
+    Paths come back as portable ids, sorted, excluding *entry* itself: relative
+    to the project root, or ``${VAR}/...`` below a variable's directory, taken
+    from the path as written so a symlink never leaks its machine-specific
+    target. An ``include`` whose argument is not statically resolvable, whose
+    target is missing on disk, or whose target has no portable id is reported
+    as a warning rather than dropped silently.
     """
     found: list[str] = []
     warnings_out: list[str] = []
     seen: set[Path] = set()
     from _repro_state import is_online_only  # deferred: _repro_state imports this module
-    pending = [entry]
+    roots = _portable_roots(project_root, variables or {})
+
+    def label(path: Path) -> str:
+        return _portable_id(path, roots) or path.as_posix()
+
+    pending = [Path(os.path.abspath(entry))]
     while pending:
         current = pending.pop()
         try:
@@ -738,7 +745,7 @@ def include_closure(
         try:
             if is_online_only(current, current.stat()):
                 warnings_out.append(
-                    f"{_relative(current, project_root)}: online-only here, so its "
+                    f"{label(current)}: online-only here, so its "
                     f"includes were not scanned; download it to detect them"
                 )
                 continue
@@ -749,39 +756,59 @@ def include_closure(
             candidates = _include_target(arg)
             if candidates is None:
                 warnings_out.append(
-                    f"{_relative(current, project_root)}: "
+                    f"{label(current)}: "
                     f"include({arg.strip()}) is not a static path; declare it "
                     f"as a dep if the step reads it"
                 )
                 continue
             bases = {"dir": current.parent, "root": project_root}
-            paths = [(bases[anchor] / target).resolve() for anchor, target in candidates]
+            paths = [Path(os.path.abspath(bases[anchor] / target)) for anchor, target in candidates]
             existing = [p for p in paths if p.is_file()]
             if len(existing) > 1:
                 warnings_out.append(
-                    f"{_relative(current, project_root)}: include({arg.strip()}) "
-                    f"matches both {_relative(existing[0], project_root)} and "
-                    f"{_relative(existing[1], project_root)}; using the first"
+                    f"{label(current)}: include({arg.strip()}) "
+                    f"matches both {label(existing[0])} and "
+                    f"{label(existing[1])}; using the first"
                 )
             child = existing[0] if existing else paths[0]
-            rel = _relative(child, project_root)
             if not child.is_file():
                 warnings_out.append(
-                    f"{_relative(current, project_root)}: include target {rel} "
+                    f"{label(current)}: include target {label(child)} "
                     f"does not exist"
                 )
                 continue
-            if child not in seen:
-                found.append(rel)
+            portable = _portable_id(child, roots)
+            if portable is None:
+                warnings_out.append(
+                    f"{label(current)}: include target {child.as_posix()} is outside "
+                    f"the project root and every ${{VAR}} directory; declare it as a "
+                    f"dep under a ${{VAR}} root if the step reads it"
+                )
+                continue
+            if child.resolve() not in seen:
+                found.append(portable)
                 pending.append(child)
     return sorted(set(found)), warnings_out
 
 
-def _relative(path: Path, project_root: Path) -> str:
-    try:
-        return path.resolve().relative_to(project_root.resolve()).as_posix()
-    except (OSError, ValueError):
-        return path.as_posix()
+def _portable_roots(project_root: Path, variables: dict[str, str]) -> list[tuple[str, str]]:
+    """(prefix, absolute directory) pairs: the project root first, then variables, longest first."""
+    root = os.path.abspath(project_root)
+    named = []
+    for name, value in variables.items():
+        directory = os.path.abspath(os.path.join(root, value)) if value else root
+        if directory != root:
+            named.append((f"${{{name}}}/", directory))
+    return [("", root), *sorted(named, key=lambda pair: len(pair[1]), reverse=True)]
+
+
+def _portable_id(path: Path, roots: list[tuple[str, str]]) -> str | None:
+    """The path below the first root containing it, written as a dep id."""
+    text = os.path.abspath(path)
+    for prefix, directory in roots:
+        if text.startswith(directory.rstrip("/") + "/"):
+            return prefix + Path(text[len(directory.rstrip("/")) + 1:]).as_posix()
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1086,11 +1113,11 @@ def _expand_deps(
         entry = project_root / ref.resolved
         if not entry.is_file():
             continue
-        included, include_warnings = include_closure(entry, project_root)
+        included, include_warnings = include_closure(entry, project_root, config.variables)
         for message in include_warnings:
             warn(f"step {step.name!r}: {message}")
         for rel in included:
-            _add(PathRef(logical=rel, resolved=rel), "include", ref.logical)
+            _add(_path_ref(rel, config.variables)[0], "include", ref.logical)
 
     for raw in config.env_deps:
         # Unknown ${VAR}s here are reported once against config.yaml, not per step.
@@ -1412,10 +1439,32 @@ def _link(graph: Graph, project_root: Path) -> None:
     edges: set[tuple[str, str, str]] = set()
 
     for step in graph.steps:
+        for out in step.outs:
+            parent = out.path.resolved.rpartition("/")[0]
+            while parent and graph.producers.get(parent) in (None, step.name):
+                parent = parent.rpartition("/")[0]
+            if parent:
+                findings.append(
+                    Finding(
+                        task_path=step.task_path,
+                        category=CATEGORY,
+                        severity="error",
+                        message=(
+                            f"out {out.path.logical} of step {step.name!r} lies inside "
+                            f"an out of step {graph.producers[parent]!r} ({parent}); "
+                            "one step owns each out"
+                        ),
+                    )
+                )
+
+    for step in graph.steps:
         for dep in step.deps:
             producer = _producing_step(dep.resolved, producer_paths, graph.producers)
+            inside = {graph.producers[p] for p in producer_paths if p.startswith(dep.resolved + "/")}
             if producer is not None:
-                edges.add((producer, step.name, dep.logical))
+                inside.add(producer)
+            if inside:
+                edges.update((source, step.name, dep.logical) for source in inside)
                 continue
             exists = (project_root / dep.resolved).exists()
             entry = externals.get(dep.logical)

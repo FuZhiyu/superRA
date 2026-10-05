@@ -503,6 +503,28 @@ def test_python3_fallback_runs_core_without_third_party_deps(
     assert "Root" in result.stdout
 
 
+def _python_3_10() -> str | None:
+    found = shutil.which("python3.10")
+    if found is None and shutil.which("uv") is not None:
+        result = subprocess.run(["uv", "python", "find", "3.10"], capture_output=True, text=True, check=False)
+        found = result.stdout.strip() if result.returncode == 0 else None
+    return found
+
+
+def test_every_script_parses_on_python_3_10() -> None:
+    python = _python_3_10()
+    if python is None:
+        pytest.skip("a Python 3.10 interpreter is required")
+    check = (
+        "import pathlib, sys\n"
+        "for p in sorted(pathlib.Path(sys.argv[1]).glob('*.py')):\n"
+        "    compile(p.read_text(encoding='utf-8'), str(p), 'exec')\n"
+    )
+    result = subprocess.run([python, "-c", check, str(SCRIPTS_DIR)],
+                            capture_output=True, text=True, timeout=60, check=False)
+    assert result.returncode == 0, result.stderr
+
+
 def test_backward_compatible_direct_script_query(
     task_root: Path,
 ) -> None:
