@@ -2494,6 +2494,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .rp-explain-actions:empty { display:none; }
 .file-peek { position:fixed;right:auto;z-index:300;width:340px;max-height:min(460px,70vh);overflow:hidden;pointer-events:none; }
 .file-peek-body img { display:block;max-width:100%;max-height:300px;margin:4px auto 0;background:#fff;border-radius:3px; }
+.file-peek-body img[hidden] { display:none; }
 .file-peek-text { max-height:240px;overflow:hidden;margin:4px 0 0;padding:8px;font-size:var(--fs-micro);line-height:1.5;white-space:pre; }
 .rp-task-meta .badge { font-size:9px;padding:1px 4px; }
 .rp-task-freshness { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }

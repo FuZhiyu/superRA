@@ -16,8 +16,8 @@ The pinned versions match the CDN tags formerly in `templates/base.html`, now mi
 | `languages/julia.min.js` | @highlightjs/cdn-assets | 11.11.1 | `https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/languages/julia.min.js` |
 | `notebook.min.js` | notebookjs | 0.8.3 | `https://cdn.jsdelivr.net/npm/notebookjs@0.8.3/notebook.min.js` |
 | `purify.min.js` | dompurify | 3.4.10 | `https://cdn.jsdelivr.net/npm/dompurify@3.4.10/dist/purify.min.js` |
-| `pdf.min.mjs` | pdfjs-dist | 5.7.284 | `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/build/pdf.min.mjs` |
-| `pdf.worker.min.mjs` | pdfjs-dist | 5.7.284 | `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/build/pdf.worker.min.mjs` |
+| `pdf.min.mjs` | pdfjs-dist | 5.7.284 | `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/legacy/build/pdf.min.mjs` |
+| `pdf.worker.min.mjs` | pdfjs-dist | 5.7.284 | `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.7.284/legacy/build/pdf.worker.min.mjs` |
 | `htmx.min.js` | htmx.org | 2.0.10 | `https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js` |
 | `sse.js` | htmx-ext-sse | 2.2.4 | `https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.4/sse.js` |
 | `fonts/KaTeX_*.woff2` | katex | 0.16.47 | `https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/fonts/<name>.woff2` |
@@ -28,7 +28,7 @@ The 20 `fonts/KaTeX_*.woff2` files are every font `katex.min.css` references via
 
 `highlight.min.js` is the highlight.js "common" bundle (36 languages, covering bash/shell, python, yaml, markdown, json among the doc/task content). It does **not** include Julia, so `languages/julia.min.js` is vendored alongside it; loaded after the bundle, that module registers Julia onto the global `hljs`. Highlight colors are theme-driven CSS (`--hl-*` tokens in `base.html`), so no highlight.js theme stylesheet is vendored. To extend language coverage, vendor more `languages/<lang>.min.js` modules from the same CDN path and load each after the bundle.
 
-`pdf.min.mjs` and `pdf.worker.min.mjs` are pdf.js, live-server only: the file hover preview imports them on the first PDF hover (never at page load) to render page 1 as a thumbnail, and the standalone export does not inline them.
+`pdf.min.mjs` and `pdf.worker.min.mjs` are pdf.js, live-server only: the file hover preview imports them on the first PDF hover (never at page load) to render page 1 as a thumbnail, and the standalone export does not inline them. They are the `legacy/` build: the modern build calls `Map.prototype.getOrInsertComputed` and `Math.sumPrecise` unguarded and fails on Safari 18 (macOS Sequoia); the legacy build bundles core-js polyfills for them.
 
 `notebook.min.js` is notebookjs's browser build. Dashboard code keeps its `executeJavaScript` flag false and replaces its cell/output renderers with the existing markdown-it, KaTeX, Highlight.js, and DOMPurify boundary. The adapter supports the common static notebook subset and emits an explicit fallback for active or unknown MIME types.
 
@@ -43,8 +43,8 @@ c4a399dd6f488bc97a3546e3476747b3e714c99c57b9473154c6fb8d259b9381  highlight.min.
 03330298d96dc711b8f66fc8075ff4a1ab9f830a87c5c6c9ae0503733ba99da4  languages/julia.min.js
 673b1916c250d2093c8c8920e5503348a2283ef67d6ad429f0b0dc6c98f7c115  notebook.min.js
 9aca84b86a0c35926d47994f354b37116044aab0aac9874f35a44322a5c96565  purify.min.js
-b0fc97331dc1fc03c4a381ebdd88f751a4d12de4ec97fa1faf18bb37721a4b5b  pdf.min.mjs
-52fadd5b81b6abd1eb665bab0c3749a8ad6a293fcb6ee9d9e0309f29d4f82619  pdf.worker.min.mjs
+93a1c3b8106822070313c9a001623d086be33bc1f7743081eef27353f7266959  pdf.min.mjs
+cd10f3bdfa9bb5eb7632776675385f5948f4b09afe6b8b563b6199aa99d5da52  pdf.worker.min.mjs
 71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de  htmx.min.js
 3b5992a541619babefc4c169505af474df5c3039da51e59b96ccf9241ecd61d2  sse.js
 ```
@@ -62,8 +62,8 @@ curl -sL "https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"    
 curl -sL "https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js" -o "$DST/highlight.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/notebookjs@0.8.3/notebook.min.js"              -o "$DST/notebook.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"             -o "$DST/purify.min.js"
-curl -sL "https://cdn.jsdelivr.net/npm/pdfjs-dist@5/build/pdf.min.mjs"            -o "$DST/pdf.min.mjs"
-curl -sL "https://cdn.jsdelivr.net/npm/pdfjs-dist@5/build/pdf.worker.min.mjs"     -o "$DST/pdf.worker.min.mjs"
+curl -sL "https://cdn.jsdelivr.net/npm/pdfjs-dist@5/legacy/build/pdf.min.mjs"            -o "$DST/pdf.min.mjs"
+curl -sL "https://cdn.jsdelivr.net/npm/pdfjs-dist@5/legacy/build/pdf.worker.min.mjs"     -o "$DST/pdf.worker.min.mjs"
 curl -sL "https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"                -o "$DST/htmx.min.js"
 curl -sL "https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"                      -o "$DST/sse.js"
 mkdir -p "$DST/languages"
