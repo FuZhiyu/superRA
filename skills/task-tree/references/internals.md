@@ -48,7 +48,7 @@ Key properties:
 | `write_task(task)` | Write a `Task` back to disk, preserving body content. Atomic: temp file + `os.replace`, so concurrent readers never see a half-written file. |
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
-| `compute_status(task)` | Roll up status from children. Parked-status exclusion and all-parked branch rules are specified in `task-file-contract.md §Task Anatomy`. |
+| `compute_status(task)` | Roll up status from children. Excludes parked (archived/postponed) children; an all-parked branch rolls up to `postponed` if any child is postponed, else `archived`. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
 
 ### Effective dependency snapshot

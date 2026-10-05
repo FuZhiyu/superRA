@@ -8,7 +8,7 @@ Bare `superra …` below denotes the committed `./superRA/superra` wrapper.
 
 ## Scaffold a new task
 
-Creates the directory, fills the template with current dates, sets frontmatter defaults (`status: not-started`):
+Creates the directory, fills the template, sets frontmatter defaults (`status: not-started`):
 
 ```bash
 superra task create 01-data/03-filter \
