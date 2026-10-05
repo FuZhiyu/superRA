@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.repository == 'FuZhiyu/superRA'
     runs-on: ubuntu-latest
     steps:
       - name: Check out the release commit
