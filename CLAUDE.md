@@ -12,20 +12,6 @@ When modifying superRA itself — skills, hooks, harness adapters, or internal d
 - **Verify behavior, not just prose.** For skill or workflow changes, run at least one realistic harness session or script-level verification that exercises the changed path.
 - **Preserve user-facing/internal separation.** `README.md` explains what superRA is and why a researcher would use it. This file explains how contributors keep the internals coherent.
 
-## Public Mirror and Privacy
-
-This repo is private: `FuZhiyu/superRA-dev`, remote `origin`. The public `FuZhiyu/superRA` (remote `public`, push disabled) receives only a filtered copy of `main`, built by `.github/public-sync/publish.sh` from `filter-paths.txt` and `replacements.txt` beside it.
-
-- **Internal records stay in filtered paths.** `superRA/` (except `showcase-analysis/`, `config.yaml`, and `superra`), `.plan/`, `docs/plans/`, `docs/drafts/`, and the rest of `filter-paths.txt` never reach the public repo.
-- **Everything else is public, history included.** In skills, hooks, tests, docs, `README.md`, `RELEASE-NOTES.md`, `CLAUDE.md`, and the message of any commit touching those paths, write no absolute home paths, machine or host names, Tailscale or LAN addresses, private research-project names, or personal file names. Use `~`, generic labels ("a home Mac"), or placeholders.
-- **Publish only through the filter.** Every push to `origin/main` runs a private-only workflow that rebuilds the filtered history and fast-forwards public `main`; never push to `public` directly. Manual equivalent, for a failed run:
-  ```bash
-  .github/public-sync/publish.sh git@github.com:FuZhiyu/superRA-dev.git "$TMPDIR/superra-public"
-  git -C "$TMPDIR/superra-public" push git@github.com:FuZhiyu/superRA.git main:main
-  ```
-  The filter is deterministic, so this push fast-forwards. A rejected push or failed sync run means the filter output changed: stop and ask before force-pushing.
-- **A leaked string goes into `replacements.txt`.** Any change to either filter file rewrites public history and needs a force-push, so batch such changes and ask first.
-
 ## Local Task-Tree CLI Development
 
 When developing this checkout, run the task-tree CLI from the live source via `uv run --script` on the loose entry scripts (there is no installable package; each entry script carries a PEP 723 dependency block):
