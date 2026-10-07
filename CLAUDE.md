@@ -38,6 +38,7 @@ superRA gives agents mechanisms they assemble for the current research situation
 - **Domain and utility skills stand alone.** They may mention task files, implementers, or reviewers as optional context, but must work when loaded directly by a researcher or another orchestrator.
 - **Compose at the workflow edge.** A step assembles the workflow skill, `agent-orchestration`, the role skill, the domain skill, and utilities; none restates another.
 - **Put instructions where they are loaded.** Role guidance in role skills, stage guidance in stage references, cross-stage guidance in the smallest owning skill. `SKILL.md` routes to references, kept one level deep.
+- **Subagents stay off tree tooling.** Outside `Stage: maturation`, subagents never load `task-tree` or `task-tree-design.md` (except `task-file-contract.md` §Reproduction Section, via `reproducibility`); `agent-orchestration` is never subagent-loaded.
 - **Write positive, executable instructions.** "Describe the data before transforming it," not "Do not transform data without describing it." Rationale goes in commits and PRs, not skill bodies.
 
 ### Teach the Protocol, Don't Prescribe Each Action
@@ -83,10 +84,6 @@ Hook feedback and default CLI output land in an agent's context; their size stay
 - **Remind once** per session or status transition (marker files).
 - **Every warning has an exit** — fixing it or recording a decision clears it.
 
-## Terminology
-
-**"Plan" is the verb, not the noun.** "Planning" is the superplan process. Everything in `superRA/` is a **task** — top-level tasks sit directly under `superRA/`, nested tasks are their dispatchable children. Call `superRA/` "the task tree," never "the plan."
-
 ## Ownership
 
 One source of truth per concern; other mentions point to it. Skill-level grouping lives in `skills/CATEGORIES.md`. The non-obvious owners:
@@ -103,20 +100,12 @@ One source of truth per concern; other mentions point to it. Skill-level groupin
 | Reproduction discipline vs. mechanics | `reproducibility` vs. `task-tree` (schema, `superra repro` CLI, hooks) |
 | Task companion files | `using-superra/references/task-companion-files.md` |
 | Human-facing writing | `communicate`; manuscripts add `academic-writing` |
-| Harness tool names and runtime differences | adapter references under `using-superra/references/` |
-
-## Architecture
-
-- **Roles are skills.** A dispatch prompt names `implement-task` or `review-task`; the role skill pulls stage and domain loads through the manifest.
-- **Subagents stay off tree tooling.** Outside `Stage: maturation`, subagents never load `task-tree` or `task-tree-design.md` (except `task-file-contract.md` §Reproduction Section, via `reproducibility`); `agent-orchestration` is never subagent-loaded.
-- **Flat skill layout.** Every skill is `skills/<name>/SKILL.md`; grouping lives in `skills/CATEGORIES.md` and `README.md`.
-- **Shared gated checklists.** Implementers and reviewers use the same checklists: `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items are recorded and never block.
-- **One dispatch mechanism, all harnesses.** Spawn the harness's default agent and name the role skill in the prompt. Shared behavior lives only in root `skills/`; harness differences live in the adapter references. `AGENTS.md` and `AGENT.md` are aliases for this file.
-- **Vendored assets are re-fetched.** Files under `skills/task-tree/scripts/vendor/` follow `vendor/README.md`.
 
 ## Adding or Changing Skills
 
 - **Prefer improving an owning skill.** Add a skill only for a distinct concern.
+- **Shared behavior lives only in root `skills/`;** harness tool names and runtime differences go in the adapter references under `using-superra/references/`.
+- **"Plan" is the verb, not the noun.** Everything in `superRA/` is a **task**; call `superRA/` "the task tree," never "the plan."
 - **Frontmatter descriptions state trigger conditions explicitly** — Codex and other harnesses discover skills by metadata.
 - **Add a reference only with a clear load condition** from its `SKILL.md`; keep domain and utility skills standalone.
 - **A new domain vertical** is `skills/<vertical>/SKILL.md` with its gates and stage-scoped references for the stages it touches; workflow, role, and orchestration skills carry over unchanged.
