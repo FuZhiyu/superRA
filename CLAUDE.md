@@ -18,12 +18,12 @@ This repo is private: `FuZhiyu/superRA-dev`, remote `origin`. The public `FuZhiy
 
 - **Internal records stay in filtered paths.** `superRA/` (except `showcase-analysis/`, `config.yaml`, and `superra`), `.plan/`, `docs/plans/`, `docs/drafts/`, and the rest of `filter-paths.txt` never reach the public repo.
 - **Everything else is public, history included.** In skills, hooks, tests, docs, `README.md`, `RELEASE-NOTES.md`, `CLAUDE.md`, and the message of any commit touching those paths, write no absolute home paths, machine or host names, Tailscale or LAN addresses, private research-project names, or personal file names. Use `~`, generic labels ("a home Mac"), or placeholders.
-- **Publish only through the filter.** Never push to `public` directly:
+- **Publish only through the filter.** Every push to `origin/main` runs a private-only workflow that rebuilds the filtered history and fast-forwards public `main`; never push to `public` directly. Manual equivalent, for a failed run:
   ```bash
   .github/public-sync/publish.sh git@github.com:FuZhiyu/superRA-dev.git "$TMPDIR/superra-public"
   git -C "$TMPDIR/superra-public" push git@github.com:FuZhiyu/superRA.git main:main
   ```
-  The filter is deterministic, so this push fast-forwards. A rejected push means the filter output changed: stop and ask before force-pushing.
+  The filter is deterministic, so this push fast-forwards. A rejected push or failed sync run means the filter output changed: stop and ask before force-pushing.
 - **A leaked string goes into `replacements.txt`.** Any change to either filter file rewrites public history and needs a force-push, so batch such changes and ask first.
 
 ## Local Task-Tree CLI Development
