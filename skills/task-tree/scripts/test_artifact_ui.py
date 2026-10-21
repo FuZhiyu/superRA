@@ -719,6 +719,15 @@ class TestAttachmentSurfaceBrowser:
         from playwright.sync_api import sync_playwright
 
         root = _attachment_tree(tmp_path)
+        # Leading comments HTML closes early: a script after one must still
+        # come after the injected CSP.
+        for name, opener in (("abrupt.html", "<!-->"), ("abrupt-dash.html", "<!--->"),
+                             ("bang.html", "<!-- a --!>")):
+            (root / "01-reader" / "attachments" / name).write_text(
+                f'{opener}<script src="https://evil.example.com/{name}.js"></script><!-- -->'
+                "<!doctype html><body><script>window.done = true;</script></body>",
+                encoding="utf-8",
+            )
         export = tmp_path / "dashboard.html"
         export.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
         monkeypatch.setattr(_artifacts, "DEFAULT_ARTIFACT_LIMITS", _artifacts.ArtifactLimits(
@@ -737,7 +746,9 @@ class TestAttachmentSurfaceBrowser:
             assert frame_el.get_attribute("src") is None
             assert "allow-same-origin" not in frame_el.get_attribute("sandbox")
             srcdoc = frame_el.get_attribute("srcdoc")
-            assert srcdoc.startswith("<!-- generated -->\n<!doctype html><script>")
+            assert srcdoc.startswith('<meta http-equiv="Content-Security-Policy"')
+            assert srcdoc.endswith(_artifacts.HTML_THEME_SCRIPT.split("__THEME__")[1]
+                                   + EXPLORER_HTML.replace("VERSION", "v1"))
             frame = frame_el.element_handle().content_frame()
             frame.wait_for_selector("#title")
             _assert_sandboxed(frame)
@@ -749,6 +760,14 @@ class TestAttachmentSurfaceBrowser:
             frame.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'dark'")
             actions = page.locator("#active-node .artifact-action")
             assert actions.all_inner_texts() == ["Download"]
+
+            for name in ("abrupt.html", "abrupt-dash.html", "bang.html"):
+                page.goto(export.as_uri() + "#/01-reader?attachment=attachments%2F" + name)
+                tricky = page.locator(f'#active-node iframe[data-artifact-path="attachments/{name}"]')
+                tricky.wait_for()
+                inner = tricky.element_handle().content_frame()
+                inner.wait_for_function("() => window.done === true")
+                assert inner.evaluate("() => window.evilLoaded === true") is False, name
 
             page.goto(oversized.as_uri() + hash_)
             page.wait_for_selector("#active-node .artifact-state-unavailable")

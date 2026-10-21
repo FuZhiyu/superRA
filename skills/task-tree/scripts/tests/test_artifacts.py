@@ -604,6 +604,13 @@ class TestHtmlArtifactFrame:
         prefix = b"\xef\xbb\xbf<!-- generated -->\n<!-- by a tool -->\n<!DOCTYPE html><script>"
         assert injected.startswith(prefix)
         assert injected.endswith(b"</script><html>")
+        # HTML closes these comments early, so what follows is page content and
+        # the script goes before it.
+        for opener in (b"<!-->", b"<!--->", b"<!-- a --!>"):
+            page = opener + b"<script src=x></script><!-- -->\n<!doctype html><html>"
+            injected = _artifacts.inject_theme_script(page, "")
+            assert injected.startswith(opener + b"<script>(function"), opener
+            assert injected.endswith(b"</script>" + page[len(opener):]), opener
 
     def test_markup_media_types_download_whatever_the_suffix(self, tmp_path, monkeypatch):
         """A host mime table can map another suffix to text/html (Debian's maps

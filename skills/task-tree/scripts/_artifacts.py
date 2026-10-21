@@ -150,9 +150,12 @@ HTML_THEME_SCRIPT = (
     "if(d&&d.type==='superra-theme')set(d.theme);});})();</script>"
 )
 # Insertion point: after a leading BOM, comments, and doctype, so the parser
-# opens <head> for the injected nodes and the page keeps standards mode.
+# opens <head> for the injected nodes and the page keeps standards mode.  A
+# comment ends as HTML ends it: at once for ``<!-->`` / ``<!--->``, else at the
+# first ``-->`` or ``--!>``.
 _HTML_PREAMBLE = re.compile(
-    rb"\A(?:\xef\xbb\xbf)?(?:\s|<!--.*?-->)*(?:<!doctype[^>]*>)?", re.IGNORECASE | re.DOTALL
+    rb"\A(?:\xef\xbb\xbf)?(?:\s|<!--(?:-?>|.*?--!?>))*(?:<!doctype[^>]*>)?",
+    re.IGNORECASE | re.DOTALL,
 )
 
 

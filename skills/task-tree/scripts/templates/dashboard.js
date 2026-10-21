@@ -3014,7 +3014,9 @@ function showOpenError(msg) {
 function reportCommentRefusal(resp) {
   if (resp.ok) return;
   resp.json().catch(function() { return {}; }).then(function(data) {
-    showOpenError('Comment not saved: ' + (data.detail || ('HTTP ' + resp.status)));
+    var detail = data.detail;
+    if (detail && typeof detail !== 'string') detail = JSON.stringify(detail);
+    showOpenError('Comment not saved: ' + (detail || ('HTTP ' + resp.status)));
   });
 }
 
@@ -3222,17 +3224,13 @@ function artifactFrameUrl(taskPath, artifactPath, version) {
   return wtUrl(url);
 }
 
-/* The page with HTML_FRAME's theme script (and, for a srcdoc frame, its CSP as
-   a <meta>) inserted where _artifacts.inject_theme_script puts it: after a
-   leading BOM, comments, and doctype, so the nodes open the page's <head>. */
-function injectHtmlFrameHead(text, withCsp) {
-  var head = HTML_FRAME.theme_script.replace('__THEME__', JSON.stringify(dashboardTheme()));
-  if (withCsp) {
-    head += '<meta http-equiv="Content-Security-Policy" content="'
-      + escapeAttr(HTML_FRAME.csp) + '">';
-  }
-  var at = text.match(/^\uFEFF?(?:\s|<!--[\s\S]*?-->)*(?:<!doctype[^>]*>)?/i)[0].length;
-  return text.slice(0, at) + head + text.slice(at);
+/* A srcdoc page with HTML_FRAME's CSP as a <meta> and its theme script ahead of
+   every byte of the page, so nothing the page holds runs before the CSP. A srcdoc
+   document never enters quirks mode, so the doctype need not come first. */
+function srcdocWithFramePolicy(text) {
+  return '<meta http-equiv="Content-Security-Policy" content="' + escapeAttr(HTML_FRAME.csp) + '">'
+    + HTML_FRAME.theme_script.replace('__THEME__', JSON.stringify(dashboardTheme()))
+    + text;
 }
 
 function artifactManifestEntry(taskPath, artifactPath) {
@@ -3647,7 +3645,7 @@ function renderHtmlArtifact(taskPath, entry, body, token) {
   }
   standaloneArtifactText(taskPath, entry).then(function(text) {
     if (token !== _artifactPreviewToken) return;
-    frame.srcdoc = injectHtmlFrameHead(text, true);
+    frame.srcdoc = srcdocWithFramePolicy(text);
     body.appendChild(frame);
   }).catch(function() {
     if (token !== _artifactPreviewToken) return;
