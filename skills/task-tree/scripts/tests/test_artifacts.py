@@ -598,6 +598,34 @@ class TestHtmlArtifactFrame:
         assert "set(\"\")" in unset.text and "x\"" not in unset.text
         assert unset.text.endswith("</script><p>no doctype</p>")
 
+    def test_theme_script_follows_leading_comments_and_doctype(self):
+        page = b"\xef\xbb\xbf<!-- generated -->\n<!-- by a tool -->\n<!DOCTYPE html><html>"
+        injected = _artifacts.inject_theme_script(page, "light")
+        prefix = b"\xef\xbb\xbf<!-- generated -->\n<!-- by a tool -->\n<!DOCTYPE html><script>"
+        assert injected.startswith(prefix)
+        assert injected.endswith(b"</script><html>")
+
+    def test_markup_media_types_download_whatever_the_suffix(self, tmp_path, monkeypatch):
+        """A host mime table can map another suffix to text/html (Debian's maps
+        .shtml); served inline, it would run unsandboxed on the dashboard origin."""
+        import mimetypes
+
+        mimetypes.guess_type("x.txt")  # initialize the table before patching it
+        monkeypatch.setitem(mimetypes.types_map, ".shtml", "text/html")
+        monkeypatch.setitem(mimetypes.types_map, ".xhtml", "application/xhtml+xml")
+        assert mimetypes.guess_type("x.shtml")[0] == "text/html"
+        root = _html_tree(tmp_path)
+        for name in ("x.shtml", "x.xhtml"):
+            (root / "attachments" / name).write_text("<script>1</script>", encoding="utf-8")
+            assert _artifacts.classify(Path(name))[2] is False, name
+        with _client_for(root) as client:
+            for name in ("x.shtml", "x.xhtml"):
+                response = client.get("/api/artifact", params={"task": "", "path": f"attachments/{name}"})
+                assert response.status_code == 200, name
+                assert response.headers["content-disposition"].startswith("attachment"), name
+                assert client.get("/api/artifact-frame", params={
+                    "task": "", "path": f"attachments/{name}"}).status_code == 404, name
+
     def test_frame_refuses_non_html_traversal_and_oversized(self, tmp_path, monkeypatch):
         root = _html_tree(tmp_path)
         with _client_for(root) as client:

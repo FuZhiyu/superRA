@@ -149,9 +149,16 @@ HTML_THEME_SCRIPT = (
     "if(e.source!==window.parent)return;var d=e.data;"
     "if(d&&d.type==='superra-theme')set(d.theme);});})();</script>"
 )
-# Insertion point: after a leading BOM and doctype, so the parser opens <head>
-# for the injected nodes and the page keeps standards mode.
-_HTML_PREAMBLE = re.compile(rb"\A(?:\xef\xbb\xbf)?\s*(?:<!doctype[^>]*>)?", re.IGNORECASE)
+# Insertion point: after a leading BOM, comments, and doctype, so the parser
+# opens <head> for the injected nodes and the page keeps standards mode.
+_HTML_PREAMBLE = re.compile(
+    rb"\A(?:\xef\xbb\xbf)?(?:\s|<!--.*?-->)*(?:<!doctype[^>]*>)?", re.IGNORECASE | re.DOTALL
+)
+
+
+def renders_markup(mime: str) -> bool:
+    """True for a media type a browser renders as an active document: HTML or XML."""
+    return mime == "text/html" or mime.endswith("xml")
 
 
 def frame_theme(value: str) -> str:
@@ -213,7 +220,11 @@ def classify(path: Path) -> tuple[str, str, bool]:
     safe_inline = (
         kind in {"markdown", "python", "julia", "r", "notebook", "pdf", "html"}
         or suffix in _STATIC_IMAGE_SUFFIXES
-        or (kind == "text" and suffix not in _ACTIVE_TEXT_SUFFIXES)
+        or (
+            kind == "text"
+            and suffix not in _ACTIVE_TEXT_SUFFIXES
+            and not renders_markup(mime)
+        )
     )
     return kind, mime, safe_inline
 

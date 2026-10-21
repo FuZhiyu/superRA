@@ -2247,6 +2247,27 @@ class TestCommentActionsRendered:
         finally:
             self._stop(t)
 
+    def test_refused_write_shows_its_reason(self, plan_root, monkeypatch):
+        from playwright.sync_api import sync_playwright
+        add_comment(plan_root / "01-first", "Objective", 0, "Complete step 1.", "check this", author="u")
+        monkeypatch.setattr(plan_dashboard, "_is_trusted_authority", lambda authority: False)
+        port, t = self._serve(plan_root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                pg = b.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/#/01-first", wait_until="domcontentloaded")
+                item = pg.locator(".comment-item", has_text="check this")
+                item.wait_for(timeout=5000)
+                item.locator("button", has_text="Resolve").click()
+                toast = pg.locator("#open-toast.visible")
+                toast.wait_for(timeout=5000)
+                assert toast.inner_text() == "Comment not saved: Untrusted Host header"
+                b.close()
+            assert not load_comments(plan_root / "01-first")[0].resolved
+        finally:
+            self._stop(t)
+
 
 @pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
 class TestFrontendPolishRendered:
@@ -6828,6 +6849,14 @@ class TestReproBuildRoutes:
             assert plan_dashboard._is_trusted_authority(host), host
         for host in ("evil.example.com", "evil.example.com:8995", "", own + ".evil.example.com"):
             assert not plan_dashboard._is_trusted_authority(host), host
+
+    def test_trusted_authority_includes_the_explicit_host_name(self, monkeypatch):
+        """`--host <name>` prints that name in the startup URL, so the server
+        must accept it as the Host of its own page."""
+        assert not plan_dashboard._is_trusted_authority("mac.tailnet.example:8995")
+        monkeypatch.setattr(plan_dashboard, "SERVE_HOST", "mac.tailnet.example")
+        assert plan_dashboard._is_trusted_authority("mac.tailnet.example:8995")
+        assert not plan_dashboard._is_trusted_authority("evil.example.com")
 
     def test_target_is_one_argv_element_after_the_separator(self):
         assert plan_dashboard._build_args("02-panel", True, True) == ["--only", "--force", "--", "02-panel"]

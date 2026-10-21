@@ -156,7 +156,8 @@ def _attachment_tree(tmp_path: Path, *, label: str = "A") -> Path:
 
 # A themed page that probes its sandbox: parent DOM, a same-origin API fetch, a
 # pinned-CDN script, and an off-allowlist script.
-EXPLORER_HTML = """<!doctype html>
+EXPLORER_HTML = """<!-- generated -->
+<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Explorer</title>
 <style>
@@ -200,8 +201,9 @@ def _assert_sandboxed(frame, *, top: bool = False) -> None:
     probe = frame.evaluate(
         "() => ({probe: window.probe, cdn: window.cdnLoaded === true,"
         " evil: window.evilLoaded === true, violations: window.violations,"
-        " origin: window.origin})"
+        " origin: window.origin, mode: document.compatMode})"
     )
+    assert probe["mode"] == "CSS1Compat"  # the injected theme script kept the doctype first
     assert probe["probe"] == {"parent": "top" if top else "blocked", "fetch": "blocked"}
     assert probe["cdn"] and not probe["evil"]
     assert any("evil.example.com" in uri for uri in probe["violations"])
@@ -685,7 +687,8 @@ class TestAttachmentSurfaceBrowser:
                     " && /auto|scroll/.test(getComputedStyle(e).overflowY))) e = e.parentElement;"
                     " return e || document.scrollingElement; })()"
                 )
-                page.evaluate(f"{scroller}.scrollTop = 120")
+                # Mid-range, so late layout settling cannot clamp it.
+                page.evaluate(f"(e => e.scrollTop = Math.floor((e.scrollHeight - e.clientHeight) / 2))({scroller})")
                 before = page.evaluate(f"{scroller}.scrollTop")
                 assert before > 0
                 page.evaluate("document.querySelector('iframe.artifact-html-frame').__kept = true")
@@ -734,7 +737,7 @@ class TestAttachmentSurfaceBrowser:
             assert frame_el.get_attribute("src") is None
             assert "allow-same-origin" not in frame_el.get_attribute("sandbox")
             srcdoc = frame_el.get_attribute("srcdoc")
-            assert srcdoc.startswith("<!doctype html><script>")
+            assert srcdoc.startswith("<!-- generated -->\n<!doctype html><script>")
             frame = frame_el.element_handle().content_frame()
             frame.wait_for_selector("#title")
             _assert_sandboxed(frame)

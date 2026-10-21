@@ -1839,6 +1839,8 @@ async def open_local_path(request: Request):
 BUILD_JOB_FILENAME = "dashboard-build.json"
 BUILD_LOG_FILENAME = "dashboard-build.log"
 BUILD_HOSTS_ENV_VAR = "SUPERRA_DASHBOARD_HOSTS"
+# The ``--host`` this process binds (``serve``): an explicit name is trusted.
+SERVE_HOST = ""
 # A just-spawned runner has not taken the lock yet; trust its live pid this long.
 BUILD_STARTUP_GRACE = 30.0
 BUILD_LOG_TAIL_LINES = 40
@@ -1853,11 +1855,13 @@ def _repro_actions_enabled() -> bool:
 
 
 def _machine_names() -> set[str]:
-    """This machine's own names, plus any the operator lists in ``SUPERRA_DASHBOARD_HOSTS``."""
+    """This machine's own names, the ``--host`` it serves on, and any the operator
+    lists in ``SUPERRA_DASHBOARD_HOSTS``."""
     names = {socket.gethostname(), socket.getfqdn()}
     names |= {n.split(".")[0] for n in list(names)}
     names |= {n + ".local" for n in list(names) if "." not in n}
     names |= set(os.environ.get(BUILD_HOSTS_ENV_VAR, "").split(","))
+    names.add(SERVE_HOST)  # the --host name the startup URL prints
     return {n.strip().lower().rstrip(".") for n in names if n.strip()}
 
 
@@ -2274,10 +2278,11 @@ async def artifact_content(
 ):
     """Preview or download one companion from its owning task and worktree.
 
-    HTML always downloads here: it renders only through ``/api/artifact-frame``.
+    HTML or XML, by media type, always downloads here: an HTML attachment
+    renders only through ``/api/artifact-frame``.
     """
     state, owner, item = await _artifact_item(request, task, path)
-    as_download = download or item.download_only or item.kind == "html"
+    as_download = download or item.download_only or artifacts.renders_markup(item.mime)
     headers = {
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-store",
@@ -3186,7 +3191,8 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     """
     import uvicorn
 
-    global _server
+    global _server, SERVE_HOST
+    SERVE_HOST = host
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:

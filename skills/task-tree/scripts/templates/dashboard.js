@@ -3009,6 +3009,15 @@ function showOpenError(msg) {
   showOpenError._timer = setTimeout(function() { el.classList.remove('visible'); }, 6000);
 }
 
+/* A refused comment write (an untrusted Host, say) names its reason instead of
+   leaving the form or button looking dead. */
+function reportCommentRefusal(resp) {
+  if (resp.ok) return;
+  resp.json().catch(function() { return {}; }).then(function(data) {
+    showOpenError('Comment not saved: ' + (data.detail || ('HTTP ' + resp.status)));
+  });
+}
+
 /* Hand a project-root-relative path to the server for opening on its own host.
    `target` is 'native' (the OS default application for the file type) or 'editor'
    (this worktree's VS Code window). When no editor CLI is installed the route
@@ -3215,14 +3224,14 @@ function artifactFrameUrl(taskPath, artifactPath, version) {
 
 /* The page with HTML_FRAME's theme script (and, for a srcdoc frame, its CSP as
    a <meta>) inserted where _artifacts.inject_theme_script puts it: after a
-   leading BOM and doctype, so the nodes open the page's <head>. */
+   leading BOM, comments, and doctype, so the nodes open the page's <head>. */
 function injectHtmlFrameHead(text, withCsp) {
   var head = HTML_FRAME.theme_script.replace('__THEME__', JSON.stringify(dashboardTheme()));
   if (withCsp) {
     head += '<meta http-equiv="Content-Security-Policy" content="'
       + escapeAttr(HTML_FRAME.csp) + '">';
   }
-  var at = text.match(/^\uFEFF?\s*(?:<!doctype[^>]*>)?/i)[0].length;
+  var at = text.match(/^\uFEFF?(?:\s|<!--[\s\S]*?-->)*(?:<!doctype[^>]*>)?/i)[0].length;
   return text.slice(0, at) + head + text.slice(at);
 }
 
@@ -5703,6 +5712,7 @@ function showCommentForm(btn) {
         body: body
       })
     }).then(function(resp) {
+      reportCommentRefusal(resp);
       if (resp.ok) {
         form.remove();
         loadComments(taskPath);
@@ -5995,7 +6005,7 @@ function _dismissActiveEdit() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: newBody })
-    });
+    }).then(reportCommentRefusal);
   }
 }
 
@@ -6033,6 +6043,7 @@ function startEditComment(item, bodyEl, comment, taskPath) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: newBody })
     }).then(function(resp) {
+      reportCommentRefusal(resp);
       if (resp.ok) loadComments(taskPath);
     });
   }
@@ -6078,13 +6089,13 @@ function startEditComment(item, bodyEl, comment, taskPath) {
 function resolveComment(taskPath, commentId) {
   _commentEditPaths[taskPath] = Date.now();
   fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'PATCH' })
-    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+    .then(function(resp) { reportCommentRefusal(resp); if (resp.ok) loadComments(taskPath); });
 }
 
 function deleteComment(taskPath, commentId) {
   _commentEditPaths[taskPath] = Date.now();
   fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'DELETE' })
-    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+    .then(function(resp) { reportCommentRefusal(resp); if (resp.ok) loadComments(taskPath); });
 }
 
 /* ── Page load: populate the sidebar, then start the hash router ──
