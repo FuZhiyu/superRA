@@ -299,6 +299,13 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]
            form because vscode://file ignores a #L... fragment. */
+        var htmlTarget = projectDir == null
+          ? resolveArtifactRelativePath(artifactPath || '', href) : '';
+        if (isHtmlArtifactPath(htmlTarget)) {
+          a.setAttribute('href', attachmentHash(taskPath, htmlTarget));
+          a.removeAttribute('target');
+          return;
+        }
         if (artifactPath) {
           var artifactTarget = resolveArtifactRelativePath(artifactPath, href);
           if (artifactTarget) {
@@ -452,6 +459,22 @@ function toggleTheme() {
   var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
   localStorage.setItem('dashboard-theme', next);
+  document.querySelectorAll('iframe.artifact-html-frame').forEach(postHtmlFrameTheme);
+  document.querySelectorAll('a[href*="/api/artifact-frame?"]').forEach(function(a) {
+    a.setAttribute('href', a.getAttribute('href').replace(/([?&]theme=)[^&]*/, '$1' + next));
+  });
+}
+
+function dashboardTheme() {
+  return document.documentElement.getAttribute('data-theme') || '';
+}
+
+/* The framed page's injected theme script accepts this message only from its
+   parent; the opaque-origin frame leaves '*' as the only usable target. */
+function postHtmlFrameTheme(frame) {
+  if (frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'superra-theme', theme: dashboardTheme() }, '*');
+  }
 }
 
 /* Shared navigation state: layout changes do not change what is selected or filtered. */
@@ -3174,6 +3197,35 @@ function artifactApiUrl(taskPath, artifactPath, download) {
   return wtUrl(url);
 }
 
+function isHtmlArtifactPath(artifactPath) {
+  return /\.html?$/i.test(artifactPath || '');
+}
+
+function attachmentHash(taskPath, artifactPath) {
+  return '#/' + (taskPath || '') + '?attachment=' + encodeURIComponent(artifactPath);
+}
+
+function artifactFrameUrl(taskPath, artifactPath, version) {
+  var url = '/api/artifact-frame?task=' + encodeURIComponent(taskPath || '')
+    + '&path=' + encodeURIComponent(artifactPath || '')
+    + '&theme=' + encodeURIComponent(dashboardTheme());
+  if (version != null) url += '&v=' + encodeURIComponent(version);
+  return wtUrl(url);
+}
+
+/* The page with HTML_FRAME's theme script (and, for a srcdoc frame, its CSP as
+   a <meta>) inserted where _artifacts.inject_theme_script puts it: after a
+   leading BOM and doctype, so the nodes open the page's <head>. */
+function injectHtmlFrameHead(text, withCsp) {
+  var head = HTML_FRAME.theme_script.replace('__THEME__', JSON.stringify(dashboardTheme()));
+  if (withCsp) {
+    head += '<meta http-equiv="Content-Security-Policy" content="'
+      + escapeAttr(HTML_FRAME.csp) + '">';
+  }
+  var at = text.match(/^\uFEFF?\s*(?:<!doctype[^>]*>)?/i)[0].length;
+  return text.slice(0, at) + head + text.slice(at);
+}
+
 function artifactManifestEntry(taskPath, artifactPath) {
   var manifest = _artifactManifests[taskPath];
   if (!manifest && window.STANDALONE && window.STANDALONE_ARTIFACTS) {
@@ -3208,6 +3260,12 @@ function artifactResourceUrl(taskPath, artifactPath) {
 }
 
 function artifactOpenHref(taskPath, artifactPath) {
+  if (isHtmlArtifactPath(artifactPath)) {
+    /* A top-level data: page cannot run; an export opens the repo copy if any. */
+    if (!window.STANDALONE) return artifactFrameUrl(taskPath, artifactPath);
+    var entry = artifactManifestEntry(taskPath, artifactPath);
+    return (entry && entry.repo_url) || '#';
+  }
   return artifactResourceUrl(taskPath, artifactPath) || '#';
 }
 
@@ -3276,8 +3334,8 @@ function buildArtifactPreviewHead(taskPath, entry) {
     open.className = 'artifact-action';
     open.href = openHref;
     open.target = '_blank';
-    open.textContent = 'Open';
-    if (window.LOCAL_OPEN) {
+    open.textContent = entry.kind === 'html' && !window.STANDALONE ? 'Open in new tab' : 'Open';
+    if (window.LOCAL_OPEN && entry.kind !== 'html') {
       open.title = 'Open in the default application';
       open.setAttribute('data-open-path', taskRelOpenPath(taskPath, entry.path));
     }
@@ -3510,6 +3568,10 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     body.appendChild(unavailable);
     return;
   }
+  if (entry.kind === 'html') {
+    renderHtmlArtifact(taskPath, entry, body, token);
+    return;
+  }
   if (entry.kind === 'image') {
     var image = document.createElement('img');
     image.className = 'artifact-image-preview';
@@ -3553,6 +3615,40 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     if (token !== _artifactPreviewToken) return;
     body.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
     body.firstChild.textContent = error.message;
+  });
+}
+
+/* An HTML attachment runs only inside a frame with HTML_FRAME's sandbox: live
+   from /api/artifact-frame (which adds the CSP), in an export from srcdoc with
+   the CSP injected as a <meta>. */
+function renderHtmlArtifact(taskPath, entry, body, token) {
+  var frame = document.createElement('iframe');
+  frame.className = 'artifact-html-frame';
+  frame.setAttribute('sandbox', HTML_FRAME.sandbox);
+  frame.title = 'HTML attachment: ' + entry.name;
+  frame.dataset.artifactOwner = taskPath;
+  frame.dataset.artifactPath = entry.path;
+  frame.dataset.mtime = String(entry.mtime_ns);
+  /* A toggle between the src request and the page's load is caught up here. */
+  frame.addEventListener('load', function() { postHtmlFrameTheme(frame); });
+  if (!window.STANDALONE) {
+    frame.src = artifactFrameUrl(taskPath, entry.path, entry.mtime_ns);
+    body.appendChild(frame);
+    return;
+  }
+  standaloneArtifactText(taskPath, entry).then(function(text) {
+    if (token !== _artifactPreviewToken) return;
+    frame.srcdoc = injectHtmlFrameHead(text, true);
+    body.appendChild(frame);
+  }).catch(function() {
+    if (token !== _artifactPreviewToken) return;
+    var state = document.createElement('p');
+    state.className = 'artifact-state artifact-state-unavailable';
+    var reason = (entry.export || {}).reason;
+    state.textContent = reason === 'total-byte-limit'
+      ? 'Not embedded — this export reached its total size limit.'
+      : 'This file was not embedded in the export.';
+    body.appendChild(state);
   });
 }
 
@@ -3641,11 +3737,28 @@ function loadProjectFile(taskPath, filePath, region, token) {
   }).catch(function(error) { showArtifactLoadError(region, token, error); });
 }
 
+function artifactMetaText(entry) {
+  return entry.path + ' · ' + entry.kind + ' · ' + formatArtifactBytes(entry.size);
+}
+
+function syncAttachmentRowActive(taskPath, artifactPath) {
+  document.querySelectorAll('.attachment-file-row').forEach(function(row) {
+    row.classList.toggle('nav-active',
+      row.dataset.artifactOwner === taskPath
+      && row.dataset.artifactPath === artifactPath);
+  });
+}
+
 function loadActiveArtifact(taskPath, artifactPath) {
   var region = document.getElementById('active-node');
   if (!region) return;
   var token = ++_artifactPreviewToken;
-  region.innerHTML = '<p class="artifact-state">Loading ' + (artifactPath.charAt(0) === '/' ? 'file' : 'attachment') + '…</p>';
+  /* The same live HTML attachment stays in place: a refresh swaps only its
+     frame src, so the pane's scroll and the route survive an edit. */
+  var frame = window.STANDALONE ? null : region.querySelector('iframe.artifact-html-frame');
+  var inPlace = !!frame && frame.dataset.artifactOwner === taskPath
+    && frame.dataset.artifactPath === artifactPath;
+  if (!inPlace) region.innerHTML = '<p class="artifact-state">Loading ' + (artifactPath.charAt(0) === '/' ? 'file' : 'attachment') + '…</p>';
   if (artifactPath.charAt(0) === '/') { loadProjectFile(taskPath, artifactPath.slice(1), region, token); return; }
   fetchAttachmentManifest(taskPath).then(function(manifest) {
     if (token !== _artifactPreviewToken || taskPath !== activePath
@@ -3654,6 +3767,16 @@ function loadActiveArtifact(taskPath, artifactPath) {
     renderAttachmentBranch(taskPath, manifest);
     var entry = artifactManifestEntry(taskPath, artifactPath);
     if (!entry) throw new Error('This attachment is unavailable.');
+    if (inPlace && entry.kind === 'html' && entry.previewable) {
+      if (frame.dataset.mtime !== String(entry.mtime_ns)) {
+        frame.dataset.mtime = String(entry.mtime_ns);
+        frame.src = artifactFrameUrl(taskPath, entry.path, entry.mtime_ns);
+      }
+      var liveMeta = region.querySelector('.attachment-active-meta');
+      if (liveMeta) liveMeta.textContent = artifactMetaText(entry);
+      syncAttachmentRowActive(taskPath, artifactPath);
+      return;
+    }
     region.innerHTML = '';
     var head = buildArtifactPageHead(taskPath, entry.name);
     var actions = buildArtifactPreviewHead(taskPath, entry)
@@ -3662,18 +3785,13 @@ function loadActiveArtifact(taskPath, artifactPath) {
     region.appendChild(head);
     var meta = document.createElement('p');
     meta.className = 'attachment-active-meta';
-    meta.textContent = entry.path + ' · ' + entry.kind + ' · '
-      + formatArtifactBytes(entry.size);
+    meta.textContent = artifactMetaText(entry);
     region.appendChild(meta);
     var body = document.createElement('div');
     body.className = 'artifact-preview-body attachment-active-body';
     region.appendChild(body);
     renderActiveArtifactBody(taskPath, entry, body, token);
-    document.querySelectorAll('.attachment-file-row').forEach(function(row) {
-      row.classList.toggle('nav-active',
-        row.dataset.artifactOwner === taskPath
-        && row.dataset.artifactPath === artifactPath);
-    });
+    syncAttachmentRowActive(taskPath, artifactPath);
     finishArtifactPage(region);
   }).catch(function(error) { showArtifactLoadError(region, token, error); });
 }

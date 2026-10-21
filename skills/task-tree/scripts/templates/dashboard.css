@@ -1389,6 +1389,15 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   border-radius: 6px;
   background: #fff;
 }
+/* A page without theme tokens draws on white, like a standalone browser tab. */
+.artifact-html-frame {
+  display: block;
+  width: 100%;
+  height: max(480px, calc(100vh - 220px));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+}
 .artifact-markdown-preview { padding-top: 0; }
 .notebook-preview .nb-cell {
   padding: 12px 0;

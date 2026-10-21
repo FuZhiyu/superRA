@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import base64
+import json
 import mimetypes
 import os
+import re
 import stat
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -119,7 +121,49 @@ _TEXT_SUFFIXES = {
     ".yml",
 }
 _STATIC_IMAGE_SUFFIXES = {".gif", ".jpeg", ".jpg", ".png", ".webp"}
-_ACTIVE_TEXT_SUFFIXES = {".htm", ".html", ".js", ".mjs", ".svg", ".xml"}
+_HTML_SUFFIXES = {".htm", ".html"}
+_ACTIVE_TEXT_SUFFIXES = {".js", ".mjs", ".svg", ".xml"}
+
+# An HTML attachment runs only in an opaque-origin sandbox under this policy,
+# whether the live frame route serves it or a standalone export frames it.
+HTML_FRAME_SANDBOX = "allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads"
+HTML_FRAME_CSP = (
+    "default-src 'none'; "
+    "script-src 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com "
+    "https://cdn.jsdelivr.net/npm/ https://unpkg.com; "
+    "style-src 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src https://fonts.gstatic.com data:; "
+    "img-src data: blob:; "
+    "connect-src 'none'; "
+    "form-action 'none'"
+)
+# First child of the page's <head>: sets the host theme, then follows the
+# parent's ``{type: "superra-theme", theme}`` messages.  ``__THEME__`` is a
+# JSON string: "light", "dark", or "" to follow the system.
+HTML_THEME_SCRIPT = (
+    "<script>(function(){var r=document.documentElement;"
+    "function set(t){if(t==='light'||t==='dark')r.setAttribute('data-theme',t);"
+    "else r.removeAttribute('data-theme');}"
+    "set(__THEME__);"
+    "window.addEventListener('message',function(e){"
+    "if(e.source!==window.parent)return;var d=e.data;"
+    "if(d&&d.type==='superra-theme')set(d.theme);});})();</script>"
+)
+# Insertion point: after a leading BOM and doctype, so the parser opens <head>
+# for the injected nodes and the page keeps standards mode.
+_HTML_PREAMBLE = re.compile(rb"\A(?:\xef\xbb\xbf)?\s*(?:<!doctype[^>]*>)?", re.IGNORECASE)
+
+
+def frame_theme(value: str) -> str:
+    return value if value in ("light", "dark") else ""
+
+
+def inject_theme_script(raw: bytes, theme: str) -> bytes:
+    """*raw* with the theme script as the first child of its ``<head>``."""
+    script = HTML_THEME_SCRIPT.replace("__THEME__", json.dumps(frame_theme(theme)))
+    at = _HTML_PREAMBLE.match(raw).end()
+    return raw[:at] + script.encode("utf-8") + raw[at:]
+
 _MIME_OVERRIDES = {
     ".md": "text/markdown",
     ".py": "text/x-python",
@@ -155,6 +199,8 @@ def classify(path: Path) -> tuple[str, str, bool]:
         kind = "r"
     elif suffix == ".ipynb":
         kind = "notebook"
+    elif suffix in _HTML_SUFFIXES:
+        kind = "html"
     elif suffix in _STATIC_IMAGE_SUFFIXES or suffix == ".svg":
         kind = "image"
     elif suffix == ".pdf":
@@ -165,7 +211,7 @@ def classify(path: Path) -> tuple[str, str, bool]:
         kind = "binary"
 
     safe_inline = (
-        kind in {"markdown", "python", "julia", "r", "notebook", "pdf"}
+        kind in {"markdown", "python", "julia", "r", "notebook", "pdf", "html"}
         or suffix in _STATIC_IMAGE_SUFFIXES
         or (kind == "text" and suffix not in _ACTIVE_TEXT_SUFFIXES)
     )

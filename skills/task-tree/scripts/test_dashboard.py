@@ -330,7 +330,8 @@ class TestServerRoutes:
         assert '<script src="/static/highlight.min.js"></script>' in html
         assert '<script src="/static/languages/julia.min.js"></script>' in html
         assert '<script src="/static/purify.min.js"></script>' in html
-        assert "cdn.jsdelivr.net" not in html
+        # The HTML-attachment frame policy names CDN hosts as data; no tag loads one.
+        assert not re.search(r'(?:src|href)="https://cdn\.jsdelivr\.net', html)
         assert "fonts.googleapis.com" in html
         # No standalone-only inlining leaks into the served page.
         assert "data:font/woff2;base64," not in html
@@ -3717,16 +3718,18 @@ class TestLocalOpen:
         )
         assert fn
         body = fn.group(0)
-        assert "open.textContent = 'Open';" in body
+        assert "open.textContent = entry.kind === 'html' && !window.STANDALONE ? 'Open in new tab' : 'Open';" in body
         assert "Open raw" not in BASE_HTML
         assert "open.href = openHref;" in body
         assert (
             "open.setAttribute('data-open-path', taskRelOpenPath(taskPath, entry.path));"
             in body
         )
-        # Gated: a doc-mode / standalone / off-loopback page keeps the href alone.
+        # Gated: a doc-mode / standalone / off-loopback page keeps the href alone,
+        # and an HTML attachment always opens the sandboxed frame route.
         assert re.search(
-            r"if \(window\.LOCAL_OPEN\) \{[^}]*data-open-path[^}]*\}", body, re.S
+            r"if \(window\.LOCAL_OPEN && entry\.kind !== 'html'\) \{[^}]*data-open-path[^}]*\}",
+            body, re.S,
         )
 
     def test_body_link_open_path_is_percent_decoded(self):
@@ -4617,6 +4620,10 @@ class TestDocMode:
             "repoFileHref",
             "isRelativeResource",
             "resolveInternalTaskPath",
+            "artifactDirectory",
+            "resolveArtifactRelativePath",
+            "isHtmlArtifactPath",
+            "attachmentHash",
             "renderMarkdown",
         ])
         shim = r"""

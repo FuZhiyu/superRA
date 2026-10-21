@@ -925,6 +925,11 @@ def _get_jinja_env():
 
     env.filters["vscode_link"] = vscode_link
     env.filters["file_url"] = file_url
+    env.globals["html_frame"] = {
+        "sandbox": artifacts.HTML_FRAME_SANDBOX,
+        "csp": artifacts.HTML_FRAME_CSP,
+        "theme_script": artifacts.HTML_THEME_SCRIPT,
+    }
 
     _jinja_env = env
     return env
@@ -1617,6 +1622,8 @@ def _file_peek(resolved: Path, path: str) -> dict:
         return {"exists": False}
     peek = {"exists": True, **entry.as_dict(),
             "max_preview_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes}
+    if peek["kind"] == "html":  # only an attachment renders in the artifact frame
+        peek.update(kind="text", previewable=False, download_only=True)
     if peek["kind"] in _PEEK_TEXT_KINDS:
         try:
             with open(resolved, "rb") as fh:
@@ -2207,14 +2214,8 @@ async def artifact_manifest(request: Request, task: str = ""):
     return manifest
 
 
-@app.get("/api/artifact")
-async def artifact_content(
-    request: Request,
-    task: str = "",
-    path: str = "",
-    download: bool = False,
-):
-    """Preview or download one companion from its owning task and worktree."""
+async def _artifact_item(request: Request, task: str, path: str):
+    """The worktree, owning task, and description of one requested companion."""
     state = await resolve_worktree(request)
     owner = _find_task(state, task)
     if owner is None:
@@ -2231,46 +2232,58 @@ async def artifact_content(
     ) as exc:
         _raise_artifact_http_error(exc)
         raise AssertionError("unreachable")
+    return state, owner, item
 
-    if not download and not item.download_only and not item.previewable:
-        raise HTTPException(
-            status_code=413,
-            detail={
-                "reason": "preview-byte-limit",
-                "size": item.size,
-                "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
-            },
+
+async def _artifact_preview_bytes(state, owner, path: str, item) -> bytes:
+    """One companion's bytes under the preview cap, or the 413 that names it."""
+    too_large = HTTPException(
+        status_code=413,
+        detail={
+            "reason": "preview-byte-limit",
+            "size": item.size,
+            "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
+        },
+    )
+    if not item.previewable:
+        raise too_large
+    try:
+        return await asyncio.to_thread(
+            artifacts.read_artifact_bytes,
+            state.plan_root,
+            owner,
+            path,
+            max_bytes=artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
         )
+    except artifacts.ArtifactTooLargeError as exc:
+        raise too_large from exc
+    except (
+        artifacts.ArtifactSecurityError,
+        FileNotFoundError,
+    ) as exc:
+        _raise_artifact_http_error(exc)
+        raise AssertionError("unreachable")
 
-    as_download = download or item.download_only
+
+@app.get("/api/artifact")
+async def artifact_content(
+    request: Request,
+    task: str = "",
+    path: str = "",
+    download: bool = False,
+):
+    """Preview or download one companion from its owning task and worktree.
+
+    HTML always downloads here: it renders only through ``/api/artifact-frame``.
+    """
+    state, owner, item = await _artifact_item(request, task, path)
+    as_download = download or item.download_only or item.kind == "html"
     headers = {
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-store",
     }
     if not as_download:
-        try:
-            raw = await asyncio.to_thread(
-                artifacts.read_artifact_bytes,
-                state.plan_root,
-                owner,
-                path,
-                max_bytes=artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
-            )
-        except artifacts.ArtifactTooLargeError as exc:
-            raise HTTPException(
-                status_code=413,
-                detail={
-                    "reason": "preview-byte-limit",
-                    "size": item.size,
-                    "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
-                },
-            ) from exc
-        except (
-            artifacts.ArtifactSecurityError,
-            FileNotFoundError,
-        ) as exc:
-            _raise_artifact_http_error(exc)
-            raise AssertionError("unreachable")
+        raw = await _artifact_preview_bytes(state, owner, path, item)
         headers["Content-Disposition"] = (
             f"inline; filename*=UTF-8''{quote(item.name, safe='')}"
         )
@@ -2296,6 +2309,34 @@ async def artifact_content(
         artifacts.iter_artifact_file(handle),
         media_type=item.mime,
         headers=headers,
+    )
+
+
+@app.get("/api/artifact-frame")
+async def artifact_frame(
+    request: Request,
+    task: str = "",
+    path: str = "",
+    theme: str = "",
+):
+    """Render one HTML companion for the pane's iframe or a new tab.
+
+    The response's own CSP sandboxes it without ``allow-same-origin``, so the
+    page runs in an opaque origin whether or not a frame wraps it.
+    """
+    state, owner, item = await _artifact_item(request, task, path)
+    if item.kind != "html":
+        raise HTTPException(status_code=404, detail="Not an HTML attachment")
+    raw = await _artifact_preview_bytes(state, owner, path, item)
+    return Response(
+        content=artifacts.inject_theme_script(raw, theme),
+        media_type="text/html",
+        headers={
+            "Content-Security-Policy": f"sandbox {artifacts.HTML_FRAME_SANDBOX}; {artifacts.HTML_FRAME_CSP}",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(item.name, safe='')}",
+        },
     )
 
 

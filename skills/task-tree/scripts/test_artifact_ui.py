@@ -38,6 +38,7 @@ def _attachment_tree(tmp_path: Path, *, label: str = "A") -> Path:
         f"Attachment reader {label}",
         "in-progress",
         objective="Read task-local attachments in the normal detail pane.",
+        results="- The [explorer](attachments/explorer.html) is interactive.",
     )
     attachments = task / "attachments"
     (attachments / "notes").mkdir(parents=True)
@@ -68,6 +69,7 @@ def _attachment_tree(tmp_path: Path, *, label: str = "A") -> Path:
     (attachments / "readme.txt").write_text(
         f"attachment from {label}\n", encoding="utf-8"
     )
+    _write_explorer(attachments / "explorer.html", "v1")
 
     notebook = {
         "nbformat": 4,
@@ -150,6 +152,67 @@ def _attachment_tree(tmp_path: Path, *, label: str = "A") -> Path:
         objective="Verify attachment navigation exits to the following task.",
     )
     return root
+
+
+# A themed page that probes its sandbox: parent DOM, a same-origin API fetch, a
+# pinned-CDN script, and an off-allowlist script.
+EXPLORER_HTML = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Explorer</title>
+<style>
+:root { --bg: #ffffff; --fg: #111111; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #101010; --fg: #eeeeee; } }
+:root[data-theme="dark"] { --bg: #101010; --fg: #eeeeee; }
+body { background: var(--bg); color: var(--fg); }
+</style>
+<script>
+window.violations = [];
+document.addEventListener('securitypolicyviolation', function (e) { window.violations.push(e.blockedURI); });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/stub-lib@1.0.0/stub.js"></script>
+<script src="https://evil.example.com/x.js"></script>
+</head><body><h1 id="title">Explorer VERSION</h1>
+<script>
+window.probe = {};
+try { window.probe.parent = window.parent === window ? 'top' : !!window.parent.document.body; } catch (e) { window.probe.parent = 'blocked'; }
+fetch('/api/artifacts?task=01-reader').then(
+  function () { window.probe.fetch = 'ok'; }, function () { window.probe.fetch = 'blocked'; });
+</script></body></html>
+"""
+CDN_STUB = "window.cdnLoaded = true;"
+
+
+def _write_explorer(path: Path, version: str) -> None:
+    path.write_text(EXPLORER_HTML.replace("VERSION", version), encoding="utf-8")
+
+
+def _route_scripts(context) -> None:
+    """Serve the allowlisted CDN script locally, and the off-allowlist one too,
+    so only the CSP can keep the latter from running."""
+    context.route("https://cdn.jsdelivr.net/**", lambda route: route.fulfill(
+        status=200, content_type="application/javascript", body=CDN_STUB))
+    context.route("https://evil.example.com/**", lambda route: route.fulfill(
+        status=200, content_type="application/javascript", body="window.evilLoaded = true;"))
+
+
+def _assert_sandboxed(frame, *, top: bool = False) -> None:
+    frame.wait_for_function("() => window.probe && window.probe.fetch")
+    probe = frame.evaluate(
+        "() => ({probe: window.probe, cdn: window.cdnLoaded === true,"
+        " evil: window.evilLoaded === true, violations: window.violations,"
+        " origin: window.origin})"
+    )
+    assert probe["probe"] == {"parent": "top" if top else "blocked", "fetch": "blocked"}
+    assert probe["cdn"] and not probe["evil"]
+    assert any("evil.example.com" in uri for uri in probe["violations"])
+    assert probe["origin"] == "null"
+
+
+def _frame_theme(frame) -> list:
+    return frame.evaluate(
+        "() => [document.documentElement.getAttribute('data-theme'),"
+        " getComputedStyle(document.body).backgroundColor]"
+    )
 
 
 def _have_chromium() -> bool:
@@ -287,7 +350,7 @@ class TestAttachmentSurfaceBrowser:
                 assert page.locator("#artifact-sidecar").count() == 0
                 assert page.locator(".artifact-toggle-btn").count() == 0
                 assert branch.locator(".attachment-branch-toggle").count() == 1
-                assert branch.locator(".attachment-file-row").count() == 9
+                assert branch.locator(".attachment-file-row").count() == 10
                 assert branch.locator(".attachment-branch-children").is_hidden()
                 assert branch.locator(".attachment-branch-toggle").get_attribute(
                     "role"
@@ -564,6 +627,130 @@ class TestAttachmentSurfaceBrowser:
             )
             download = page.locator("#active-node .artifact-action", has_text="Download")
             assert download.get_attribute("href").startswith("data:text/plain")
+            browser.close()
+
+    def test_html_attachment_runs_sandboxed_follows_theme_and_hot_reloads(self, tmp_path):
+        from playwright.sync_api import sync_playwright
+
+        root = _attachment_tree(tmp_path)
+        port, server, loop, thread = _start_server(root)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                context = browser.new_context(viewport={"width": 1200, "height": 700})
+                _route_scripts(context)
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{port}/#/01-reader", wait_until="domcontentloaded")
+                branch = page.locator('.task-node[data-path="01-reader"] > .attachment-branch')
+                branch.wait_for()
+                branch.locator(".attachment-branch-toggle").click()
+
+                # A ## Results link opens the artifact view, not a download.
+                page.locator('#active-node a', has_text="explorer").click()
+                page.wait_for_function("() => location.hash.includes('attachment=attachments%2Fexplorer.html')")
+                frame_el = page.locator("#active-node iframe.artifact-html-frame")
+                frame_el.wait_for()
+                sandbox = frame_el.get_attribute("sandbox").split()
+                assert set(sandbox) == {"allow-scripts", "allow-popups",
+                                        "allow-popups-to-escape-sandbox", "allow-downloads"}
+                assert "/api/artifact-frame?" in frame_el.get_attribute("src")
+                pane = page.eval_on_selector("#active-node", "e => e.getBoundingClientRect().width")
+                assert frame_el.bounding_box()["width"] >= pane - 2
+                frame = frame_el.element_handle().content_frame()
+                _assert_sandboxed(frame)
+
+                # Theme: serve-time light, then the live toggle.
+                assert _frame_theme(frame) == ["light", "rgb(255, 255, 255)"]
+                page.click(".theme-toggle")
+                frame.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'dark'")
+                assert _frame_theme(frame) == ["dark", "rgb(16, 16, 16)"]
+
+                # Open in new tab: the same route, sandboxed at top level too.
+                open_href = page.locator("#active-node .artifact-action", has_text="Open in new tab").get_attribute("href")
+                assert "/api/artifact-frame?" in open_href and "theme=dark" in open_href
+                tab = context.new_page()
+                tab.goto(f"http://127.0.0.1:{port}{open_href}")
+                _assert_sandboxed(tab.main_frame, top=True)
+                assert _frame_theme(tab.main_frame)[0] == "dark"
+                tab.close()
+
+                # Hot reload swaps only the frame src: route, scroll, branch stay.
+                deadline = time.monotonic() + 5
+                while (not plan_dashboard._worktree_clients.get(plan_dashboard._launch_wt_id)
+                       and time.monotonic() < deadline):
+                    time.sleep(0.02)
+                scroller = (
+                    "(() => { let e = document.getElementById('active-node');"
+                    " while (e && !(e.scrollHeight > e.clientHeight"
+                    " && /auto|scroll/.test(getComputedStyle(e).overflowY))) e = e.parentElement;"
+                    " return e || document.scrollingElement; })()"
+                )
+                page.evaluate(f"{scroller}.scrollTop = 120")
+                before = page.evaluate(f"{scroller}.scrollTop")
+                assert before > 0
+                page.evaluate("document.querySelector('iframe.artifact-html-frame').__kept = true")
+                hash_before = page.evaluate("location.hash")
+                _write_explorer(root / "01-reader" / "attachments" / "explorer.html", "v2")
+                _broadcast_manifest(loop, "01-reader")
+                page.frame_locator("iframe.artifact-html-frame").locator("#title", has_text="Explorer v2").wait_for()
+                assert page.evaluate("document.querySelector('iframe.artifact-html-frame').__kept === true")
+                assert page.evaluate(f"{scroller}.scrollTop") == before
+                assert page.evaluate("location.hash") == hash_before
+                assert branch.locator(".attachment-branch-children").is_visible()
+                frame = frame_el.element_handle().content_frame()
+                assert _frame_theme(frame)[0] == "dark"
+                _assert_sandboxed(frame)
+
+                # The serve-time theme follows a reload into dark mode.
+                page.reload(wait_until="domcontentloaded")
+                frame_el.wait_for()
+                assert "theme=dark" in frame_el.get_attribute("src")
+                frame = frame_el.element_handle().content_frame()
+                frame.wait_for_selector("#title")
+                assert _frame_theme(frame) == ["dark", "rgb(16, 16, 16)"]
+                browser.close()
+        finally:
+            _stop_server(server, thread)
+
+    def test_standalone_html_attachment_renders_in_a_srcdoc_sandbox(self, tmp_path, monkeypatch):
+        from playwright.sync_api import sync_playwright
+
+        root = _attachment_tree(tmp_path)
+        export = tmp_path / "dashboard.html"
+        export.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
+        monkeypatch.setattr(_artifacts, "DEFAULT_ARTIFACT_LIMITS", _artifacts.ArtifactLimits(
+            max_preview_bytes=1024, max_export_file_bytes=1024))
+        oversized = tmp_path / "oversized.html"
+        oversized.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
+        hash_ = "#/01-reader?attachment=attachments%2Fexplorer.html"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            context = browser.new_context()
+            _route_scripts(context)
+            page = context.new_page()
+            page.goto(export.as_uri() + hash_)
+            frame_el = page.locator("#active-node iframe.artifact-html-frame")
+            frame_el.wait_for()
+            assert frame_el.get_attribute("src") is None
+            assert "allow-same-origin" not in frame_el.get_attribute("sandbox")
+            srcdoc = frame_el.get_attribute("srcdoc")
+            assert srcdoc.startswith("<!doctype html><script>")
+            frame = frame_el.element_handle().content_frame()
+            frame.wait_for_selector("#title")
+            _assert_sandboxed(frame)
+            csp = frame.evaluate(
+                "() => document.head.querySelector('meta[http-equiv=\"Content-Security-Policy\"]').content")
+            assert csp == _artifacts.HTML_FRAME_CSP
+            assert _frame_theme(frame) == ["light", "rgb(255, 255, 255)"]
+            page.click(".theme-toggle")
+            frame.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'dark'")
+            actions = page.locator("#active-node .artifact-action")
+            assert actions.all_inner_texts() == ["Download"]
+
+            page.goto(oversized.as_uri() + hash_)
+            page.wait_for_selector("#active-node .artifact-state-unavailable")
+            assert "exceeds the preview limit" in page.inner_text("#active-node")
+            assert page.locator("#active-node iframe").count() == 0
             browser.close()
 
     def test_worktree_switch_keeps_attachment_route_isolated(
