@@ -686,6 +686,13 @@ class TestHtmlArtifactFrame:
         page = payload["contents"][""]["attachments/page.html"]
         assert base64.b64decode(page["data"]).startswith(b"<!doctype html>")
 
+    def test_authoring_guidance_allows_exactly_the_frame_csp_hosts(self):
+        guidance = SCRIPTS_DIR.parents[1] / "communicate" / "references" / "html.md"
+        allowed = set(re.findall(r"`(https://[^`\s]+)`", guidance.read_text(encoding="utf-8")))
+        csp_hosts = {source for sources in _csp_directives(_artifacts.HTML_FRAME_CSP).values()
+                     for source in sources if source.startswith("https://")}
+        assert allowed == csp_hosts
+
 
 class TestArtifactWatcher:
     def _events(self, state, changes):

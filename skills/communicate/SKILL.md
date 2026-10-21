@@ -1,6 +1,6 @@
 ---
 name: communicate
-description: Communication discipline for writing, rewriting, distilling, and reviewing any text meant for human reading, including conversation, task files, planning updates, results, reports, reviews, handoffs, and documentation. Use for every message or artifact a human will read; Must load for superRA who produces human-facing text. 
+description: Communication discipline for writing, rewriting, distilling, and reviewing any text meant for human reading, including conversation, task files, planning updates, results, reports, reviews, handoffs, documentation, and interactive HTML pages. Use for every message or artifact a human will read; Must load for superRA who produces human-facing text. 
 ---
 
 # Communicate
@@ -106,6 +106,7 @@ Each rule fires on a real reading problem; applying one to a line that already r
 ## Route the work
 - When editing a markdown file, **MUST** load [markdown.md](references/markdown.md) for formatting and presentation. 
 - **Rewriting existing material, or auditing why text is hard to read:** load [rewrite.md](references/rewrite.md).
+- **Writing a standalone HTML page:** load [html.md](references/html.md).
 
 ## Final pass
 
