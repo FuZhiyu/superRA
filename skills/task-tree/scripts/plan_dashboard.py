@@ -1666,23 +1666,34 @@ def _authority_host(authority: str) -> str:
     return host
 
 
+def _same_origin_headers(request: Request, trusted_authority) -> None:
+    """Refuse a request whose headers do not show a same-origin browser.
+
+    *trusted_authority* on the ``Host`` header closes DNS rebinding, which makes
+    an attacker page genuinely same-origin; the ``Sec-Fetch-Site`` check refuses
+    what a browser marks as coming from another site or an opaque-origin
+    (sandboxed) page.  Enough alone for a method a browser preflights
+    cross-origin, such as PATCH or DELETE.
+    """
+    if not trusted_authority(request.headers.get("host", "")):
+        raise HTTPException(status_code=403, detail="Untrusted Host header")
+    fetch_site = request.headers.get("sec-fetch-site")
+    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request refused")
+
+
 async def _same_origin_json(request: Request, trusted_authority) -> dict:
     """The JSON object body of a same-origin request, or the refusal.
 
     Requiring ``application/json`` forces a preflight on any cross-origin
-    ``fetch``, which fails because no CORS middleware is installed; the
-    ``Sec-Fetch-Site`` check closes the simple-form-POST path that skips the
-    preflight; *trusted_authority* on the ``Host`` header closes DNS rebinding,
-    which defeats both by making the attacker page genuinely same-origin.
+    ``fetch``, which fails because no CORS middleware is installed; the header
+    checks (``_same_origin_headers``) close the simple-form-POST path that skips
+    the preflight and DNS rebinding.
     """
-    if not trusted_authority(request.headers.get("host", "")):
-        raise HTTPException(status_code=403, detail="Untrusted Host header")
+    _same_origin_headers(request, trusted_authority)
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type != "application/json":
         raise HTTPException(status_code=415, detail="Expected application/json")
-    fetch_site = request.headers.get("sec-fetch-site")
-    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
-        raise HTTPException(status_code=403, detail="Cross-site request refused")
     try:
         body = await request.json()
     except Exception:
@@ -2290,13 +2301,13 @@ async def artifact_content(
 
 @app.post("/api/task/{path:path}/comment")
 async def create_comment(path: str, request: Request):
-    """Create a comment on a task."""
+    """Create a comment on a task, from a same-origin JSON request only."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
+    body = await _same_origin_json(request, _is_trusted_authority)
     task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
-    body = await request.json()
     comment = add_comment(
         task_dir=task.dir_path,
         section=body.get("section", ""),
@@ -2343,6 +2354,7 @@ async def toggle_comment(path: str, comment_id: int, request: Request):
     """
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
+    _same_origin_headers(request, _is_trusted_authority)
     task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
@@ -2370,6 +2382,7 @@ async def remove_comment(path: str, comment_id: int, request: Request):
     """Delete a comment."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
+    _same_origin_headers(request, _is_trusted_authority)
     task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")

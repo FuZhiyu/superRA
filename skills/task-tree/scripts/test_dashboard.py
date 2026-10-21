@@ -130,8 +130,11 @@ def client(plan_root):
     plan_dashboard._jinja_env = None
     plan_dashboard.rebuild_tree()
 
-    # Use the app without the lifespan (no watcher needed in tests)
-    with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
+    # Use the app without the lifespan (no watcher needed in tests), under a
+    # loopback Host, as a browser on this machine sends: the comment routes
+    # refuse an untrusted one.
+    with TestClient(plan_dashboard.app, raise_server_exceptions=True,
+                    base_url="http://127.0.0.1:8995") as c:
         yield c
 
 
@@ -671,6 +674,31 @@ class TestServerRoutes:
     def test_comment_delete_404_on_bad_id(self, client):
         resp = client.delete("/api/task/01-first/comment/9999")
         assert resp.status_code == 404
+
+    def test_comment_create_refuses_a_blind_or_cross_site_post(self, client, plan_root):
+        """A sandboxed project page from /files/ can send a text/plain POST
+        without a preflight; create takes same-origin JSON only."""
+        url = "/api/task/01-first/comment"
+        body = json.dumps({"section": "Objective", "block_index": 0, "body": "forged"})
+        json_type = {"content-type": "application/json"}
+        assert client.post(url, content=body, headers={"content-type": "text/plain"}).status_code == 415
+        assert client.post(url, content=body, headers={**json_type, "sec-fetch-site": "cross-site"}).status_code == 403
+        assert client.post(url, content=body, headers={**json_type, "host": "evil.example.com:8995"}).status_code == 403
+        assert load_comments(plan_root / "01-first") == []
+
+    @pytest.mark.parametrize("method", ["PATCH", "DELETE"])
+    def test_comment_edit_resolve_delete_refuse_cross_site(self, client, plan_root, method):
+        """Edit, resolve, and delete need a trusted Host and a same-origin
+        Sec-Fetch-Site; a body-less same-origin request still works."""
+        c = add_comment(plan_root / "01-first", "Objective", 0, "p", "keep", author="u")
+        url = f"/api/task/01-first/comment/{c.id}"
+        edit = {"content": json.dumps({"body": "forged"})} if method == "PATCH" else {}
+        for headers in ({"sec-fetch-site": "cross-site"}, {"sec-fetch-site": "same-site"},
+                        {"host": "evil.example.com:8995"}):
+            assert client.request(method, url, headers=headers, **edit).status_code == 403
+        [kept] = load_comments(plan_root / "01-first")
+        assert (kept.body, kept.resolved) == ("keep", False)
+        assert client.request(method, url, headers={"sec-fetch-site": "same-origin"}).status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -2185,6 +2213,36 @@ class TestTouchPolishRendered:
                 b.close()
             assert not trig, "retired trigger visible on iPhone"
             assert inline, "shared search hidden on iPhone"
+        finally:
+            self._stop(t)
+
+
+@pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
+class TestCommentActionsRendered:
+    """Resolve and delete send a body-less PATCH and DELETE; the header-only
+    same-origin guard must still pass the page's own requests."""
+
+    _serve = TestTouchPolishRendered._serve
+    _stop = TestTouchPolishRendered._stop
+
+    def test_resolve_and_delete_from_the_page(self, plan_root):
+        from playwright.sync_api import sync_playwright
+        add_comment(plan_root / "01-first", "Objective", 0, "Complete step 1.", "check this", author="u")
+        port, t = self._serve(plan_root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                pg = b.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/#/01-first", wait_until="domcontentloaded")
+                item = pg.locator(".comment-item", has_text="check this")
+                item.wait_for(timeout=5000)
+                item.locator("button", has_text="Resolve").click()
+                pg.wait_for_selector(".comment-item.comment-resolved", timeout=5000)
+                assert load_comments(plan_root / "01-first")[0].resolved
+                pg.locator(".comment-item button", has_text="Delete").click()
+                pg.wait_for_function("() => !document.querySelector('.comment-item')", timeout=5000)
+                b.close()
+            assert load_comments(plan_root / "01-first") == []
         finally:
             self._stop(t)
 
