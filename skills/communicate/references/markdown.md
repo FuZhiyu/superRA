@@ -98,7 +98,7 @@ Source: [Original](relative/path/to/original/figure.pdf)
 
 Reach for it only for layouts markdown cannot express — flow diagrams, side-by-side cards, styled callouts. Prose, lists, tables, code, and math stay plain markdown.
 
-An interactive page is a standalone HTML file under `attachments/`, linked from the task: [html.md](html.md).
+An interactive page is a standalone HTML file: [html.md](html.md).
 
 The dashboard renders task markdown with `html: true` and sanitizes the result with DOMPurify before display, so:
 

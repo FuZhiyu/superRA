@@ -687,11 +687,21 @@ class TestHtmlArtifactFrame:
         assert base64.b64decode(page["data"]).startswith(b"<!doctype html>")
 
     def test_authoring_guidance_allows_exactly_the_frame_csp_hosts(self):
-        guidance = SCRIPTS_DIR.parents[1] / "communicate" / "references" / "html.md"
-        allowed = set(re.findall(r"`(https://[^`\s]+)`", guidance.read_text(encoding="utf-8")))
-        csp_hosts = {source for sources in _csp_directives(_artifacts.HTML_FRAME_CSP).values()
-                     for source in sources if source.startswith("https://")}
-        assert allowed == csp_hosts
+        """html.md's §Libraries names each CSP host under its directive's role:
+        script hosts, then the stylesheet host, then the font host. No URL in
+        the file, bare or linked, falls outside that list."""
+        text = (SCRIPTS_DIR.parents[1] / "communicate" / "references" / "html.md").read_text(encoding="utf-8")
+        url = r"https?://[^\s`)\]>\"']+"
+        libraries = text.split("\n## Libraries\n", 1)[1].split("\n## ", 1)[0]
+        scripts, styles = libraries.split("**Stylesheets", 1)
+        styles, fonts = styles.split("font files from", 1)
+        named = {"script-src": set(re.findall(url, scripts)),
+                 "style-src": set(re.findall(url, styles)),
+                 "font-src": set(re.findall(url, fonts))}
+        for directive, sources in _csp_directives(_artifacts.HTML_FRAME_CSP).items():
+            hosts = {source for source in sources if source.startswith("https://")}
+            assert named.get(directive, set()) == hosts, directive
+        assert set(re.findall(url, text)) == set().union(*named.values())
 
 
 class TestArtifactWatcher:

@@ -1,24 +1,24 @@
 # HTML Artifacts
 
-An HTML artifact is one self-contained interactive page, committed as a file. The same bytes render in the superRA dashboard's sandboxed frame, open from disk, and publish unchanged to claude.ai.
+An HTML artifact is one self-contained interactive page, committed as a file.
 
-**Design craft:** the harness has an artifact design skill (`artifact-design` on Claude): load it. Where it conflicts with this file, this file wins: keep the complete document below rather than its hosted skeleton, and add no `claude:` meta tags.
+**Harness with an artifact design skill** (`artifact-design` on Claude): load it for design craft. Where it conflicts with this file, this file wins: keep the complete document below rather than its hosted skeleton, and add no `claude:` meta tags.
 
 ## When a page earns its place
 
 - **Interaction answers a question a fixed view cannot:** filtering many series, hovering for exact values, switching specifications, browsing a grid of estimates. One fixed view: a PNG or a table.
-- **It supplements, never replaces.** Key figures stay PNG in `## Results`; the page is an extra linked view.
+- **It supplements, never replaces.** Key figures stay PNG in `## Results`.
 
 ## File format
 
 - **A complete document:** `<!doctype html>`, `<html>`, a `<head>` with `<meta charset="utf-8">`, a viewport meta, and a `<title>` that names the page, then `<body>`.
-- **Everything inline.** CSS in `<style>`, JS in `<script>`, data in a `<script type="application/json" id="data">` block read with `JSON.parse(document.getElementById("data").textContent)`.
+- **Everything inline.** CSS in `<style>`, JS in `<script>`, data in a `<script type="application/json">` block.
 - **At most 2 MiB.** Larger: aggregate or thin the data.
 
 ## Libraries
 
 - **Plain HTML, SVG, or Canvas** when no library does substantial work.
-- **Otherwise a UMD build by `<script src>`**, pinned to an exact version and placed before the inline script that uses its global, from only these hosts:
+- **Otherwise a UMD build by `<script src>`**, pinned to an exact version, from only these hosts:
   - `https://cdnjs.cloudflare.com`
   - `https://cdn.jsdelivr.net/npm/`
   - `https://unpkg.com`
@@ -26,9 +26,7 @@ An HTML artifact is one self-contained interactive page, committed as a file. Th
 
 ## The sandbox fails silently
 
-The page runs in an opaque-origin frame with no access to the parent page, cookies, or dashboard APIs. These fail without an error the reader sees:
-
-- **No network.** `fetch` and XHR are blocked; embed every byte the page shows. Images are `data:` or `blob:` URIs. No iframes, media, or `<object>`.
+- **No network.** `fetch` and XHR are blocked. Images are `data:` or `blob:` URIs. No iframes, media, or `<object>`.
 - **Storage may throw.** Wrap every `localStorage` access in `try`/`catch`; the page renders correctly without it.
 - **No forms or modal dialogs.** `<form>` never submits and `alert`/`confirm`/`prompt` do nothing: drive the page from `input`, `change`, and `click` handlers and in-page UI.
 - **No downloads on claude.ai.** A download link works only in the dashboard; never make it the only way to the data.
@@ -37,7 +35,7 @@ The page runs in an opaque-origin frame with no access to the parent page, cooki
 
 ## Theme
 
-The host sets `data-theme="light"` or `"dark"` on `<html>` before page scripts run and updates it live, or leaves it unset to follow the system.
+**Leave `data-theme` to the host; add no theme toggle.** The host sets it to `light` or `dark` on `<html>` and updates it live, or leaves it unset to follow the system.
 
 - **Define every color as a token** in this shape:
 
@@ -59,7 +57,7 @@ The host sets `data-theme="light"` or `"dark"` on `<html>` before page scripts r
 ## Computed numbers come from a generator
 
 - **A page showing computed numbers is written by a generator script**, never typed by hand. The script reads the result files and writes the whole page, data block included; register it as a reproduction step per `superRA:reproducibility`.
-- **Deterministic bytes:** no timestamps or random IDs, sorted keys, fixed number formatting, so a rebuild reproduces the committed file.
+- **Deterministic page bytes:** fixed number formatting and no random element IDs.
 
 ## Save and link
 
