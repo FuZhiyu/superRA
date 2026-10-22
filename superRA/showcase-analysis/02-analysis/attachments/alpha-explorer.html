@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alpha Explorer</title>
+<style>
+:root { --bg:#f9f9f7; --fg:#1a1a1a; --muted:#6b6b66; --line:#d8d8d2; --pos:#c0392b; --neg:#2471a3; --focus:#1a1a1a }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0d0d0d; --fg:#ececea; --muted:#9a9a94; --line:#333; --pos:#e8685a; --neg:#5aa3d6; --focus:#ececea; color-scheme: dark } }
+:root[data-theme="dark"] { --bg:#0d0d0d; --fg:#ececea; --muted:#9a9a94; --line:#333; --pos:#e8685a; --neg:#5aa3d6; --focus:#ececea; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; margin: 0; padding: 16px; max-width: 760px }
+h1 { font-size: 20px; margin: 0 0 4px }
+p.sub { color: var(--muted); margin: 0 0 14px }
+.ctl { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px }
+.ctl button, .cell { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; cursor: pointer }
+.ctl button { padding: 4px 10px }
+.ctl button[aria-pressed="true"] { border-color: var(--fg); font-weight: 600 }
+.grid { display: grid; grid-template-columns: 3.2em repeat(5, 1fr); gap: 3px; align-items: stretch }
+.hd { color: var(--muted); font-size: 12px; text-align: center; align-self: center }
+.cell { padding: 8px 2px; font-size: 13px; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--c) calc(var(--m) * 85%), var(--bg)) }
+.cell[aria-pressed="true"] { outline: 2px solid var(--focus); outline-offset: 1px }
+.cell:disabled { cursor: default; color: var(--muted) }
+.scroll { overflow-x: auto; margin-top: 14px }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums }
+th, td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--line); white-space: nowrap }
+th:first-child, td:first-child { text-align: left }
+h2 { font-size: 16px; margin: 16px 0 0 }
+.note { color: var(--muted); font-size: 12px; margin-top: 8px }
+</style>
+</head>
+<body>
+<h1>Alpha Explorer</h1>
+<p class="sub">CAPM and FF3 estimates for the 25 size and book-to-market portfolios; pick a model and a statistic, then click a cell.</p>
+<div class="ctl" id="model" role="group" aria-label="Model"></div>
+<div class="ctl" id="metric" role="group" aria-label="Statistic"></div>
+<div class="grid" id="grid"></div>
+<p class="note" id="scale"></p>
+<h2 id="title"></h2>
+<div class="scroll"><table id="detail"></table></div>
+<script type="application/json" id="data">{"columns":["alpha","alpha_t","r2","b_Mkt-RF","t_Mkt-RF","b_SMB","t_SMB","b_HML","t_HML"],"models":{"CAPM":[[-0.5232,0.0512,0.1336,0.3449,0.4743,-0.2637,0.1049,0.2384,0.2852,0.3151,-0.2167,0.1283,0.1405,0.2666,0.3453,-0.0723,0.0086,0.1411,0.2717,0.223,0.0187,0.0376,0.0954,0.0236,0.1942],[-2.9414,0.3246,1.0332,2.6327,3.1729,-1.9468,0.9411,2.3129,2.6854,2.3917,-1.9881,1.4821,1.6547,2.7963,2.7728,-0.8666,0.1256,1.7937,2.9935,1.8587,0.3175,0.6506,1.2749,0.2476,1.4745],[0.6295,0.615,0.6643,0.6247,0.5752,0.7345,0.7504,0.7463,0.7101,0.6675,0.7931,0.8163,0.7918,0.7451,0.6693,0.8451,0.8693,0.8149,0.7598,0.682,0.8832,0.8722,0.7793,0.6967,0.6078],[1.4178,1.2181,1.112,1.0334,1.0638,1.3777,1.1824,1.0812,1.0165,1.1415,1.3053,1.1157,1.0128,0.9968,1.0834,1.1926,1.0747,1.0091,0.9871,1.0746,0.9909,0.9234,0.8598,0.8835,1.0026],[35.8376,34.7479,38.6792,35.4704,31.9938,45.733,47.6799,47.1565,43.0325,38.9603,53.8389,57.9688,53.6241,47.0079,39.1179,64.2335,70.9168,57.6951,48.9068,40.2699,75.6159,71.8343,51.6635,41.6721,34.2264],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]],"FF3":[[-0.4647,0.007,-0.0087,0.1317,0.1802,-0.1656,0.0367,0.0748,0.0465,-0.0148,-0.1016,0.0529,-0.03,0.0168,0.0058,0.0522,-0.0692,-0.028,0.0475,-0.1076,0.1604,0.0109,-0.0163,-0.2239,-0.1161],[-5.0583,0.0979,-0.1609,2.7202,2.5636,-2.552,0.6855,1.3406,0.9914,-0.2995,-1.6927,0.9079,-0.5158,0.3063,0.0869,0.8964,-1.126,-0.4464,0.7328,-1.4159,3.989,0.2031,-0.259,-3.8385,-1.1946],[0.9031,0.9227,0.9423,0.9498,0.9079,0.9403,0.9436,0.9271,0.9447,0.954,0.9385,0.9182,0.9045,0.9174,0.9053,0.9262,0.8957,0.8844,0.88,0.8749,0.9467,0.8911,0.8467,0.8886,0.7907],[1.1059,0.958,0.9373,0.887,0.9453,1.1242,1.0149,0.9836,0.9508,1.078,1.1063,1.0187,0.9821,0.9969,1.0892,1.061,1.0547,1.0362,1.0204,1.1349,0.9864,0.9717,0.9447,1.0163,1.1413],[51.3731,57.3335,73.8818,78.2122,57.3931,73.9589,80.9016,75.2291,86.6015,92.9655,78.652,74.5597,72.1503,77.6257,69.0659,77.7879,73.2094,70.448,67.2182,63.7131,104.702,76.9652,64.0114,74.3533,50.1345],[1.4004,1.3347,1.0985,1.0887,1.0995,1.0472,0.931,0.7647,0.7453,0.8982,0.7543,0.6033,0.4539,0.4474,0.5808,0.4119,0.2358,0.1726,0.2414,0.3022,-0.2323,-0.1853,-0.2094,-0.1969,-0.1129],[44.5118,54.655,59.2459,65.6823,45.6765,47.1358,50.7808,40.0197,46.4488,52.9989,36.6929,30.2116,22.8127,23.8341,25.1983,20.6639,11.1986,8.0286,10.8784,11.608,-16.87,-10.041,-9.709,-9.8554,-3.3947],[-0.2628,0.0135,0.2908,0.4789,0.6918,-0.3401,0.1082,0.3731,0.573,0.8018,-0.3623,0.1523,0.4152,0.6252,0.8516,-0.3607,0.1872,0.4332,0.5734,0.8499,-0.3562,0.0847,0.3112,0.6689,0.8281],[-8.417,0.5584,15.8061,29.1156,28.963,-15.4278,5.9491,19.6736,35.9828,47.6775,-17.7625,7.6853,21.0295,33.5649,37.2308,-18.234,8.9594,20.3076,26.0436,32.8982,-26.0698,4.6277,14.5398,33.7414,25.0822]]},"portfolios":["SMALL LoBM","ME1 BM2","ME1 BM3","ME1 BM4","SMALL HiBM","ME2 BM1","ME2 BM2","ME2 BM3","ME2 BM4","ME2 BM5","ME3 BM1","ME3 BM2","ME3 BM3","ME3 BM4","ME3 BM5","ME4 BM1","ME4 BM2","ME4 BM3","ME4 BM4","ME4 BM5","BIG LoBM","ME5 BM2","ME5 BM3","ME5 BM4","BIG HiBM"]}</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const COL = Object.fromEntries(D.columns.map((c, i) => [c, i]));
+const METRICS = [["alpha", "Alpha (%/mo)"], ["alpha_t", "t(alpha)"], ["b_Mkt-RF", "Mkt-RF loading"], ["b_SMB", "SMB loading"], ["b_HML", "HML loading"]];
+const SIZE = ["Small", "ME2", "ME3", "ME4", "Big"], BM = ["Growth", "BM2", "BM3", "BM4", "Value"];
+const models = Object.keys(D.models);
+const S = { model: models.includes("FF3") ? "FF3" : models[0], metric: "alpha", cell: 0 };
+const val = (m, c, i) => D.models[m][COL[c]][i];
+const fmt = (v, d = 3) => v == null ? "–" : v.toFixed(d);
+
+function buttons(id, items, key) {
+  const box = document.getElementById(id);
+  for (const [v, label] of items) {
+    const b = document.createElement("button");
+    b.textContent = label; b.dataset.v = v;
+    b.addEventListener("click", () => { S[key] = v; render(); });
+    box.append(b);
+  }
+}
+buttons("model", models.map(m => [m, m]), "model");
+buttons("metric", METRICS, "metric");
+
+const grid = document.getElementById("grid");
+grid.append(document.createElement("div"));
+for (const b of BM) { const h = document.createElement("div"); h.className = "hd"; h.textContent = b; grid.append(h); }
+const cells = [];
+SIZE.forEach((s, r) => {
+  const h = document.createElement("div"); h.className = "hd"; h.textContent = s; grid.append(h);
+  for (let k = 0; k < 5; k++) {
+    const i = r * 5 + k, b = document.createElement("button");
+    b.className = "cell"; b.title = D.portfolios[i];
+    b.addEventListener("click", () => { S.cell = i; render(); });
+    cells[i] = b; grid.append(b);
+  }
+});
+
+function render() {
+  for (const b of document.querySelectorAll("#model button")) b.setAttribute("aria-pressed", b.dataset.v === S.model);
+  for (const b of document.querySelectorAll("#metric button")) b.setAttribute("aria-pressed", b.dataset.v === S.metric);
+  const all = models.flatMap(m => D.portfolios.map((_, i) => val(m, S.metric, i))).filter(v => v != null);
+  const max = Math.max(...all.map(Math.abs)) || 1;
+  cells.forEach((b, i) => {
+    const v = val(S.model, S.metric, i);
+    b.textContent = fmt(v, S.metric === "alpha_t" ? 2 : 3);
+    b.disabled = v == null;
+    b.style.setProperty("--m", v == null ? 0 : Math.abs(v) / max);
+    b.style.setProperty("--c", v < 0 ? "var(--neg)" : "var(--pos)");
+    b.setAttribute("aria-pressed", i === S.cell);
+  });
+  document.getElementById("scale").textContent =
+    `Color scale is shared across models: full color at |value| = ${max.toFixed(2)}. Red positive, blue negative.` +
+    (S.model === "CAPM" && /SMB|HML/.test(S.metric) ? " CAPM has no SMB or HML loading." : "");
+  document.getElementById("title").textContent = D.portfolios[S.cell];
+  const rows = [["Alpha (%/mo)", "alpha"], ["t(alpha)", "alpha_t"], ["Mkt-RF loading", "b_Mkt-RF"], ["t(Mkt-RF)", "t_Mkt-RF"],
+    ["SMB loading", "b_SMB"], ["t(SMB)", "t_SMB"], ["HML loading", "b_HML"], ["t(HML)", "t_HML"], ["R²", "r2"]];
+  document.getElementById("detail").innerHTML =
+    `<tr><th></th>${models.map(m => `<th>${m}</th>`).join("")}</tr>` +
+    rows.map(([l, c]) => `<tr><td>${l}</td>${models.map(m => `<td>${fmt(val(m, c, S.cell))}</td>`).join("")}</tr>`).join("");
+}
+render();
+</script>
+</body>
+</html>

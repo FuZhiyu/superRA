@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Interactive HTML pages as task attachments.** Ask an agent for an interactive explorer and it writes a self-contained HTML file under the task's `attachments/`, generated from the saved results and linked from `## Results`. The dashboard renders the page in a sandboxed frame that follows its theme, and the standalone export carries it. On request, an agent with an artifact-publishing tool publishes the same file. The showcase study gains an alpha explorer for its 25 portfolios; see [communicate](docs/site/03-utility-skills/06-communicate/task.md).
+
 ## [0.5.0] - 2026-10-04
 
 The reproduction release: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced. Coming from 0.4.1, read [Upgrading from 0.4.1](#upgrading-from-041) first.

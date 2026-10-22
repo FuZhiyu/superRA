@@ -23,6 +23,17 @@ Use communicate to rewrite analyses/example/RESULTS.md for a cold reader.
 - Sentences are direct and concrete: each names the actor and action and uses one term per concept.
 - A rewrite preserves exact literals, meaning, claim strength, and your voice. It changes a pattern only when that pattern makes the text slower to understand.
 
+## Ask for an interactive page when a fixed figure is not enough
+
+Ask for a page when you want to filter, hover, or switch specifications, as in "make an interactive explorer of these alphas":
+
+- **The page is one self-contained HTML file** the agent saves under the task's `attachments/` and links from `## Results`. It supplements the PNG figures, which stay.
+- **The dashboard shows it in the reading pane**, in a sandbox that blocks network access, and the page follows the dashboard's light or dark theme. The standalone export carries it too.
+- **A generator script writes the page** from the saved results, so the numbers stay reproducible. The showcase study's [alpha explorer](superRA/showcase-analysis/02-analysis/attachments/alpha-explorer.html) is built this way: a click on any of the 25 portfolios shows CAPM and FF3 alphas, t-statistics, and loadings side by side.
+- **Publishing is separate.** Say "publish it" and an agent with an artifact-publishing tool, such as the one in Claude, publishes the same file and records the link beside the attachment.
+
+The authoring rules are in [html.md](skills/communicate/references/html.md).
+
 ## Check Markdown math before it breaks
 
 The Markdown checker catches display-math and KaTeX failures that render silently broken:

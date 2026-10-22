@@ -141,6 +141,8 @@ Both gradients are checked monotone in the run log, and hard sign-guard asserts 
 
 ### Figures
 
+[Alpha explorer](attachments/alpha-explorer.html) is an interactive page of all 50 portfolio-model estimates: pick CAPM or FF3 and a statistic (alpha, t-statistic, or a factor loading), then click a cell for both models side by side. The static figures below stay the record. [alpha_explorer.py](../analysis/alpha_explorer.py) writes the page from `regression_estimates.parquet`, and [check_alpha_explorer.py](../analysis/check_alpha_explorer.py) confirms its 350 embedded numbers match the parquet.
+
 **Figure 1 — Pricing errors collapse from CAPM to FF3.** Two 5×5 alpha heatmaps on a shared diverging scale centered at zero. The CAPM panel is saturated (deep red on the value/large-cap cells, deep blue on small-growth); the FF3 panel is visibly washed out toward white, mean |α| falling 0.197 → 0.087 %/mo. Small-growth (top-left) stays blue in both — the alpha FF3 cannot remove.
 
 ![CAPM and FF3 alpha grids on the 5×5 size × book-to-market sort, shared diverging color scale centered at zero. Cells are alphas in %/month. CAPM (left) shows a strong growth→value gradient and a large negative small-growth corner; FF3 (right) washes most cells toward zero but the small-growth corner remains blue.](attachments/fig1_alpha_grids.png)
@@ -188,4 +190,18 @@ steps:
     script: superRA/showcase-analysis/analysis/check_grs.py
     deps:
       - superRA/showcase-analysis/data/grs_results.csv
+  - name: alpha-explorer
+    runner: uv
+    script: superRA/showcase-analysis/analysis/alpha_explorer.py
+    deps:
+      - superRA/showcase-analysis/data/regression_estimates.parquet
+    outs:
+      - superRA/showcase-analysis/02-analysis/attachments/alpha-explorer.html
+  - name: check-alpha-explorer
+    kind: check
+    runner: uv
+    script: superRA/showcase-analysis/analysis/check_alpha_explorer.py
+    deps:
+      - superRA/showcase-analysis/02-analysis/attachments/alpha-explorer.html
+      - superRA/showcase-analysis/data/regression_estimates.parquet
 ```
