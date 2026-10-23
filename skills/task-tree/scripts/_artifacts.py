@@ -189,13 +189,9 @@ def renders_markup(mime: str) -> bool:
     return mime == "text/html" or mime.endswith("xml")
 
 
-def frame_theme(value: str) -> str:
-    return value if value in ("light", "dark") else ""
-
-
 def inject_theme_script(raw: bytes, theme: str) -> bytes:
     """*raw* with the theme script as the first child of its ``<head>``."""
-    script = HTML_THEME_SCRIPT.replace("__THEME__", json.dumps(frame_theme(theme)))
+    script = HTML_THEME_SCRIPT.replace("__THEME__", json.dumps(theme if theme in ("light", "dark") else ""))
     at = _HTML_PREAMBLE.match(raw).end()
     return raw[:at] + script.encode("utf-8") + raw[at:]
 

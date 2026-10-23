@@ -1382,21 +1382,20 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   height: auto;
   margin-inline: auto;
 }
-.artifact-pdf-preview {
+.artifact-pdf-preview,
+.artifact-html-frame {
   width: 100%;
-  min-height: 65vh;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #fff;
 }
+.artifact-pdf-preview {
+  min-height: 65vh;
+}
 /* A page without theme tokens draws on white, like a standalone browser tab. */
 .artifact-html-frame {
   display: block;
-  width: 100%;
   height: max(480px, calc(100vh - 220px));
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #fff;
 }
 /* An inline embed starts short; its page's height reports resize it. */
 .artifact-embed { display: block; margin: 12px 0; }
