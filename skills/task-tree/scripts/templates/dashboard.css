@@ -1387,12 +1387,12 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 6px;
+  /* A page without theme tokens draws on white, like a standalone browser tab. */
   background: #fff;
 }
 .artifact-pdf-preview {
   min-height: 65vh;
 }
-/* A page without theme tokens draws on white, like a standalone browser tab. */
 .artifact-html-frame {
   display: block;
   height: max(480px, calc(100vh - 220px));

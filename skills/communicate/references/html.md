@@ -14,7 +14,7 @@ An HTML artifact is one self-contained interactive page, committed as a file.
 A page extends `communicate` §Pyramid structure: each interaction reveals the next layer of detail.
 
 - **The first view carries the answer.** Before any interaction, the page shows its main point, what is plotted, and the units.
-- **Detail waits behind interaction.** Every visible element competes with the main point. Exact values, definitions, method, sources, and full tables move behind hover, an expandable section, or a toggle, whichever fits the page.
+- **Detail waits behind interaction.** Exact values, definitions, method, sources, and full tables move behind hover, an expandable section, or a toggle, whichever fits the page.
 - **Information that changes a decision stays visible.** A caveat, sample restriction, or warning that changes how the reader reads the main view sits in the first view.
 - **Every reveal works on touch.** A hover reveal has a tap or focus equivalent, and a collapsed section's label names what it holds.
 

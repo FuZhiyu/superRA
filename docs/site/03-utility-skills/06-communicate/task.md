@@ -43,4 +43,4 @@ The Markdown checker catches display-math and KaTeX failures that render silentl
 uv run --script <skill-dir>/scripts/check_markdown.py path/to/file.md
 ```
 
-`<skill-dir>` is the directory holding the skill's `SKILL.md`. The always-loaded core is [communicate](skills/communicate/SKILL.md); on-demand references cover [rewriting](skills/communicate/references/rewrite.md) and [Markdown mechanics](skills/communicate/references/markdown.md).
+`<skill-dir>` is the directory holding the skill's `SKILL.md`. The always-loaded core is [communicate](skills/communicate/SKILL.md); on-demand references cover [rewriting](skills/communicate/references/rewrite.md), [Markdown mechanics](skills/communicate/references/markdown.md), and [HTML pages](skills/communicate/references/html.md).
