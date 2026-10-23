@@ -141,7 +141,7 @@ Both gradients are checked monotone in the run log, and hard sign-guard asserts 
 
 ### Figures
 
-[Alpha explorer](attachments/alpha-explorer.html "embed") is an interactive page of all 50 portfolio-model estimates: pick CAPM or FF3 and a statistic (alpha, t-statistic, or a factor loading), then click a cell for both models side by side. The static figures below stay the record. [alpha_explorer.py](../analysis/alpha_explorer.py) writes the page from `regression_estimates.parquet`, and [check_alpha_explorer.py](../analysis/check_alpha_explorer.py) confirms its 350 embedded numbers match the parquet.
+[Alpha explorer](attachments/alpha-explorer.html "embed") is an interactive page of all 50 portfolio-model estimates. Its first view states the fall in mean |α| and the small-growth FF3 alpha above the grid; pick CAPM or FF3 and a statistic (alpha, t-statistic, or a factor loading), then tap a cell for both models side by side. The static figures below stay the record. [alpha_explorer.py](../analysis/alpha_explorer.py) writes the page from `regression_estimates.parquet`, and [check_alpha_explorer.py](../analysis/check_alpha_explorer.py) confirms its 350 embedded numbers match the parquet.
 
 **Figure 1 — Pricing errors collapse from CAPM to FF3.** Two 5×5 alpha heatmaps on a shared diverging scale centered at zero. The CAPM panel is saturated (deep red on the value/large-cap cells, deep blue on small-growth); the FF3 panel is visibly washed out toward white, mean |α| falling 0.197 → 0.087 %/mo. Small-growth (top-left) stays blue in both — the alpha FF3 cannot remove.
 
