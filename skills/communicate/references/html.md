@@ -40,7 +40,7 @@ A page extends `communicate` §Pyramid structure: each interaction reveals the n
 - **No forms or modal dialogs.** `<form>` never submits and `alert`/`confirm`/`prompt` do nothing: drive the page from `input`, `change`, and `click` handlers and in-page UI.
 - **No downloads on claude.ai.** A download link works only in the dashboard; never make it the only way to the data.
 - **External links:** `<a href="…" target="_blank" rel="noopener">`.
-- **Narrow width.** The page fits phone width (about 400px) with no horizontal page scroll: rows wrap, the plot carrying the main point scales to the frame width, and only secondary wide content, such as a full table, scrolls in its own `overflow-x: auto` box.
+- **Narrow width.** The page fits the embed frame in a phone-sized window (about 340px) with no horizontal page scroll: rows wrap, the plot carrying the main point scales to the frame width, and only secondary wide content, such as a full table, scrolls in its own `overflow-x: auto` box.
 - **Height from content:** no `vh` or `100%` page heights.
 
 ## Theme
@@ -72,10 +72,10 @@ A page extends `communicate` §Pyramid structure: each interaction reveals the n
 ## Save and link
 
 - **Save under the owning task's `attachments/`** as a task companion; lifecycle and provenance per [task-companion-files.md](../../using-superra/references/task-companion-files.md).
-- **Embed it in `## Results`, compact.** An embedded page fits about one phone screen without scrolling inside its frame: at most about 500px tall at 400px wide, and shorter at desktop width.
+- **Embed it in `## Results`, compact.** An embedded page fits about one phone screen without scrolling inside its frame: at most about 500px tall at 340px wide.
   - **Text link:** `[Alpha explorer](attachments/alpha-explorer.html "embed")`.
   - **Interactive twin of a PNG figure, with the PNG as poster:** `[![caption](attachments/fig1.png)](attachments/fig1.html "embed")`.
-- **One plot per embed.** A page with several plots becomes several embeds, one question each, each beside the text it supports; so does any other content that does not fit.
+- **One plot per embed.** A page with several plots becomes several embeds, one question each, each beside the text it supports; so does content that exceeds the compact size.
 - **A plain link only for an explorer whose views share state and cannot be separated:** `[Alpha explorer](attachments/alpha-explorer.html)`.
 
 ## Publish on request
@@ -90,9 +90,9 @@ When the harness has an artifact-publishing tool (`Artifact` on Claude), publish
 
 **Any review of a task that ships a page walks this list**, whatever its focus.
 
-- `[BLOCKING]` The first view lacks the main point, what is plotted, or the units, or its main plot scrolls sideways at 400px wide.
+- `[BLOCKING]` The first view lacks the main point, what is plotted, or the units, or its main plot scrolls sideways at 340px wide.
 - `[BLOCKING]` Information that changes a decision is hidden behind interaction.
-- `[BLOCKING]` An embed is taller than about 500px at 400px wide, or holds more than one plot.
+- `[BLOCKING]` An embed is taller than about 500px at 340px wide, or holds more than one plot.
 - `[ADVISORY]` Detail that could wait behind interaction crowds the first view.
 - `[ADVISORY]` A hover reveal lacks a tap or focus equivalent, or a collapsed label does not name what it holds.
 - `[ADVISORY]` A plain link holds views that could be separate embeds.
