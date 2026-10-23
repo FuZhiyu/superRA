@@ -187,6 +187,57 @@ def _write_explorer(path: Path, version: str) -> None:
     path.write_text(EXPLORER_HTML.replace("VERSION", version), encoding="utf-8")
 
 
+# A page exactly as tall as #box, so an embed's frame height reads against it.
+SIZED_HTML = """<!doctype html>
+<html><head><meta charset="utf-8"><title>Sized</title>
+<style>body { margin: 0; } #box { height: 300px; overflow: hidden; }</style></head>
+<body><div id="box"><span id="title">Sized VERSION</span></div>
+<script>window.setBox = function (px) { document.getElementById('box').style.height = px + 'px'; };</script>
+</body></html>
+"""
+SIZED_FRAME = '#active-node iframe.artifact-embed-frame[data-artifact-path="attachments/sized.html"]'
+POSTER_FRAME = '#active-node iframe.artifact-embed-frame[data-artifact-path="attachments/explorer.html"]'
+
+
+def _write_sized(path: Path, version: str) -> None:
+    path.write_text(SIZED_HTML.replace("VERSION", version), encoding="utf-8")
+
+
+def _embed_tree(tmp_path: Path) -> Path:
+    """The attachment tree plus a task whose Results embed a sized page by a
+    text link and the sandbox probe by a poster link."""
+    root = _attachment_tree(tmp_path)
+    task = root / "03-embeds"
+    attachments = task / "attachments"
+    attachments.mkdir(parents=True)
+    _write_task_md(
+        task / "task.md",
+        "Embedded pages",
+        "in-progress",
+        objective="Show attachment pages inline.",
+        results=(
+            'The [sized page](attachments/sized.html "embed") sizes to its content.\n\n'
+            '[![Tiny poster](attachments/tiny.png)](attachments/explorer.html "embed")\n\n'
+            "- A [plain explorer](attachments/explorer.html) link opens the pane.\n"
+            '- An `embed` title on [notes](attachments/notes.md "embed") stays a link.\n'
+        ),
+    )
+    _write_tiny_png(attachments / "tiny.png")
+    _write_explorer(attachments / "explorer.html", "v1")
+    _write_sized(attachments / "sized.html", "v1")
+    (attachments / "notes.md").write_text(
+        '# Notes\n\n[Sized again](sized.html "embed")\n', encoding="utf-8"
+    )
+    return root
+
+
+def _wait_frame_height(page, selector: str, px: int) -> None:
+    page.wait_for_function(
+        "([s, px]) => { const f = document.querySelector(s); return f && f.clientHeight === px; }",
+        arg=[selector, px],
+    )
+
+
 def _route_scripts(context) -> None:
     """Serve the allowlisted CDN script locally, and the off-allowlist one too,
     so only the CSP can keep the latter from running."""
@@ -772,6 +823,136 @@ class TestAttachmentSurfaceBrowser:
             page.goto(oversized.as_uri() + hash_)
             page.wait_for_selector("#active-node .artifact-state-unavailable")
             assert "exceeds the preview limit" in page.inner_text("#active-node")
+            assert page.locator("#active-node iframe").count() == 0
+            browser.close()
+
+    def test_html_embeds_render_inline_size_to_their_page_and_hot_reload(self, tmp_path):
+        from playwright.sync_api import sync_playwright
+
+        root = _embed_tree(tmp_path)
+        port, server, loop, thread = _start_server(root)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                context = browser.new_context(viewport={"width": 1200, "height": 700})
+                _route_scripts(context)
+                page = context.new_page()
+                page.goto(f"http://127.0.0.1:{port}/#/03-embeds", wait_until="domcontentloaded")
+                # The watcher starts with this page's event stream, and FSEvents
+                # can hand it the fixture's own writes: that batch rebuilds the
+                # card once, within watchfiles' 1.6s debounce plus 0.2s.
+                deadline = time.monotonic() + 5
+                while (not plan_dashboard._worktree_clients.get(plan_dashboard._launch_wt_id)
+                       and time.monotonic() < deadline):
+                    time.sleep(0.02)
+                time.sleep(2.5)
+                page.locator(POSTER_FRAME).wait_for()
+                page.locator(SIZED_FRAME).wait_for()
+                assert page.locator("#active-node iframe.artifact-embed-frame").count() == 2
+                for selector in (SIZED_FRAME, POSTER_FRAME):
+                    frame_el = page.locator(selector)
+                    assert set(frame_el.get_attribute("sandbox").split()) == {
+                        "allow-scripts", "allow-popups",
+                        "allow-popups-to-escape-sandbox", "allow-downloads"}
+                    assert "/api/artifact-frame?" in frame_el.get_attribute("src")
+
+                # The text link stays, its frame after the paragraph; the poster's
+                # frame takes the image's place. Plain and non-HTML links stay links.
+                slots = page.evaluate("""() => [...document.querySelectorAll('#active-node .artifact-embed')]
+                  .map(s => ({path: s.dataset.artifactPath, tag: s.tagName, parent: s.parentElement.tagName,
+                    before: (s.previousElementSibling && s.previousElementSibling.querySelector('a') || {}).textContent,
+                    images: s.querySelectorAll('img').length}))""")
+                assert slots == [
+                    {"path": "attachments/sized.html", "tag": "DIV", "parent": "DIV",
+                     "before": "sized page", "images": 0},
+                    {"path": "attachments/explorer.html", "tag": "SPAN", "parent": "P",
+                     "before": None, "images": 0},
+                ]
+                assert page.locator("#active-node a", has_text="sized page").get_attribute("title") is None
+                assert page.locator("#active-node a", has_text="plain explorer").get_attribute("href") \
+                    == "#/03-embeds?attachment=attachments%2Fexplorer.html"
+                _assert_sandboxed(page.locator(POSTER_FRAME).element_handle().content_frame())
+
+                # Height follows the page between the floor and 80% of the window.
+                sized = page.locator(SIZED_FRAME).element_handle().content_frame()
+                sized.wait_for_selector("#title")
+                _wait_frame_height(page, SIZED_FRAME, 300)
+                for box, expected in ((480, 480), (150, 150), (5000, 560), (10, 120), (300, 300)):
+                    sized.evaluate(f"setBox({box})")
+                    _wait_frame_height(page, SIZED_FRAME, expected)
+
+                # Only a frame's own finite report sizes it.
+                poster = page.locator(POSTER_FRAME).element_handle().content_frame()
+                page.evaluate("window.postMessage({type: 'superra-height', height: 900}, '*')")
+                sized.evaluate("window.parent.postMessage({type: 'superra-height', height: '900'}, '*')")
+                poster.evaluate("window.parent.postMessage({type: 'superra-height', height: Infinity}, '*')")
+                poster.evaluate("window.parent.postMessage({type: 'superra-height', height: 200}, '*')")
+                _wait_frame_height(page, POSTER_FRAME, 200)
+                assert page.eval_on_selector(SIZED_FRAME, "f => f.clientHeight") == 300
+
+                # Theme: the toggle reaches every embed.
+                page.click(".theme-toggle")
+                for frame in (sized, poster):
+                    frame.wait_for_function("() => document.documentElement.getAttribute('data-theme') === 'dark'")
+
+                # Hot reload swaps the embed's src in place.
+                page.locator('.task-node[data-path="03-embeds"] > .attachment-branch').first.wait_for()
+                page.eval_on_selector(SIZED_FRAME, "f => { f.__kept = true; }")
+                _write_sized(root / "03-embeds" / "attachments" / "sized.html", "v2")
+                _broadcast_manifest(loop, "03-embeds")
+                page.frame_locator(SIZED_FRAME).locator("#title", has_text="Sized v2").wait_for()
+                assert page.eval_on_selector(SIZED_FRAME, "f => f.__kept === true")
+                assert "theme=dark" in page.locator(SIZED_FRAME).get_attribute("src")
+                _wait_frame_height(page, SIZED_FRAME, 300)
+
+                # Expand opens the side pane; a markdown attachment embeds too.
+                page.locator("#active-node .artifact-embed-actions a", has_text="Expand").first.click()
+                page.wait_for_function("() => location.hash.includes('attachment=attachments%2Fsized.html')")
+                page.locator("#active-node iframe.artifact-html-frame:not(.artifact-embed-frame)").wait_for()
+                page.goto(f"http://127.0.0.1:{port}/#/03-embeds?attachment=attachments%2Fnotes.md")
+                page.locator("#active-node .artifact-markdown-preview iframe.artifact-embed-frame").wait_for()
+                browser.close()
+        finally:
+            _stop_server(server, thread)
+
+    def test_standalone_html_embeds_use_srcdoc_and_fall_back_to_the_poster(self, tmp_path, monkeypatch):
+        from playwright.sync_api import sync_playwright
+
+        root = _embed_tree(tmp_path)
+        export = tmp_path / "dashboard.html"
+        export.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
+        monkeypatch.setattr(_artifacts, "DEFAULT_ARTIFACT_LIMITS",
+                            _artifacts.ArtifactLimits(max_export_file_bytes=256))
+        omitted = tmp_path / "omitted.html"
+        omitted.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            context = browser.new_context(viewport={"width": 1200, "height": 700})
+            _route_scripts(context)
+            page = context.new_page()
+            page.goto(export.as_uri() + "#/03-embeds")
+            page.locator(POSTER_FRAME).wait_for()
+            page.locator(SIZED_FRAME).wait_for()
+            for selector in (SIZED_FRAME, POSTER_FRAME):
+                frame_el = page.locator(selector)
+                assert frame_el.get_attribute("src") is None
+                assert "allow-same-origin" not in frame_el.get_attribute("sandbox")
+                assert frame_el.get_attribute("srcdoc").startswith('<meta http-equiv="Content-Security-Policy"')
+            _assert_sandboxed(page.locator(POSTER_FRAME).element_handle().content_frame())
+            _wait_frame_height(page, SIZED_FRAME, 300)
+            actions = page.locator("#active-node .artifact-embed-actions").first
+            assert actions.locator(".artifact-action").all_inner_texts() == ["Expand"]
+            page.click(".theme-toggle")
+            page.locator(SIZED_FRAME).element_handle().content_frame().wait_for_function(
+                "() => document.documentElement.getAttribute('data-theme') === 'dark'")
+
+            # An export that omitted the pages keeps the poster and names the reason.
+            page.goto(omitted.as_uri() + "#/03-embeds")
+            text_slot = page.locator('#active-node .artifact-embed[data-artifact-path="attachments/sized.html"]')
+            text_slot.locator(".artifact-state-unavailable").wait_for()
+            assert text_slot.inner_text() == "This file was not embedded in the export."
+            poster_slot = page.locator('#active-node .artifact-embed[data-artifact-path="attachments/explorer.html"]')
+            assert poster_slot.locator("img").count() == 1
             assert page.locator("#active-node iframe").count() == 0
             browser.close()
 

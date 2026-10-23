@@ -139,7 +139,9 @@ HTML_FRAME_CSP = (
 )
 # First child of the page's <head>: sets the host theme, then follows the
 # parent's ``{type: "superra-theme", theme}`` messages.  ``__THEME__`` is a
-# JSON string: "light", "dark", or "" to follow the system.
+# JSON string: "light", "dark", or "" to follow the system.  Inside a frame it
+# also posts ``{type: "superra-height", height}`` whenever the page's content
+# height changes, which an inline embed sizes itself by.
 HTML_THEME_SCRIPT = (
     "<script>(function(){var r=document.documentElement;"
     "function set(t){if(t==='light'||t==='dark')r.setAttribute('data-theme',t);"
@@ -147,7 +149,12 @@ HTML_THEME_SCRIPT = (
     "set(__THEME__);"
     "window.addEventListener('message',function(e){"
     "if(e.source!==window.parent)return;var d=e.data;"
-    "if(d&&d.type==='superra-theme')set(d.theme);});})();</script>"
+    "if(d&&d.type==='superra-theme')set(d.theme);});"
+    "if(window.parent!==window&&window.ResizeObserver){var last=-1;"
+    "new ResizeObserver(function(){var b=document.body;"
+    "var h=Math.ceil(Math.max(r.getBoundingClientRect().height,b?b.scrollHeight:0));"
+    "if(h!==last){last=h;window.parent.postMessage({type:'superra-height',height:h},'*');}"
+    "}).observe(r);}})();</script>"
 )
 # Insertion point: after a leading BOM, comments, and doctype, so the parser
 # opens <head> for the injected nodes and the page keeps standards mode.  A
