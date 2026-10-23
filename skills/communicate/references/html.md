@@ -32,6 +32,7 @@ An HTML artifact is one self-contained interactive page, committed as a file.
 - **No downloads on claude.ai.** A download link works only in the dashboard; never make it the only way to the data.
 - **External links:** `<a href="…" target="_blank" rel="noopener">`.
 - **Narrow width.** The page fits phone width (about 400px) with no horizontal page scroll: rows wrap, and wide tables and plots scroll in their own `overflow-x: auto` box.
+- **Height from content:** no `vh` or `100%` page heights.
 
 ## Theme
 
@@ -62,7 +63,10 @@ An HTML artifact is one self-contained interactive page, committed as a file.
 ## Save and link
 
 - **Save under the owning task's `attachments/`** as a task companion; lifecycle and provenance per [task-companion-files.md](../../using-superra/references/task-companion-files.md).
-- **Link from `## Results`** with a plain link, `[Alpha explorer](attachments/alpha-explorer.html)`, beside the PNG it supplements.
+- **Reference it from `## Results` by scale:**
+  - **Short, plot-style page: embed**, `[Alpha explorer](attachments/alpha-explorer.html "embed")`.
+  - **Interactive twin of a PNG figure: embed with the PNG as poster**, `[![caption](attachments/fig1.png)](attachments/fig1.html "embed")`.
+  - **Long, full-page artifact: a plain link**, `[Alpha explorer](attachments/alpha-explorer.html)`.
 
 ## Publish on request
 

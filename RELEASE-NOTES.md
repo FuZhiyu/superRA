@@ -4,7 +4,7 @@
 
 ### Added
 
-- **Interactive HTML pages as task attachments.** Ask an agent for an interactive explorer and it writes a self-contained HTML file under the task's `attachments/`, generated from the saved results and linked from `## Results`. The dashboard renders the page in a sandboxed frame that follows its theme, and the standalone export carries it. On request, an agent with an artifact-publishing tool publishes the same file. The showcase study gains an alpha explorer for its 25 portfolios; see [communicate](docs/site/03-utility-skills/06-communicate/task.md).
+- **Interactive HTML pages as task attachments.** Ask an agent for an interactive explorer and it writes a self-contained HTML file under the task's `attachments/`, generated from the saved results and linked from `## Results`. The dashboard shows a short page inline in the task, an interactive figure in place of its PNG, and a long page in the reading pane. Each runs in a sandboxed frame that follows the dashboard's theme, and the standalone export carries it. On request, an agent with an artifact-publishing tool publishes the same file. The showcase study gains an alpha explorer for its 25 portfolios; see [communicate](docs/site/03-utility-skills/06-communicate/task.md).
 
 ## [0.5.0] - 2026-10-04
 
