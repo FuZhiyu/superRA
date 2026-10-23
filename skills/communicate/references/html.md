@@ -9,6 +9,15 @@ An HTML artifact is one self-contained interactive page, committed as a file.
 - **Interaction answers a question a fixed view cannot:** filtering many series, hovering for exact values, switching specifications, browsing a grid of estimates. One fixed view: a PNG or a table.
 - **It supplements, never replaces.** Key figures stay PNG in `## Results`.
 
+## Layer the page from its answer down
+
+A page extends `communicate` §Pyramid structure: each interaction reveals the next layer of detail.
+
+- **The first view carries the answer.** Before any interaction, the page shows its main point, what is plotted, and the units.
+- **Detail waits behind interaction.** Every visible element competes with the main point. Exact values, definitions, method, sources, and full tables move behind hover, an expandable section, or a toggle, whichever fits the page.
+- **Information that changes a decision stays visible.** A caveat, sample restriction, or warning that changes how the reader reads the main view sits in the first view.
+- **Every reveal works on touch.** A hover reveal has a tap or focus equivalent, and a collapsed section's label names what it holds.
+
 ## File format
 
 - **A complete document:** `<!doctype html>`, `<html>`, a `<head>` with `<meta charset="utf-8">`, a viewport meta, and a `<title>` that names the page, then `<body>`.
@@ -63,10 +72,11 @@ An HTML artifact is one self-contained interactive page, committed as a file.
 ## Save and link
 
 - **Save under the owning task's `attachments/`** as a task companion; lifecycle and provenance per [task-companion-files.md](../../using-superra/references/task-companion-files.md).
-- **Reference it from `## Results` by scale:**
-  - **Short, plot-style page: embed**, `[Alpha explorer](attachments/alpha-explorer.html "embed")`.
-  - **Interactive twin of a PNG figure: embed with the PNG as poster**, `[![caption](attachments/fig1.png)](attachments/fig1.html "embed")`.
-  - **Long, full-page artifact: a plain link**, `[Alpha explorer](attachments/alpha-explorer.html)`.
+- **Embed it in `## Results`, compact.** An embedded page fits about one phone screen without scrolling inside its frame: at most about 500px tall at 400px wide, and shorter at desktop width.
+  - **Text link:** `[Alpha explorer](attachments/alpha-explorer.html "embed")`.
+  - **Interactive twin of a PNG figure, with the PNG as poster:** `[![caption](attachments/fig1.png)](attachments/fig1.html "embed")`.
+- **One plot per embed.** A page with several plots becomes several embeds, one question each, each beside the text it supports; so does any other content that does not fit.
+- **A plain link only for an explorer whose views share state and cannot be separated:** `[Alpha explorer](attachments/alpha-explorer.html)`.
 
 ## Publish on request
 
@@ -75,3 +85,14 @@ When the harness has an artifact-publishing tool (`Artifact` on Claude), publish
 - **Publish the committed file** as is.
 - **Record the returned URL next to the attachment link** in `## Results`.
 - **After the page changes, republish to the same URL.**
+
+## Review checklist
+
+**Any review of a task that ships a page walks this list**, whatever its focus.
+
+- `[BLOCKING]` The first view lacks the main point, what is plotted, or the units.
+- `[BLOCKING]` Information that changes a decision is hidden behind interaction.
+- `[BLOCKING]` An embed is taller than about 500px at 400px wide, or holds more than one plot.
+- `[ADVISORY]` Detail that could wait behind interaction crowds the first view.
+- `[ADVISORY]` A hover reveal lacks a tap or focus equivalent, or a collapsed label does not name what it holds.
+- `[ADVISORY]` A plain link holds views that could be separate embeds.

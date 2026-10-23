@@ -106,7 +106,7 @@ Each rule fires on a real reading problem; applying one to a line that already r
 ## Route the work
 - When editing a markdown file, **MUST** load [markdown.md](references/markdown.md) for formatting and presentation. 
 - **Rewriting existing material, or auditing why text is hard to read:** load [rewrite.md](references/rewrite.md).
-- **Writing a standalone HTML page:** load [html.md](references/html.md).
+- **Writing or reviewing a standalone HTML page:** load [html.md](references/html.md).
 
 ## Final pass
 
