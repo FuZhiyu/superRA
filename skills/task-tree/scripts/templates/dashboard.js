@@ -249,6 +249,11 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
   var html = DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] });
   var container = document.createElement('div');
   container.innerHTML = html;
+  /* Embed slots come only from placeHtmlEmbed below, never from authored markup. */
+  container.querySelectorAll('.artifact-embed, [data-embed-state]').forEach(function(el) {
+    el.classList.remove('artifact-embed');
+    el.removeAttribute('data-embed-state');
+  });
 
   /* Base directory for resolving relative paths within a task, derived from the
      resolved task root (any --root, not just `superRA`). Two bases:
@@ -3711,34 +3716,45 @@ function placeHtmlEmbed(a, taskPath, artifactPath, container) {
    /api/artifact-frame, in an export from srcdoc. Otherwise a poster stays, and
    a text link's slot names the reason. */
 function hydrateHtmlEmbeds(root) {
-  root.querySelectorAll('.artifact-embed:not([data-hydrated])').forEach(function(slot) {
-    slot.setAttribute('data-hydrated', '');
-    var owner = slot.dataset.artifactOwner || '';
-    var path = slot.dataset.artifactPath;
-    var entry = null;
-    fetchAttachmentManifest(owner).then(function(manifest) {
-      if (manifest && !window.STANDALONE) _artifactManifests[owner] = manifest;
-      entry = artifactManifestEntry(owner, path);
-      if (!entry) throw new Error('This attachment is unavailable.');
-      if (entry.kind !== 'html' || !entry.previewable) throw new Error(artifactUnavailableReason(entry));
-      var frame = createHtmlFrame(owner, entry, 'Interactive page: ' + slot.dataset.label);
-      frame.classList.add('artifact-embed-frame');
-      if (!window.STANDALONE) {
-        frame.src = artifactFrameUrl(owner, path, entry.mtime_ns);
-        return frame;
-      }
-      return standaloneArtifactText(owner, entry).then(function(text) {
-        frame.srcdoc = srcdocWithFramePolicy(text);
-        return frame;
-      }, function() { throw new Error(standaloneOmittedReason(entry)); });
-    }).then(function(frame) {
-      slot.innerHTML = '';
-      slot.appendChild(frame);
-      slot.appendChild(htmlEmbedActions(owner, entry));
-    }).catch(function(error) {
-      if (!slot.querySelector('img')) slot.appendChild(artifactStateNote(error.message));
-    });
+  root.querySelectorAll('.artifact-embed:not([data-embed-state])').forEach(hydrateHtmlEmbed);
+}
+
+function hydrateHtmlEmbed(slot) {
+  slot.dataset.embedState = 'pending';
+  var owner = slot.dataset.artifactOwner || '';
+  var path = slot.dataset.artifactPath;
+  var entry = null;
+  fetchAttachmentManifest(owner).then(function(manifest) {
+    if (manifest && !window.STANDALONE) _artifactManifests[owner] = manifest;
+    entry = artifactManifestEntry(owner, path);
+    if (!entry) throw new Error('This attachment is unavailable.');
+    if (entry.kind !== 'html' || !entry.previewable) throw new Error(artifactUnavailableReason(entry));
+    var frame = createHtmlFrame(owner, entry, 'Interactive page: ' + slot.dataset.label);
+    frame.classList.add('artifact-embed-frame');
+    if (!window.STANDALONE) {
+      frame.src = artifactFrameUrl(owner, path, entry.mtime_ns);
+      return frame;
+    }
+    return standaloneArtifactText(owner, entry).then(function(text) {
+      frame.srcdoc = srcdocWithFramePolicy(text);
+      return frame;
+    }, function() { throw new Error(standaloneOmittedReason(entry)); });
+  }).then(function(frame) {
+    slot.innerHTML = '';
+    slot.appendChild(frame);
+    slot.appendChild(htmlEmbedActions(owner, entry));
+    slot.dataset.embedState = 'shown';
+  }).catch(function(error) {
+    showHtmlEmbedFailure(slot, error.message);
   });
+}
+
+/* A poster stays as the failed slot's content; a text link's slot names why. */
+function showHtmlEmbedFailure(slot, reason) {
+  slot.dataset.embedState = 'failed';
+  var note = slot.querySelector('.artifact-state');
+  if (note) note.remove();
+  if (!slot.querySelector('img')) slot.appendChild(artifactStateNote(reason));
 }
 
 function htmlEmbedActions(taskPath, entry) {
@@ -3792,12 +3808,25 @@ window.addEventListener('resize', function() {
     .forEach(sizeHtmlEmbed);
 });
 
-/* A changed page reloads every embed of it in place, as the pane frame does. */
+/* After the owner's manifest changes: a changed page reloads in place, as the
+   pane frame does; a slot that failed tries again; a removed page leaves a note. */
 function refreshHtmlEmbeds(taskPath) {
-  document.querySelectorAll('iframe.artifact-embed-frame').forEach(function(frame) {
-    if (frame.dataset.artifactOwner !== taskPath) return;
-    var entry = artifactManifestEntry(taskPath, frame.dataset.artifactPath);
-    if (!entry || frame.dataset.mtime === String(entry.mtime_ns)) return;
+  document.querySelectorAll('.artifact-embed[data-embed-state]').forEach(function(slot) {
+    if (slot.dataset.artifactOwner !== taskPath) return;
+    var entry = artifactManifestEntry(taskPath, slot.dataset.artifactPath);
+    var state = slot.dataset.embedState;
+    if (state === 'failed') {
+      if (entry) hydrateHtmlEmbed(slot);
+      return;
+    }
+    if (state !== 'shown') return;
+    if (!entry) {
+      slot.innerHTML = '';
+      showHtmlEmbedFailure(slot, 'This attachment is unavailable.');
+      return;
+    }
+    var frame = slot.querySelector('iframe.artifact-embed-frame');
+    if (frame.dataset.mtime === String(entry.mtime_ns)) return;
     frame.dataset.mtime = String(entry.mtime_ns);
     frame.src = artifactFrameUrl(taskPath, entry.path, entry.mtime_ns);
   });

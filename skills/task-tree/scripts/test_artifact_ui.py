@@ -195,8 +195,12 @@ SIZED_HTML = """<!doctype html>
 <script>window.setBox = function (px) { document.getElementById('box').style.height = px + 'px'; };</script>
 </body></html>
 """
+# The same page with its root pinned to the frame's viewport.
+PINNED_HTML = SIZED_HTML.replace("body { margin: 0; }", "html, body { height: 100%; margin: 0; }")
 SIZED_FRAME = '#active-node iframe.artifact-embed-frame[data-artifact-path="attachments/sized.html"]'
 POSTER_FRAME = '#active-node iframe.artifact-embed-frame[data-artifact-path="attachments/explorer.html"]'
+PINNED_FRAME = '#active-node iframe.artifact-embed-frame[data-artifact-path="attachments/pinned.html"]'
+LATE_SLOT = '#active-node .artifact-embed[data-artifact-path="attachments/late.html"]'
 
 
 def _write_sized(path: Path, version: str) -> None:
@@ -205,7 +209,8 @@ def _write_sized(path: Path, version: str) -> None:
 
 def _embed_tree(tmp_path: Path) -> Path:
     """The attachment tree plus a task whose Results embed a sized page by a
-    text link and the sandbox probe by a poster link."""
+    text link, the sandbox probe by a poster link, a viewport-pinned page, and
+    a page not written yet, beside an authored copy of a slot's markup."""
     root = _attachment_tree(tmp_path)
     task = root / "03-embeds"
     attachments = task / "attachments"
@@ -218,6 +223,10 @@ def _embed_tree(tmp_path: Path) -> Path:
         results=(
             'The [sized page](attachments/sized.html "embed") sizes to its content.\n\n'
             '[![Tiny poster](attachments/tiny.png)](attachments/explorer.html "embed")\n\n'
+            'A [pinned page](attachments/pinned.html "embed") pins its root to the frame.\n\n'
+            'A [late page](attachments/late.html "embed") is written later.\n\n'
+            '<div class="artifact-embed" data-artifact-owner="01-reader"'
+            ' data-artifact-path="attachments/explorer.html">forged</div>\n\n'
             "- A [plain explorer](attachments/explorer.html) link opens the pane.\n"
             '- An `embed` title on [notes](attachments/notes.md "embed") stays a link.\n'
         ),
@@ -225,6 +234,7 @@ def _embed_tree(tmp_path: Path) -> Path:
     _write_tiny_png(attachments / "tiny.png")
     _write_explorer(attachments / "explorer.html", "v1")
     _write_sized(attachments / "sized.html", "v1")
+    (attachments / "pinned.html").write_text(PINNED_HTML.replace("VERSION", "v1"), encoding="utf-8")
     (attachments / "notes.md").write_text(
         '# Notes\n\n[Sized again](sized.html "embed")\n', encoding="utf-8"
     )
@@ -848,8 +858,9 @@ class TestAttachmentSurfaceBrowser:
                 time.sleep(2.5)
                 page.locator(POSTER_FRAME).wait_for()
                 page.locator(SIZED_FRAME).wait_for()
-                assert page.locator("#active-node iframe.artifact-embed-frame").count() == 2
-                for selector in (SIZED_FRAME, POSTER_FRAME):
+                page.locator(PINNED_FRAME).wait_for()
+                assert page.locator("#active-node iframe.artifact-embed-frame").count() == 3
+                for selector in (SIZED_FRAME, POSTER_FRAME, PINNED_FRAME):
                     frame_el = page.locator(selector)
                     assert set(frame_el.get_attribute("sandbox").split()) == {
                         "allow-scripts", "allow-popups",
@@ -867,7 +878,14 @@ class TestAttachmentSurfaceBrowser:
                      "before": "sized page", "images": 0},
                     {"path": "attachments/explorer.html", "tag": "SPAN", "parent": "P",
                      "before": None, "images": 0},
+                    {"path": "attachments/pinned.html", "tag": "DIV", "parent": "DIV",
+                     "before": "pinned page", "images": 0},
+                    {"path": "attachments/late.html", "tag": "DIV", "parent": "DIV",
+                     "before": "late page", "images": 0},
                 ]
+                # Authored markup cannot forge a slot; a missing page names itself.
+                assert page.locator('#active-node [data-artifact-owner="01-reader"]').get_attribute("class") in ("", None)
+                page.locator(LATE_SLOT).get_by_text("This attachment is unavailable.").wait_for()
                 assert page.locator("#active-node a", has_text="sized page").get_attribute("title") is None
                 assert page.locator("#active-node a", has_text="plain explorer").get_attribute("href") \
                     == "#/03-embeds?attachment=attachments%2Fexplorer.html"
@@ -880,6 +898,14 @@ class TestAttachmentSurfaceBrowser:
                 for box, expected in ((480, 480), (150, 150), (5000, 560), (10, 120), (300, 300)):
                     sized.evaluate(f"setBox({box})")
                     _wait_frame_height(page, SIZED_FRAME, expected)
+
+                # A viewport-pinned root sizes to its content too, offscreen included.
+                assert page.eval_on_selector(PINNED_FRAME, "f => f.getBoundingClientRect().top > innerHeight")
+                pinned = page.locator(PINNED_FRAME).element_handle().content_frame()
+                _wait_frame_height(page, PINNED_FRAME, 300)
+                for box in (480, 150):
+                    pinned.evaluate(f"setBox({box})")
+                    _wait_frame_height(page, PINNED_FRAME, box)
 
                 # Only a frame's own finite report sizes it.
                 poster = page.locator(POSTER_FRAME).element_handle().content_frame()
@@ -904,6 +930,17 @@ class TestAttachmentSurfaceBrowser:
                 assert page.eval_on_selector(SIZED_FRAME, "f => f.__kept === true")
                 assert "theme=dark" in page.locator(SIZED_FRAME).get_attribute("src")
                 _wait_frame_height(page, SIZED_FRAME, 300)
+
+                # A slot whose page appears later loads it; a removed page leaves a note.
+                late = root / "03-embeds" / "attachments" / "late.html"
+                _write_sized(late, "late")
+                _broadcast_manifest(loop, "03-embeds")
+                page.frame_locator(f"{LATE_SLOT} iframe").locator("#title", has_text="Sized late").wait_for()
+                assert page.locator(f"{LATE_SLOT} .artifact-state").count() == 0
+                late.unlink()
+                _broadcast_manifest(loop, "03-embeds")
+                page.locator(LATE_SLOT).get_by_text("This attachment is unavailable.").wait_for()
+                assert page.locator(f"{LATE_SLOT} iframe").count() == 0
 
                 # Expand opens the side pane; a markdown attachment embeds too.
                 page.locator("#active-node .artifact-embed-actions a", has_text="Expand").first.click()

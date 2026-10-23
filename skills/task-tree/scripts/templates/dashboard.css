@@ -1400,6 +1400,8 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 }
 /* An inline embed starts short; its page's height reports resize it. */
 .artifact-embed { display: block; margin: 12px 0; }
+/* A text link's slot sits beside the comment-gutter wrappers; align it with them. */
+.rendered-md > .commentable-block ~ .artifact-embed { margin-left: 24px; }
 .artifact-embed-frame { height: 320px; }
 .artifact-embed-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
 .artifact-markdown-preview { padding-top: 0; }

@@ -141,7 +141,11 @@ HTML_FRAME_CSP = (
 # parent's ``{type: "superra-theme", theme}`` messages.  ``__THEME__`` is a
 # JSON string: "light", "dark", or "" to follow the system.  Inside a frame it
 # also posts ``{type: "superra-height", height}`` whenever the page's content
-# height changes, which an inline embed sizes itself by.
+# height changes, which an inline embed sizes itself by.  The height is the
+# bottom of the body's in-flow children, so a root pinned to the frame's
+# viewport (``height: 100%``, ``min-height: 100vh``) still reports its content.
+# DOM changes and load events trigger a report as well as resizes: an offscreen
+# frame's ResizeObserver waits for it to scroll into view.
 HTML_THEME_SCRIPT = (
     "<script>(function(){var r=document.documentElement;"
     "function set(t){if(t==='light'||t==='dark')r.setAttribute('data-theme',t);"
@@ -150,11 +154,25 @@ HTML_THEME_SCRIPT = (
     "window.addEventListener('message',function(e){"
     "if(e.source!==window.parent)return;var d=e.data;"
     "if(d&&d.type==='superra-theme')set(d.theme);});"
-    "if(window.parent!==window&&window.ResizeObserver){var last=-1;"
-    "new ResizeObserver(function(){var b=document.body;"
-    "var h=Math.ceil(Math.max(r.getBoundingClientRect().height,b?b.scrollHeight:0));"
-    "if(h!==last){last=h;window.parent.postMessage({type:'superra-height',height:h},'*');}"
-    "}).observe(r);}})();</script>"
+    "if(window.parent===window)return;"
+    "var last=-1,timer=0;"
+    "function px(s,p){return parseFloat(s[p])||0;}"
+    "function measure(){var b=document.body,bottom=0;"
+    "for(var k=b.children,i=0;i<k.length;i++){var s=getComputedStyle(k[i]);"
+    "if(s.position==='absolute'||s.position==='fixed')continue;"
+    "var box=k[i].getBoundingClientRect();"
+    "if(box.width||box.height)bottom=Math.max(bottom,box.bottom+px(s,'marginBottom'));}"
+    "if(!bottom)return r.getBoundingClientRect().height;"
+    "var bs=getComputedStyle(b);return bottom+window.scrollY+b.scrollTop"
+    "+px(bs,'paddingBottom')+px(bs,'borderBottomWidth')+px(bs,'marginBottom');}"
+    "function report(){timer=0;if(!document.body)return;var h=Math.ceil(measure());"
+    "if(h!==last){last=h;window.parent.postMessage({type:'superra-height',height:h},'*');}}"
+    "function soon(){if(!timer)timer=setTimeout(report,20);}"
+    "if(window.ResizeObserver)new ResizeObserver(soon).observe(r);"
+    "document.addEventListener('DOMContentLoaded',function(){"
+    "if(document.body)new MutationObserver(soon).observe(document.body,"
+    "{childList:true,subtree:true,attributes:true,characterData:true});soon();});"
+    "window.addEventListener('load',soon);})();</script>"
 )
 # Insertion point: after a leading BOM, comments, and doctype, so the parser
 # opens <head> for the injected nodes and the page keeps standards mode.  A
