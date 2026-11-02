@@ -11,6 +11,12 @@
 - **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.
 - **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, JSON, data files, and the lock keep the path they recorded, and paths into other projects are left alone. The move lists the project files and the steps it changed.
 
+## [0.5.1] - 2026-11-01
+
+### Added
+
+- **Interactive HTML pages as task attachments.** Ask an agent for an interactive explorer and it writes a self-contained HTML file under the task's `attachments/`, generated from the saved results and linked from `## Results`. Each page leads with its main point and keeps exact values and method behind hover or toggles. The dashboard shows it inline in the task, one plot per embed sized to a phone screen, with an interactive figure in place of its PNG; only an explorer with linked views opens in the reading pane. Each runs in a sandboxed frame that follows the dashboard's theme, and the standalone export carries it. On request, an agent with an artifact-publishing tool publishes the same file. The showcase study gains an alpha explorer for its 25 portfolios; see [communicate](docs/site/03-utility-skills/06-communicate/task.md).
+
 ## [0.5.0] - 2026-10-04
 
 The reproduction release: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced. Coming from 0.4.1, read [Upgrading from 0.4.1](#upgrading-from-041) first.

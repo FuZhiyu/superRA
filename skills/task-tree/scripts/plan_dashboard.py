@@ -925,6 +925,11 @@ def _get_jinja_env():
 
     env.filters["vscode_link"] = vscode_link
     env.filters["file_url"] = file_url
+    env.globals["html_frame"] = {
+        "sandbox": artifacts.HTML_FRAME_SANDBOX,
+        "csp": artifacts.HTML_FRAME_CSP,
+        "theme_script": artifacts.HTML_THEME_SCRIPT,
+    }
 
     _jinja_env = env
     return env
@@ -1617,6 +1622,8 @@ def _file_peek(resolved: Path, path: str) -> dict:
         return {"exists": False}
     peek = {"exists": True, **entry.as_dict(),
             "max_preview_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes}
+    if peek["kind"] == "html":  # only an attachment renders in the artifact frame
+        peek.update(kind="text", previewable=False, download_only=True)
     if peek["kind"] in _PEEK_TEXT_KINDS:
         try:
             with open(resolved, "rb") as fh:
@@ -1666,23 +1673,34 @@ def _authority_host(authority: str) -> str:
     return host
 
 
+def _same_origin_headers(request: Request, trusted_authority) -> None:
+    """Refuse a request whose headers do not show a same-origin browser.
+
+    *trusted_authority* on the ``Host`` header closes DNS rebinding, which makes
+    an attacker page genuinely same-origin; the ``Sec-Fetch-Site`` check refuses
+    what a browser marks as coming from another site or an opaque-origin
+    (sandboxed) page.  Enough alone for a method a browser preflights
+    cross-origin, such as PATCH or DELETE.
+    """
+    if not trusted_authority(request.headers.get("host", "")):
+        raise HTTPException(status_code=403, detail="Untrusted Host header")
+    fetch_site = request.headers.get("sec-fetch-site")
+    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
+        raise HTTPException(status_code=403, detail="Cross-site request refused")
+
+
 async def _same_origin_json(request: Request, trusted_authority) -> dict:
     """The JSON object body of a same-origin request, or the refusal.
 
     Requiring ``application/json`` forces a preflight on any cross-origin
-    ``fetch``, which fails because no CORS middleware is installed; the
-    ``Sec-Fetch-Site`` check closes the simple-form-POST path that skips the
-    preflight; *trusted_authority* on the ``Host`` header closes DNS rebinding,
-    which defeats both by making the attacker page genuinely same-origin.
+    ``fetch``, which fails because no CORS middleware is installed; the header
+    checks (``_same_origin_headers``) close the simple-form-POST path that skips
+    the preflight and DNS rebinding.
     """
-    if not trusted_authority(request.headers.get("host", "")):
-        raise HTTPException(status_code=403, detail="Untrusted Host header")
+    _same_origin_headers(request, trusted_authority)
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type != "application/json":
         raise HTTPException(status_code=415, detail="Expected application/json")
-    fetch_site = request.headers.get("sec-fetch-site")
-    if fetch_site is not None and fetch_site not in ("same-origin", "none"):
-        raise HTTPException(status_code=403, detail="Cross-site request refused")
     try:
         body = await request.json()
     except Exception:
@@ -1821,6 +1839,8 @@ async def open_local_path(request: Request):
 BUILD_JOB_FILENAME = "dashboard-build.json"
 BUILD_LOG_FILENAME = "dashboard-build.log"
 BUILD_HOSTS_ENV_VAR = "SUPERRA_DASHBOARD_HOSTS"
+# The ``--host`` this process binds (``serve``): an explicit name is trusted.
+SERVE_HOST = ""
 # A just-spawned runner has not taken the lock yet; trust its live pid this long.
 BUILD_STARTUP_GRACE = 30.0
 BUILD_LOG_TAIL_LINES = 40
@@ -1835,11 +1855,13 @@ def _repro_actions_enabled() -> bool:
 
 
 def _machine_names() -> set[str]:
-    """This machine's own names, plus any the operator lists in ``SUPERRA_DASHBOARD_HOSTS``."""
+    """This machine's own names, the ``--host`` it serves on, and any the operator
+    lists in ``SUPERRA_DASHBOARD_HOSTS``."""
     names = {socket.gethostname(), socket.getfqdn()}
     names |= {n.split(".")[0] for n in list(names)}
     names |= {n + ".local" for n in list(names) if "." not in n}
     names |= set(os.environ.get(BUILD_HOSTS_ENV_VAR, "").split(","))
+    names.add(SERVE_HOST)  # the --host name the startup URL prints
     return {n.strip().lower().rstrip(".") for n in names if n.strip()}
 
 
@@ -2196,14 +2218,8 @@ async def artifact_manifest(request: Request, task: str = ""):
     return manifest
 
 
-@app.get("/api/artifact")
-async def artifact_content(
-    request: Request,
-    task: str = "",
-    path: str = "",
-    download: bool = False,
-):
-    """Preview or download one companion from its owning task and worktree."""
+async def _artifact_item(request: Request, task: str, path: str):
+    """The worktree, owning task, and description of one requested companion."""
     state = await resolve_worktree(request)
     owner = _find_task(state, task)
     if owner is None:
@@ -2220,46 +2236,59 @@ async def artifact_content(
     ) as exc:
         _raise_artifact_http_error(exc)
         raise AssertionError("unreachable")
+    return state, owner, item
 
-    if not download and not item.download_only and not item.previewable:
-        raise HTTPException(
-            status_code=413,
-            detail={
-                "reason": "preview-byte-limit",
-                "size": item.size,
-                "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
-            },
+
+async def _artifact_preview_bytes(state, owner, path: str, item) -> bytes:
+    """One companion's bytes under the preview cap, or the 413 that names it."""
+    too_large = HTTPException(
+        status_code=413,
+        detail={
+            "reason": "preview-byte-limit",
+            "size": item.size,
+            "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
+        },
+    )
+    if not item.previewable:
+        raise too_large
+    try:
+        return await asyncio.to_thread(
+            artifacts.read_artifact_bytes,
+            state.plan_root,
+            owner,
+            path,
+            max_bytes=artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
         )
+    except artifacts.ArtifactTooLargeError as exc:
+        raise too_large from exc
+    except (
+        artifacts.ArtifactSecurityError,
+        FileNotFoundError,
+    ) as exc:
+        _raise_artifact_http_error(exc)
+        raise AssertionError("unreachable")
 
-    as_download = download or item.download_only
+
+@app.get("/api/artifact")
+async def artifact_content(
+    request: Request,
+    task: str = "",
+    path: str = "",
+    download: bool = False,
+):
+    """Preview or download one companion from its owning task and worktree.
+
+    HTML or XML, by media type, always downloads here: an HTML attachment
+    renders only through ``/api/artifact-frame``.
+    """
+    state, owner, item = await _artifact_item(request, task, path)
+    as_download = download or item.download_only or artifacts.renders_markup(item.mime)
     headers = {
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-store",
     }
     if not as_download:
-        try:
-            raw = await asyncio.to_thread(
-                artifacts.read_artifact_bytes,
-                state.plan_root,
-                owner,
-                path,
-                max_bytes=artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
-            )
-        except artifacts.ArtifactTooLargeError as exc:
-            raise HTTPException(
-                status_code=413,
-                detail={
-                    "reason": "preview-byte-limit",
-                    "size": item.size,
-                    "max_bytes": artifacts.DEFAULT_ARTIFACT_LIMITS.max_preview_bytes,
-                },
-            ) from exc
-        except (
-            artifacts.ArtifactSecurityError,
-            FileNotFoundError,
-        ) as exc:
-            _raise_artifact_http_error(exc)
-            raise AssertionError("unreachable")
+        raw = await _artifact_preview_bytes(state, owner, path, item)
         headers["Content-Disposition"] = (
             f"inline; filename*=UTF-8''{quote(item.name, safe='')}"
         )
@@ -2288,15 +2317,43 @@ async def artifact_content(
     )
 
 
+@app.get("/api/artifact-frame")
+async def artifact_frame(
+    request: Request,
+    task: str = "",
+    path: str = "",
+    theme: str = "",
+):
+    """Render one HTML companion for the pane's iframe or a new tab.
+
+    The response's own CSP sandboxes it without ``allow-same-origin``, so the
+    page runs in an opaque origin whether or not a frame wraps it.
+    """
+    state, owner, item = await _artifact_item(request, task, path)
+    if item.kind != "html":
+        raise HTTPException(status_code=404, detail="Not an HTML attachment")
+    raw = await _artifact_preview_bytes(state, owner, path, item)
+    return Response(
+        content=artifacts.inject_theme_script(raw, theme),
+        media_type="text/html",
+        headers={
+            "Content-Security-Policy": f"sandbox {artifacts.HTML_FRAME_SANDBOX}; {artifacts.HTML_FRAME_CSP}",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(item.name, safe='')}",
+        },
+    )
+
+
 @app.post("/api/task/{path:path}/comment")
 async def create_comment(path: str, request: Request):
-    """Create a comment on a task."""
+    """Create a comment on a task, from a same-origin JSON request only."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
+    body = await _same_origin_json(request, _is_trusted_authority)
     task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
-    body = await request.json()
     comment = add_comment(
         task_dir=task.dir_path,
         section=body.get("section", ""),
@@ -2343,6 +2400,7 @@ async def toggle_comment(path: str, comment_id: int, request: Request):
     """
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
+    _same_origin_headers(request, _is_trusted_authority)
     task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
@@ -2370,6 +2428,7 @@ async def remove_comment(path: str, comment_id: int, request: Request):
     """Delete a comment."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
+    _same_origin_headers(request, _is_trusted_authority)
     task = _find_task(await resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
@@ -3132,7 +3191,8 @@ def serve(port: int, host: str = "127.0.0.1") -> None:
     """
     import uvicorn
 
-    global _server
+    global _server, SERVE_HOST
+    SERVE_HOST = host
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:

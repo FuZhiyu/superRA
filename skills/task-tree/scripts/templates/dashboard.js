@@ -249,6 +249,11 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
   var html = DOMPurify.sanitize(md.render(text), { ADD_ATTR: ['style', 'class'] });
   var container = document.createElement('div');
   container.innerHTML = html;
+  /* Embed slots come only from placeHtmlEmbed below, never from authored markup. */
+  container.querySelectorAll('.artifact-embed, [data-embed-state]').forEach(function(el) {
+    el.classList.remove('artifact-embed');
+    el.removeAttribute('data-embed-state');
+  });
 
   /* Base directory for resolving relative paths within a task, derived from the
      resolved task root (any --root, not just `superRA`). Two bases:
@@ -299,6 +304,14 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]
            form because vscode://file ignores a #L... fragment. */
+        var htmlTarget = projectDir == null
+          ? resolveArtifactRelativePath(artifactPath || '', href) : '';
+        if (isHtmlArtifactPath(htmlTarget)) {
+          a.setAttribute('href', attachmentHash(taskPath, htmlTarget));
+          a.removeAttribute('target');
+          if (a.getAttribute('title') === 'embed') placeHtmlEmbed(a, taskPath, htmlTarget, container);
+          return;
+        }
         if (artifactPath) {
           var artifactTarget = resolveArtifactRelativePath(artifactPath, href);
           if (artifactTarget) {
@@ -452,6 +465,22 @@ function toggleTheme() {
   var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
   localStorage.setItem('dashboard-theme', next);
+  document.querySelectorAll('iframe.artifact-html-frame').forEach(postHtmlFrameTheme);
+  document.querySelectorAll('a[href*="/api/artifact-frame?"]').forEach(function(a) {
+    a.setAttribute('href', a.getAttribute('href').replace(/([?&]theme=)[^&]*/, '$1' + next));
+  });
+}
+
+function dashboardTheme() {
+  return document.documentElement.getAttribute('data-theme') || '';
+}
+
+/* The framed page's injected theme script accepts this message only from its
+   parent; the opaque-origin frame leaves '*' as the only usable target. */
+function postHtmlFrameTheme(frame) {
+  if (frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'superra-theme', theme: dashboardTheme() }, '*');
+  }
 }
 
 /* Shared navigation state: layout changes do not change what is selected or filtered. */
@@ -895,6 +924,7 @@ function toggleSection(toggleEl, event) {
       if (tmpl) {
         renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
         renderedMd.dataset.rendered = 'true';
+        hydrateHtmlEmbeds(renderedMd);
       }
       if (sectionName === REPRO_SECTION) renderReproStepTable(renderedMd, taskPath);
     }
@@ -2986,6 +3016,17 @@ function showOpenError(msg) {
   showOpenError._timer = setTimeout(function() { el.classList.remove('visible'); }, 6000);
 }
 
+/* A refused comment write (an untrusted Host, say) names its reason instead of
+   leaving the form or button looking dead. */
+function reportCommentRefusal(resp) {
+  if (resp.ok) return;
+  resp.json().catch(function() { return {}; }).then(function(data) {
+    var detail = data.detail;
+    if (detail && typeof detail !== 'string') detail = JSON.stringify(detail);
+    showOpenError('Comment not saved: ' + (detail || ('HTTP ' + resp.status)));
+  });
+}
+
 /* Hand a project-root-relative path to the server for opening on its own host.
    `target` is 'native' (the OS default application for the file type) or 'editor'
    (this worktree's VS Code window). When no editor CLI is installed the route
@@ -3174,6 +3215,31 @@ function artifactApiUrl(taskPath, artifactPath, download) {
   return wtUrl(url);
 }
 
+function isHtmlArtifactPath(artifactPath) {
+  return /\.html?$/i.test(artifactPath || '');
+}
+
+function attachmentHash(taskPath, artifactPath) {
+  return '#/' + (taskPath || '') + '?attachment=' + encodeURIComponent(artifactPath);
+}
+
+function artifactFrameUrl(taskPath, artifactPath, version) {
+  var url = '/api/artifact-frame?task=' + encodeURIComponent(taskPath || '')
+    + '&path=' + encodeURIComponent(artifactPath || '')
+    + '&theme=' + encodeURIComponent(dashboardTheme());
+  if (version != null) url += '&v=' + encodeURIComponent(version);
+  return wtUrl(url);
+}
+
+/* A srcdoc page with HTML_FRAME's CSP as a <meta> and its theme script ahead of
+   every byte of the page, so nothing the page holds runs before the CSP. A srcdoc
+   document never enters quirks mode, so the doctype need not come first. */
+function srcdocWithFramePolicy(text) {
+  return '<meta http-equiv="Content-Security-Policy" content="' + escapeAttr(HTML_FRAME.csp) + '">'
+    + HTML_FRAME.theme_script.replace('__THEME__', JSON.stringify(dashboardTheme()))
+    + text;
+}
+
 function artifactManifestEntry(taskPath, artifactPath) {
   var manifest = _artifactManifests[taskPath];
   if (!manifest && window.STANDALONE && window.STANDALONE_ARTIFACTS) {
@@ -3208,6 +3274,12 @@ function artifactResourceUrl(taskPath, artifactPath) {
 }
 
 function artifactOpenHref(taskPath, artifactPath) {
+  if (isHtmlArtifactPath(artifactPath)) {
+    /* A top-level data: page cannot run; an export opens the repo copy if any. */
+    if (!window.STANDALONE) return artifactFrameUrl(taskPath, artifactPath);
+    var entry = artifactManifestEntry(taskPath, artifactPath);
+    return (entry && entry.repo_url) || '#';
+  }
   return artifactResourceUrl(taskPath, artifactPath) || '#';
 }
 
@@ -3276,8 +3348,8 @@ function buildArtifactPreviewHead(taskPath, entry) {
     open.className = 'artifact-action';
     open.href = openHref;
     open.target = '_blank';
-    open.textContent = 'Open';
-    if (window.LOCAL_OPEN) {
+    open.textContent = entry.kind === 'html' && !window.STANDALONE ? 'Open in new tab' : 'Open';
+    if (window.LOCAL_OPEN && entry.kind !== 'html') {
       open.title = 'Open in the default application';
       open.setAttribute('data-open-path', taskRelOpenPath(taskPath, entry.path));
     }
@@ -3510,6 +3582,10 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     body.appendChild(unavailable);
     return;
   }
+  if (entry.kind === 'html') {
+    renderHtmlArtifact(taskPath, entry, body, token);
+    return;
+  }
   if (entry.kind === 'image') {
     var image = document.createElement('img');
     image.className = 'artifact-image-preview';
@@ -3549,10 +3625,210 @@ function renderActiveArtifactBody(taskPath, entry, body, token) {
     } else {
       body.appendChild(renderArtifactCode(text, languages[entry.kind] || ''));
     }
+    hydrateHtmlEmbeds(body);
   }).catch(function(error) {
     if (token !== _artifactPreviewToken) return;
     body.innerHTML = '<p class="artifact-state artifact-state-unavailable"></p>';
     body.firstChild.textContent = error.message;
+  });
+}
+
+/* An HTML attachment runs only inside a frame with HTML_FRAME's sandbox: live
+   from /api/artifact-frame (which adds the CSP), in an export from srcdoc with
+   the CSP injected as a <meta>. */
+function renderHtmlArtifact(taskPath, entry, body, token) {
+  var frame = createHtmlFrame(taskPath, entry, 'HTML attachment: ' + entry.name);
+  if (!window.STANDALONE) {
+    frame.src = artifactFrameUrl(taskPath, entry.path, entry.mtime_ns);
+    body.appendChild(frame);
+    return;
+  }
+  standaloneArtifactText(taskPath, entry).then(function(text) {
+    if (token !== _artifactPreviewToken) return;
+    frame.srcdoc = srcdocWithFramePolicy(text);
+    body.appendChild(frame);
+  }).catch(function() {
+    if (token !== _artifactPreviewToken) return;
+    body.appendChild(artifactStateNote(standaloneOmittedReason(entry)));
+  });
+}
+
+function createHtmlFrame(taskPath, entry, title) {
+  var frame = document.createElement('iframe');
+  frame.className = 'artifact-html-frame';
+  frame.setAttribute('sandbox', HTML_FRAME.sandbox);
+  frame.title = title;
+  frame.dataset.artifactOwner = taskPath;
+  frame.dataset.artifactPath = entry.path;
+  frame.dataset.mtime = String(entry.mtime_ns);
+  /* A toggle between the src request and the page's load is caught up here. */
+  frame.addEventListener('load', function() { postHtmlFrameTheme(frame); });
+  return frame;
+}
+
+function standaloneOmittedReason(entry) {
+  return (entry.export || {}).reason === 'total-byte-limit'
+    ? 'Not embedded — this export reached its total size limit.'
+    : 'This file was not embedded in the export.';
+}
+
+function artifactStateNote(text) {
+  var state = document.createElement('p');
+  state.className = 'artifact-state artifact-state-unavailable';
+  state.textContent = text;
+  return state;
+}
+
+/* An `embed`-titled link to an HTML attachment leaves a slot for
+   hydrateHtmlEmbeds, which needs the slot in the document. A poster link (one
+   holding an image) moves inside its slot and stays the fallback; a text link
+   stays put, with its slot after the paragraph or list item that holds it. */
+function placeHtmlEmbed(a, taskPath, artifactPath, container) {
+  a.removeAttribute('title');
+  var poster = a.querySelector('img');
+  var slot = document.createElement(poster ? 'span' : 'div');
+  slot.className = 'artifact-embed';
+  slot.dataset.artifactOwner = taskPath || '';
+  slot.dataset.artifactPath = artifactPath;
+  slot.dataset.label = a.textContent.trim()
+    || (poster && poster.getAttribute('alt')) || artifactPath.split('/').pop();
+  if (poster) {
+    a.parentNode.insertBefore(slot, a);
+    slot.appendChild(a);
+    return;
+  }
+  var block = a.closest('p, li');
+  if (!block) {
+    block = a;
+    while (block.parentNode !== container) block = block.parentNode;
+  }
+  var parent = block.tagName === 'LI' ? block : block.parentNode;
+  var before = block.tagName === 'LI'
+    ? block.querySelector(':scope > ul, :scope > ol') : block.nextSibling;
+  while (before && before.classList && before.classList.contains('artifact-embed')) {
+    before = before.nextSibling;
+  }
+  parent.insertBefore(slot, before);
+}
+
+/* Each new embed slot under *root* becomes a frame under HTML_FRAME's policy
+   once the owner's manifest names a previewable page: live from
+   /api/artifact-frame, in an export from srcdoc. Otherwise a poster stays, and
+   a text link's slot names the reason. */
+function hydrateHtmlEmbeds(root) {
+  root.querySelectorAll('.artifact-embed:not([data-embed-state])').forEach(hydrateHtmlEmbed);
+}
+
+function hydrateHtmlEmbed(slot) {
+  slot.dataset.embedState = 'pending';
+  var owner = slot.dataset.artifactOwner || '';
+  var path = slot.dataset.artifactPath;
+  var entry = null;
+  fetchAttachmentManifest(owner).then(function(manifest) {
+    if (manifest && !window.STANDALONE) _artifactManifests[owner] = manifest;
+    entry = artifactManifestEntry(owner, path);
+    if (!entry) throw new Error('This attachment is unavailable.');
+    if (entry.kind !== 'html' || !entry.previewable) throw new Error(artifactUnavailableReason(entry));
+    var frame = createHtmlFrame(owner, entry, 'Interactive page: ' + slot.dataset.label);
+    frame.classList.add('artifact-embed-frame');
+    if (!window.STANDALONE) {
+      frame.src = artifactFrameUrl(owner, path, entry.mtime_ns);
+      return frame;
+    }
+    return standaloneArtifactText(owner, entry).then(function(text) {
+      frame.srcdoc = srcdocWithFramePolicy(text);
+      return frame;
+    }, function() { throw new Error(standaloneOmittedReason(entry)); });
+  }).then(function(frame) {
+    slot.innerHTML = '';
+    slot.appendChild(frame);
+    slot.appendChild(htmlEmbedActions(owner, entry));
+    slot.dataset.embedState = 'shown';
+  }).catch(function(error) {
+    showHtmlEmbedFailure(slot, error.message);
+  });
+}
+
+/* A poster stays as the failed slot's content; a text link's slot names why. */
+function showHtmlEmbedFailure(slot, reason) {
+  slot.dataset.embedState = 'failed';
+  var note = slot.querySelector('.artifact-state');
+  if (note) note.remove();
+  if (!slot.querySelector('img')) slot.appendChild(artifactStateNote(reason));
+}
+
+function htmlEmbedActions(taskPath, entry) {
+  var actions = document.createElement('span');
+  actions.className = 'artifact-actions artifact-embed-actions';
+  var expand = document.createElement('a');
+  expand.className = 'artifact-action';
+  expand.href = attachmentHash(taskPath, entry.path);
+  expand.textContent = 'Expand';
+  actions.appendChild(expand);
+  var openHref = artifactOpenHref(taskPath, entry.path);
+  if (openHref && openHref !== '#') {
+    var open = document.createElement('a');
+    open.className = 'artifact-action';
+    open.href = openHref;
+    open.target = '_blank';
+    open.textContent = window.STANDALONE ? 'Open' : 'Open in new tab';
+    actions.appendChild(open);
+  }
+  return actions;
+}
+
+/* An embed frame takes its height from its own page's reports
+   (HTML_THEME_SCRIPT), between a floor and 80% of the window, so neither a
+   hostile value nor a viewport-sized page can push the task view around. */
+var HTML_EMBED_MIN_HEIGHT = 120;
+
+function sizeHtmlEmbed(frame) {
+  var style = getComputedStyle(frame);
+  var cap = Math.max(HTML_EMBED_MIN_HEIGHT, Math.floor(window.innerHeight * 0.8));
+  var inner = Math.min(cap, Math.max(HTML_EMBED_MIN_HEIGHT, Number(frame.dataset.reportedHeight)));
+  frame.style.height = (inner + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)) + 'px';
+}
+
+window.addEventListener('message', function(event) {
+  var data = event.data;
+  if (!data || data.type !== 'superra-height'
+      || typeof data.height !== 'number' || !isFinite(data.height)) return;
+  var frames = document.querySelectorAll('iframe.artifact-embed-frame');
+  for (var i = 0; i < frames.length; i++) {
+    if (frames[i].contentWindow === event.source) {
+      frames[i].dataset.reportedHeight = String(Math.ceil(data.height));
+      sizeHtmlEmbed(frames[i]);
+      return;
+    }
+  }
+});
+
+window.addEventListener('resize', function() {
+  document.querySelectorAll('iframe.artifact-embed-frame[data-reported-height]')
+    .forEach(sizeHtmlEmbed);
+});
+
+/* After the owner's manifest changes: a changed page reloads in place, as the
+   pane frame does; a slot that failed tries again; a removed page leaves a note. */
+function refreshHtmlEmbeds(taskPath) {
+  document.querySelectorAll('.artifact-embed[data-embed-state]').forEach(function(slot) {
+    if (slot.dataset.artifactOwner !== taskPath) return;
+    var entry = artifactManifestEntry(taskPath, slot.dataset.artifactPath);
+    var state = slot.dataset.embedState;
+    if (state === 'failed') {
+      if (entry) hydrateHtmlEmbed(slot);
+      return;
+    }
+    if (state !== 'shown') return;
+    if (!entry) {
+      slot.innerHTML = '';
+      showHtmlEmbedFailure(slot, 'This attachment is unavailable.');
+      return;
+    }
+    var frame = slot.querySelector('iframe.artifact-embed-frame');
+    if (frame.dataset.mtime === String(entry.mtime_ns)) return;
+    frame.dataset.mtime = String(entry.mtime_ns);
+    frame.src = artifactFrameUrl(taskPath, entry.path, entry.mtime_ns);
   });
 }
 
@@ -3641,11 +3917,28 @@ function loadProjectFile(taskPath, filePath, region, token) {
   }).catch(function(error) { showArtifactLoadError(region, token, error); });
 }
 
+function artifactMetaText(entry) {
+  return entry.path + ' · ' + entry.kind + ' · ' + formatArtifactBytes(entry.size);
+}
+
+function syncAttachmentRowActive(taskPath, artifactPath) {
+  document.querySelectorAll('.attachment-file-row').forEach(function(row) {
+    row.classList.toggle('nav-active',
+      row.dataset.artifactOwner === taskPath
+      && row.dataset.artifactPath === artifactPath);
+  });
+}
+
 function loadActiveArtifact(taskPath, artifactPath) {
   var region = document.getElementById('active-node');
   if (!region) return;
   var token = ++_artifactPreviewToken;
-  region.innerHTML = '<p class="artifact-state">Loading ' + (artifactPath.charAt(0) === '/' ? 'file' : 'attachment') + '…</p>';
+  /* The same live HTML attachment stays in place: a refresh swaps only its
+     frame src, so the pane's scroll and the route survive an edit. */
+  var frame = window.STANDALONE ? null : region.querySelector('iframe.artifact-html-frame:not(.artifact-embed-frame)');
+  var inPlace = !!frame && frame.dataset.artifactOwner === taskPath
+    && frame.dataset.artifactPath === artifactPath;
+  if (!inPlace) region.innerHTML = '<p class="artifact-state">Loading ' + (artifactPath.charAt(0) === '/' ? 'file' : 'attachment') + '…</p>';
   if (artifactPath.charAt(0) === '/') { loadProjectFile(taskPath, artifactPath.slice(1), region, token); return; }
   fetchAttachmentManifest(taskPath).then(function(manifest) {
     if (token !== _artifactPreviewToken || taskPath !== activePath
@@ -3654,6 +3947,16 @@ function loadActiveArtifact(taskPath, artifactPath) {
     renderAttachmentBranch(taskPath, manifest);
     var entry = artifactManifestEntry(taskPath, artifactPath);
     if (!entry) throw new Error('This attachment is unavailable.');
+    if (inPlace && entry.kind === 'html' && entry.previewable) {
+      if (frame.dataset.mtime !== String(entry.mtime_ns)) {
+        frame.dataset.mtime = String(entry.mtime_ns);
+        frame.src = artifactFrameUrl(taskPath, entry.path, entry.mtime_ns);
+      }
+      var liveMeta = region.querySelector('.attachment-active-meta');
+      if (liveMeta) liveMeta.textContent = artifactMetaText(entry);
+      syncAttachmentRowActive(taskPath, artifactPath);
+      return;
+    }
     region.innerHTML = '';
     var head = buildArtifactPageHead(taskPath, entry.name);
     var actions = buildArtifactPreviewHead(taskPath, entry)
@@ -3662,18 +3965,13 @@ function loadActiveArtifact(taskPath, artifactPath) {
     region.appendChild(head);
     var meta = document.createElement('p');
     meta.className = 'attachment-active-meta';
-    meta.textContent = entry.path + ' · ' + entry.kind + ' · '
-      + formatArtifactBytes(entry.size);
+    meta.textContent = artifactMetaText(entry);
     region.appendChild(meta);
     var body = document.createElement('div');
     body.className = 'artifact-preview-body attachment-active-body';
     region.appendChild(body);
     renderActiveArtifactBody(taskPath, entry, body, token);
-    document.querySelectorAll('.attachment-file-row').forEach(function(row) {
-      row.classList.toggle('nav-active',
-        row.dataset.artifactOwner === taskPath
-        && row.dataset.artifactPath === artifactPath);
-    });
+    syncAttachmentRowActive(taskPath, artifactPath);
     finishArtifactPage(region);
   }).catch(function(error) { showArtifactLoadError(region, token, error); });
 }
@@ -3681,6 +3979,7 @@ function loadActiveArtifact(taskPath, artifactPath) {
 function refreshAttachmentManifest(taskPath, manifest) {
   _artifactManifests[taskPath] = manifest;
   renderAttachmentBranch(taskPath, manifest);
+  refreshHtmlEmbeds(taskPath);
   if (taskPath === activePath && activeArtifactPath) {
     loadActiveArtifact(taskPath, activeArtifactPath);
   }
@@ -3990,6 +4289,7 @@ function revealCardSection(wrapper, taskPath) {
     if (tmpl) {
       renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
       renderedMd.dataset.rendered = 'true';
+      hydrateHtmlEmbeds(renderedMd);
     }
     if (sectionName === REPRO_SECTION) renderReproStepTable(renderedMd, taskPath);
   }
@@ -5585,6 +5885,7 @@ function showCommentForm(btn) {
         body: body
       })
     }).then(function(resp) {
+      reportCommentRefusal(resp);
       if (resp.ok) {
         form.remove();
         loadComments(taskPath);
@@ -5877,7 +6178,7 @@ function _dismissActiveEdit() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: newBody })
-    });
+    }).then(reportCommentRefusal);
   }
 }
 
@@ -5915,6 +6216,7 @@ function startEditComment(item, bodyEl, comment, taskPath) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: newBody })
     }).then(function(resp) {
+      reportCommentRefusal(resp);
       if (resp.ok) loadComments(taskPath);
     });
   }
@@ -5960,13 +6262,13 @@ function startEditComment(item, bodyEl, comment, taskPath) {
 function resolveComment(taskPath, commentId) {
   _commentEditPaths[taskPath] = Date.now();
   fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'PATCH' })
-    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+    .then(function(resp) { reportCommentRefusal(resp); if (resp.ok) loadComments(taskPath); });
 }
 
 function deleteComment(taskPath, commentId) {
   _commentEditPaths[taskPath] = Date.now();
   fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'DELETE' })
-    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+    .then(function(resp) { reportCommentRefusal(resp); if (resp.ok) loadComments(taskPath); });
 }
 
 /* ── Page load: populate the sidebar, then start the hash router ──

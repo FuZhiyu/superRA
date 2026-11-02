@@ -244,6 +244,10 @@ var ALL_TASK_PATHS = {{ all_tasks | map(attribute='path') | list | tojson }};
    covers both server and standalone; in server mode it is re-fetched from
    /api/search-index on a structural full-reload so live search stays current. #}
 var SEARCH_INDEX = {{ search_index | default([]) | tojson }};
+{# The sandbox tokens, CSP, and theme script every HTML-attachment frame gets
+   (`_artifacts.HTML_FRAME_*`): the live iframe's sandbox attribute, and in a
+   standalone export the srcdoc frame's injected <meta> CSP and theme script. #}
+var HTML_FRAME = {{ html_frame | tojson }};
 </script>
 {% if standalone %}
 <script>{{ standalone_assets.dashboard_js | safe }}</script>
