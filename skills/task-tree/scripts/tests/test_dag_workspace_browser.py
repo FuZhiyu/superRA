@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import pytest
 
@@ -47,9 +47,11 @@ def workspace(tmp_path_factory):
         steps = []
         for j in range(4):
             name = f'step-{i}-{j}'
-            steps.append({'name': name, 'cmd': f'echo {name}', 'deps': [f'out/{i}-{j-1}.txt'] if j else [], 'outs': [f'out/{i}-{j}.txt']})
+            deps = [f'out/{i}-{j-1}.txt'] if j else ['out/1-3.txt'] if i == 3 else []
+            steps.append({'name': name, 'cmd': f'echo {name}', 'deps': deps, 'outs': [f'out/{i}-{j}.txt']})
         import yaml
-        (owner / 'task.md').write_text(f'---\ntitle: Analysis {i} with a readable research question\nstatus: in-progress\n---\n\n## Objective\n\nRead analysis {i}. [Own step](#step-step-{i}-0). [Other step](../analysis-1/task.md#step-step-1-2).\n\n## Reproduction\n\n```yaml\n' + yaml.safe_dump({'steps': steps}) + '```\n')
+        prerequisite = 'depends_on: [analysis-1]\n' if i == 2 else ''
+        (owner / 'task.md').write_text(f'---\ntitle: Analysis {i} with a readable research question\nstatus: in-progress\n{prerequisite}---\n\n## Objective\n\nRead analysis {i}. [Own step](#step-step-{i}-0). [Other step](../analysis-1/task.md#step-step-1-2).\n\n## Reproduction\n\n```yaml\n' + yaml.safe_dump({'steps': steps}) + '```\n')
     for path in ('analysis-0/phase-a', 'analysis-0/phase-b', 'analysis-0/phase-a/leaf'):
         owner = root / path
         owner.mkdir(parents=True, exist_ok=True)
@@ -127,6 +129,49 @@ def test_build_menu_and_explain_card(browser, workspace):
     page.close()
 
 
+
+
+def faded(page, selector):
+    return sorted(page.eval_on_selector_all(selector, 'els => els.map(e => e.dataset.step || e.dataset.task)'))
+
+
+def test_selection_traces_dependencies_and_the_filter_keeps_them(browser, workspace):
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    enter(page, workspace['url'], {'layout': 'graph', 'expanded': ['analysis-1', 'analysis-2', 'analysis-3']})
+    page.wait_for_selector('#repro-node-step-1-3')
+    page.evaluate("""() => { window._layouts = 0; const layout = reproHierarchyLayout;
+      reproHierarchyLayout = m => { window._layouts++; return layout(m); }; }""")
+    page.locator('#repro-node-step-1-3').dispatch_event('click')
+    assert faded(page, '.has-lineage .repro-node:not(.in-lineage)') == [f'step-2-{j}' for j in range(4)]
+    assert faded(page, '.has-lineage .rp-task:not(.in-lineage)') == ['analysis-0', 'analysis-2']
+    assert page.locator('#repro-step-count').inner_text().startswith('Dependencies of step-1-3: 8 of 19 steps')
+    page.locator('.rp-task-title[data-value="analysis-1"]').dispatch_event('click')
+    assert faded(page, '.has-lineage .repro-node:not(.in-lineage)') == []
+    assert faded(page, '.has-lineage .rp-task:not(.in-lineage)') == ['analysis-0']
+    assert '12 of 19 steps' in page.locator('#repro-step-count').inner_text()
+    assert page.evaluate('window._layouts') == 0, 'selection restyles in place'
+    page.locator('.rp-legend-menu summary').click()
+    assert page.locator('.rp-legend-menu .repro-legend-item.rp-missing .repro-count').inner_text() == '12'
+
+    page.locator('#active-node .lineage-btn').click()
+    page.wait_for_function("!document.querySelector('.rp-task[data-task=\"analysis-0\"]')")
+    assert 'Upstream and downstream of' in page.locator('#workspace-filter-summary').inner_text()
+    assert page.locator('#filter-trigger').inner_text() == 'Filter · 1'
+    page.reload()
+    page.wait_for_selector('#repro-node-step-1-3')
+    assert page.locator('.rp-task[data-task="analysis-0"]').count() == 0
+    page.locator('#btn-workspace').click()
+    page.wait_for_function("document.querySelector('#nav-tree .task-node[data-path=\"analysis-2\"]')")
+    assert page.locator('#nav-tree .task-node[data-path="analysis-0"]').is_hidden()
+    assert page.locator('#nav-tree .task-node[data-path="analysis-3"]').is_visible()
+    page.locator('#filter-trigger').click()
+    assert page.locator('.lineage-chip').inner_text().startswith('Analysis 1')
+    page.locator('input[name=lineage-direction][value=up]').check()
+    page.wait_for_function("document.querySelector('#nav-tree .task-node[data-path=\"analysis-3\"]').style.display === 'none'")
+    page.locator('.workspace-filter > .hc-btn:has-text("Clear filters")').click()
+    assert page.locator('#nav-tree .task-node[data-path="analysis-0"]').is_visible()
+    assert 'anchors' not in unquote(page.url)
+    page.close()
 
 def _tiny_pdf():
     objs = [b'<< /Type /Catalog /Pages 2 0 R >>', b'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',

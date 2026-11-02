@@ -91,6 +91,7 @@
 <dialog id="workspace-filter" class="workspace-filter" aria-labelledby="workspace-filter-title">
   <div class="workspace-filter-head"><strong id="workspace-filter-title">Filter tasks</strong><button class="hc-btn" onclick="closeWorkspaceFilter()">Done</button></div>
   <fieldset><legend>Task status</legend><div id="workspace-status-options"></div></fieldset>
+  <fieldset class="workspace-lineage-filter"><legend>Dependencies</legend><div id="workspace-lineage-options"></div></fieldset>
   <section class="workspace-task-filter" aria-labelledby="workspace-task-filter-title"><h3 id="workspace-task-filter-title">Tasks to show</h3>
     <input id="workspace-task-query" type="search" placeholder="Find a task in this list…" aria-label="Find a task in filter list" oninput="renderWorkspaceTaskOptions()">
     <div class="filter-task-actions"><button class="hc-btn" onclick="selectAllWorkspaceTasks(true)">Select all</button><button class="hc-btn" onclick="selectAllWorkspaceTasks(false)">Deselect all</button></div>

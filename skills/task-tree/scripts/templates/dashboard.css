@@ -1065,6 +1065,7 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
   margin: 0;
 }
 .active-node-head .badge { align-self: center; }
+.lineage-btn { white-space: nowrap; }
 /* Share/Export control — sits at the trailing edge beside the VS Code button.
    The VS Code button (rendered just before it) carries the margin-left:auto that
    claims the free space; both then group together, spaced by the header gap. */
@@ -2585,6 +2586,14 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 .rp-task.is-edge-endpoint,.repro-node.is-edge-endpoint { outline:3px solid var(--accent);outline-offset:3px; }
 .rp-task.is-cycle.is-edge-endpoint,.repro-node.is-cycle.is-edge-endpoint { outline-color:var(--accent); }
 .has-edge-focus .rp-wire:not(.is-edge-active) { opacity:.22; }
+/* Selection highlight: what lies outside the selection's dependency set fades. */
+.has-lineage .repro-node:not(.in-lineage),.has-lineage .rp-task:not(.in-lineage) { opacity:.5;filter:saturate(.4); }
+[data-theme="dark"] .has-lineage .repro-node:not(.in-lineage),[data-theme="dark"] .has-lineage .rp-task:not(.in-lineage) { opacity:.6; }
+.has-lineage .rp-wire:not(.in-lineage):not(.is-lit):not(.is-edge-active) { opacity:.22; }
+.repro-scope-name { display:inline-block;max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;font-weight:600;color:var(--text); }
+.repro-scope-rollup { display:inline-flex;gap:6px; }
+.repro-scope-rollup > span { background:none; }
+.repro-scope-rollup .repro-glyph { font-size:.9em; }
 #repro-connection-label { position:absolute;left:12px;right:12px;top:12px;z-index:4;width:fit-content;max-width:calc(100% - 24px);padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;font:12px var(--font-mono);pointer-events:none; }
 #repro-connection-label:empty { display:none; }
 
@@ -2627,6 +2636,16 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #workspace-task-options small { display:block;color:var(--text-mute);font-size:11px;overflow-wrap:anywhere; }
 #selection-filter-notice { padding:8px 12px;margin-bottom:12px;border:1px solid var(--border);background:var(--bg-alt);font-size:13px; }
 .filter-context > .task-row { opacity:.55; }
+.workspace-filter > fieldset.workspace-lineage-filter { flex-shrink:0;margin-top:0; }
+.lineage-chips { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px; }
+.lineage-chip { display:inline-flex;align-items:center;gap:2px;max-width:100%;padding:2px 2px 2px 10px;border:1px solid var(--accent);border-radius:14px;background:var(--accent-soft);color:var(--text);font-size:12px; }
+.lineage-chip.is-step > span { font-family:var(--font-mono); }
+.lineage-chip > span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.lineage-chip button { flex:none;width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:var(--text-mid);cursor:pointer;font-size:15px;line-height:1; }
+.lineage-chip button:hover,.lineage-chip button:focus-visible { background:var(--bg-hover);color:var(--accent); }
+.lineage-direction { display:flex;flex-wrap:wrap;gap:4px 16px; }
+.workspace-filter input[type=radio] { accent-color:var(--accent);width:16px;height:16px;margin:0; }
+.filter-lineage-summary b { display:inline-block;max-width:min(48ch,70vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom; }
 .nav-repro-rollup > span, .rp-task-summary > span { background:none; }
 .rp-task-summary .repro-glyph { font-size:inherit; }
 .nav-repro-rollup { display:inline-flex;align-items:center;gap:6px;flex-shrink:0;padding:1px 5px;border-radius:3px;font:var(--fs-micro) var(--font-mono);color:var(--rp-ink-2);white-space:nowrap; }

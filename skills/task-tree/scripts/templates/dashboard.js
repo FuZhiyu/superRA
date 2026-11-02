@@ -484,14 +484,43 @@ function postHtmlFrameTheme(frame) {
 }
 
 /* Shared navigation state: layout changes do not change what is selected or filtered. */
-var _workspaceFilters={statuses:[],tasks:null};
+var _workspaceFilters={statuses:[],tasks:null,lineage:null};
+var _workspaceLineageMemo=null;
 var _treeSidebarHidden=false;
 var _filterExpanded=new Set(['']);
 function normalizeWorkspaceFilters(value) {
   value=value||{};
   var selected=Array.isArray(value.tasks)?Array.from(new Set(value.tasks.filter(function(p){return typeof p==='string';}))).sort():null;
   if(selected===null&&Array.isArray(value.hidden)&&value.hidden.length)selected=workspaceTasks().filter(function(t){return !value.hidden.some(function(p){return typeof p==='string'&&reproWithin(t.path,p);});}).map(function(t){return t.path;});
-  return {statuses:Array.isArray(value.statuses)?Array.from(new Set(value.statuses.filter(function(s){return ['not-started','in-progress','implemented','revise','approved','archived','postponed'].includes(s);}))).sort():[],tasks:selected};
+  return {statuses:Array.isArray(value.statuses)?Array.from(new Set(value.statuses.filter(function(s){return ['not-started','in-progress','implemented','revise','approved','archived','postponed'].includes(s);}))).sort():[],tasks:selected,lineage:normalizeLineageFilter(value.lineage)};
+}
+/* The dependency filter: anchors ({task} or {step}) and a direction, or null. */
+function normalizeLineageFilter(value) {
+  if(!value||!Array.isArray(value.anchors))return null;
+  var seen=new Set(),anchors=value.anchors.filter(function(a){
+    var key=a&&(typeof a.step==='string'&&a.step?'step:'+a.step:typeof a.task==='string'&&a.task?'task:'+a.task:'');
+    if(!key||seen.has(key))return false;seen.add(key);return true;
+  }).map(function(a){return typeof a.step==='string'&&a.step?{step:a.step}:{task:a.task};});
+  return anchors.length?{anchors:anchors,direction:['up','down'].includes(value.direction)?value.direction:'both'}:null;
+}
+/* The dependency filter's set on the full graph, or null when no filter is active
+   or the graph has not loaded. Anchors the graph no longer has are dropped. */
+function workspaceLineage() {
+  var filter=_workspaceFilters.lineage;
+  if(!filter||!_reproData)return null;
+  var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
+  var anchors=filter.anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
+  if(anchors.length!==filter.anchors.length)filter=_workspaceFilters.lineage=anchors.length?{anchors:anchors,direction:filter.direction}:null;
+  if(!filter)return null;
+  var key=JSON.stringify(filter);
+  if(!_workspaceLineageMemo||_workspaceLineageMemo.data!==_reproData||_workspaceLineageMemo.key!==key)_workspaceLineageMemo={data:_reproData,key:key,set:reproLineage(graph,filter.anchors,filter.direction)};
+  return _workspaceLineageMemo.set;
+}
+function lineageAnchorLabel(anchor) { return anchor.step?anchor.step:reproTaskTitle(anchor.task); }
+function addLineageAnchor(anchor) {
+  var current=_workspaceFilters.lineage||{anchors:[],direction:'both'};
+  _workspaceFilters.lineage=normalizeLineageFilter({anchors:current.anchors.concat([anchor]),direction:current.direction});
+  applyWorkspaceFilters(true);
 }
 function workspaceTasks() {
   var tasks={};
@@ -501,6 +530,7 @@ function workspaceTasks() {
 }
 function workspaceTaskMatches(path, task) {
   if(_workspaceFilters.tasks!==null&&!_workspaceFilters.tasks.includes(path))return false;
+  var lineage=workspaceLineage();if(lineage&&path&&!lineage.tasks.has(path))return false;
   if(!_workspaceFilters.statuses.length)return true;
   task=task||workspaceTasks().find(function(t){return t.path===path;});
   return !!task&&_workspaceFilters.statuses.includes(task.status);
@@ -513,8 +543,9 @@ function workspaceVisibility() {
 function workspaceGraph(graph) {
   var archived=graph.dependencies&&graph.dependencies.archived_tasks||[];
   if(archived.length){var catalog=workspaceTasks(),known=new Set(graph.dependencies.tasks.map(function(t){return t.path;})),extra=catalog.filter(function(t){return archived.includes(t.path)&&!known.has(t.path);});graph=Object.assign({},graph,{dependencies:Object.assign({},graph.dependencies,{tasks:graph.dependencies.tasks.concat(extra)})});}
-  if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length)return graph;
-  var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task);}),names=new Set(steps.map(function(s){return s.name;}));
+  var lineage=workspaceLineage();
+  if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length&&!lineage)return graph;
+  var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task)&&(!lineage||lineage.steps.has(s.name));}),names=new Set(steps.map(function(s){return s.name;}));
   var dependencies=Object.assign({},graph.dependencies);
   dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
   dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
@@ -543,15 +574,17 @@ function applyWorkspaceFilters(changed) {
 }
 function updateWorkspaceFilterSummary() {
   var host=document.getElementById('workspace-filter-summary');if(!host)return;
-  var active=_workspaceFilters.statuses.length+(_workspaceFilters.tasks===null?0:1);
+  var lineage=_workspaceFilters.lineage,active=_workspaceFilters.statuses.length+(_workspaceFilters.tasks===null?0:1)+(lineage?1:0);
   host.hidden=!active;
   host.innerHTML=(_workspaceFilters.statuses.length?'<span>Status: '+escapeHtml(_workspaceFilters.statuses.join(', '))+'</span>':'')
     +(_workspaceFilters.tasks!==null?'<span>'+_workspaceFilters.tasks.length+' of '+workspaceTasks().length+' tasks selected</span>':'')
+    +(lineage?'<span class="filter-lineage-summary">'+LINEAGE_DIRECTIONS[lineage.direction]+' '+lineage.anchors.map(function(a){var label=lineageAnchorLabel(a);return '<b title="'+escapeAttr(label)+'">'+escapeHtml(label)+'</b>';}).join(', ')+'</span>':'')
     +'<button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>';
   var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=active?'Filter · '+active:'Filter';trigger.classList.toggle('active',!!active);}
   var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear filters to show this task in navigation.';}
   if(typeof reproSizeWorkspace==='function')reproSizeWorkspace();
 }
+var LINEAGE_DIRECTIONS={both:'Upstream and downstream of',up:'Upstream of',down:'Downstream of'};
 function openWorkspaceFilter() {
   var dialog=document.getElementById('workspace-filter');
   document.getElementById('workspace-task-query').value='';
@@ -562,7 +595,15 @@ function closeWorkspaceFilter() {document.getElementById('workspace-filter').clo
 function renderWorkspaceFilter() {
   var host=document.getElementById('workspace-status-options');if(!host)return;
   host.innerHTML=['not-started','in-progress','implemented','revise','approved','archived','postponed'].map(function(status){return '<label><input type="checkbox" data-filter-status="'+status+'"'+(_workspaceFilters.statuses.includes(status)?' checked':'')+'> '+status+'</label>';}).join('');
-  renderWorkspaceTaskOptions();
+  renderWorkspaceLineageOptions();renderWorkspaceTaskOptions();
+}
+function renderWorkspaceLineageOptions() {
+  var host=document.getElementById('workspace-lineage-options');if(!host)return;
+  var lineage=_workspaceFilters.lineage;
+  if(!lineage){host.innerHTML='<p class="repro-hint">Select a task or step, then choose <strong>Filter to dependencies</strong>.</p>';return;}
+  host.innerHTML='<div class="lineage-chips">'+lineage.anchors.map(function(a,i){var label=lineageAnchorLabel(a);
+    return '<span class="lineage-chip'+(a.step?' is-step':'')+'" title="'+escapeAttr(a.step?'Step '+a.step:a.task)+'"><span>'+escapeHtml(label)+'</span><button type="button" data-lineage-remove="'+i+'" aria-label="Remove '+escapeAttr(label)+'">×</button></span>';}).join('')+'</div>'
+    +'<div class="lineage-direction" role="radiogroup" aria-label="Direction">'+[['up','Upstream'],['down','Downstream'],['both','Both']].map(function(d){return '<label><input type="radio" name="lineage-direction" value="'+d[0]+'"'+(lineage.direction===d[0]?' checked':'')+'> '+d[1]+'</label>';}).join('')+'</div>';
 }
 function renderWorkspaceTaskOptions() {
   var host=document.getElementById('workspace-task-options');if(!host)return;
@@ -589,7 +630,7 @@ function selectAllWorkspaceTasks(selected) {
   _workspaceFilters.tasks=selected?null:[];renderWorkspaceTaskOptions();applyWorkspaceFilters(true);
 }
 function clearWorkspaceFilters() {
-  _workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(true);renderWorkspaceFilter();
+  _workspaceFilters={statuses:[],tasks:null,lineage:null};applyWorkspaceFilters(true);renderWorkspaceFilter();
 }
 function workspaceSearchRecords() {
   var records=(SEARCH_INDEX||[]).slice();
@@ -633,7 +674,8 @@ function initWorkspaceControls() {
   var dialog=document.getElementById('workspace-filter');
   dialog.addEventListener('change',function(event){
     var input=event.target;
-    if(input.dataset.filterStatus){var statuses=new Set(_workspaceFilters.statuses);if(input.checked)statuses.add(input.dataset.filterStatus);else statuses.delete(input.dataset.filterStatus);_workspaceFilters.statuses=Array.from(statuses).sort();}
+    if(input.name==='lineage-direction'){if(_workspaceFilters.lineage)_workspaceFilters.lineage.direction=input.value;}
+    else if(input.dataset.filterStatus){var statuses=new Set(_workspaceFilters.statuses);if(input.checked)statuses.add(input.dataset.filterStatus);else statuses.delete(input.dataset.filterStatus);_workspaceFilters.statuses=Array.from(statuses).sort();}
     else if(input.hasAttribute('data-filter-task')){
       var path=input.dataset.filterTask,tasks=workspaceTasks(),selected=new Set(_workspaceFilters.tasks===null?tasks.map(function(t){return t.path;}):_workspaceFilters.tasks);
       tasks.forEach(function(t){if(reproWithin(t.path,path)){if(input.checked)selected.add(t.path);else selected.delete(t.path);}});
@@ -642,7 +684,7 @@ function initWorkspaceControls() {
     }
     applyWorkspaceFilters(true);
   });
-  dialog.addEventListener('click',function(e){var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
+  dialog.addEventListener('click',function(e){var remove=e.target.closest('[data-lineage-remove]');if(remove&&_workspaceFilters.lineage){var anchors=_workspaceFilters.lineage.anchors.slice();anchors.splice(Number(remove.dataset.lineageRemove),1);_workspaceFilters.lineage=normalizeLineageFilter({anchors:anchors,direction:_workspaceFilters.lineage.direction});renderWorkspaceLineageOptions();applyWorkspaceFilters(true);var next=dialog.querySelector('[data-lineage-remove]');if(next)next.focus();return;}var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
   loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
 }
 
@@ -665,7 +707,7 @@ function showView(view) {
     if(!restoring&&previousView==='workspace'&&activePath)reproRevealOwner(_reproSelected?activePath:parentPath(activePath));
     renderReproView(false);
   } else {
-    _lastSidebarUpdate=updateSidebar(activePath);
+    _lastSidebarUpdate=updateSidebar(activePath).then(function(){applyWorkspaceFilters(false);});
     renderReproDetail(_reproSelected);
   }
   if(!restoring)workspaceWriteHistory();
@@ -1142,18 +1184,65 @@ function reproProject(graph) {
   });
   return { steps: graph.steps || [], edges: edges, incoming: incoming, outgoing: outgoing, byName: byName };
 }
+/* Upstream and downstream of each anchor ({step} or {task}) on the full graph.
+   A step anchor follows step file edges only. A task anchor starts from its
+   subtree and also follows `depends_on`: an edge declared on a task covers its
+   subtree, and a task it reaches joins with its subtree. `edges` keys every
+   followed edge as reproLineageKey does. */
+function reproLineageKey(e) { return (e.kind === 'logical' ? 'l' : 'f') + '\n' + e.from + '\n' + e.to; }
+function reproLineage(graph, anchors, direction) {
+  var steps = graph.steps || [], owner = {}, next = { up: {}, down: {} }, logical = graph.dependencies && graph.dependencies.logical || [];
+  steps.forEach(function(s) { owner[s.name] = s.task; next.up[s.name] = []; next.down[s.name] = []; });
+  (graph.step_edges || []).forEach(function(e) {
+    if (owner[e.from] !== undefined && owner[e.to] !== undefined) { next.down[e.from].push(e); next.up[e.to].push(e); }
+  });
+  var paths = new Set(reproTasks(graph));
+  steps.forEach(function(s) { paths.add(s.task); });
+  function walk(anchor, up) {
+    var found = { steps: new Set(), tasks: new Set() }, queue = [], followed = new Set(), joined = new Set(), byTask = typeof anchor.task === 'string';
+    function addStep(name) { if (found.steps.has(name)) return; found.steps.add(name); found.tasks.add(owner[name]); queue.push(name); }
+    function follow(path) {
+      if (followed.has(path)) return;
+      followed.add(path);
+      logical.forEach(function(e) { if (reproWithin(path, up ? e.to : e.from)) { edges.add(reproLineageKey(e)); join(up ? e.from : e.to); } });
+    }
+    function join(root) {
+      if (joined.has(root)) return;
+      joined.add(root);
+      paths.forEach(function(p) { if (reproWithin(p, root)) { found.tasks.add(p); follow(p); } });
+      steps.forEach(function(s) { if (reproWithin(s.task, root)) addStep(s.name); });
+    }
+    if (byTask) join(anchor.task); else if (owner[anchor.step] !== undefined) addStep(anchor.step);
+    while (queue.length) {
+      var name = queue.shift();
+      if (byTask) follow(owner[name]);
+      next[up ? 'up' : 'down'][name].forEach(function(e) { edges.add(reproLineageKey(e)); addStep(up ? e.from : e.to); });
+    }
+    return found;
+  }
+  var edges = new Set(), result = { steps: new Set(), tasks: new Set(), edges: edges, up: { steps: new Set(), tasks: new Set() }, down: { steps: new Set(), tasks: new Set() } };
+  (anchors || []).forEach(function(anchor) {
+    ['up', 'down'].forEach(function(side) {
+      if (direction && direction !== 'both' && direction !== side) return;
+      var found = walk(anchor, side === 'up');
+      found.steps.forEach(function(n) { result[side].steps.add(n); result.steps.add(n); });
+      found.tasks.forEach(function(p) { result[side].tasks.add(p); result.tasks.add(p); });
+    });
+  });
+  return result;
+}
 function reproHash() {
   var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
   var f=_workspaceFilters||{};
   /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
-  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null;
+  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null&&!f.lineage;
   var query=(activeArtifactPath?[activeArtifactPath.charAt(0)==='/'?'file='+encodeURIComponent(activeArtifactPath.slice(1)):'attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
   return '#/'+activePath+(query.length?'?'+query.join('&'):'');
 }
 function reproReadHash() {
   var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
   var raw=params.get('repro'), step=params.get('step');
-  if(!raw&&!step){_workspaceFilters={statuses:[],tasks:null};_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
+  if(!raw&&!step){_workspaceFilters={statuses:[],tasks:null,lineage:null};_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
   try {
     var n=raw?JSON.parse(raw):{};
     _workspaceFilters=normalizeWorkspaceFilters(n.filters);
@@ -1648,11 +1737,11 @@ function reproBindEdges(container){
 function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);}
 function reproGraphHTML(lay,statuses) {
   var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
-  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+(e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;})?' is-lit':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
+  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
   html+=lay.bands.filter(function(b){return b.label;}).map(function(b){return '<div class="rp-component-label" role="heading" aria-level="3" data-component-parent="'+escapeAttr(b.parent||'')+'" data-component-kind="'+(b.isolated?'isolated':'connected')+'" style="left:'+b.x+'px;top:'+b.y+'px;width:'+b.width+'px">'+escapeHtml(b.label)+'</div>';}).join('');
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
     if(n.type==='step') {var entry=statuses[n.id],ch=reproChannels(entry),st=ch.state,base=ch.label+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
-      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
+      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
         +reproChipHTML(target,'▶','rp-build-chip-step',n.id,'left:'+(p.x+p.width-26)+'px;top:'+(p.y+4)+'px');}
     var total=0,explain=false;n.steps.forEach(function(s){var e=statuses[s.name];if(e&&e.duration!=null)total+=e.duration;if(reproExplainable(reproStateOf(e)))explain=true;});
     var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;}),rollup=reproRollup(n.steps,statuses);
@@ -1687,9 +1776,10 @@ function drawReproView(container,data) {
   var findings=data.graph.findings||[];
   var notice=!workspaceTaskMatches(activePath)?'Selected task is hidden by filters.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
   var errors=findings.filter(function(f){return f.severity==='error';}).length;
+  _reproDrawn={steps:project.steps,statuses:statuses,status:data.status};var scope=reproScopeHTML(_reproDrawn);
   var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
   container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)
-    +'<div class="repro-summary"><span>'+project.steps.length+' steps'+(window.STANDALONE?' · snapshot':'')+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+reproLegendHTML(project.steps,statuses,data.status)+'</div></details>'
+    +'<div class="repro-summary"><span id="repro-step-count">'+scope.count+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+scope.legend+'</div></details>'
     +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
     +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
@@ -1700,6 +1790,7 @@ function drawReproView(container,data) {
 
 
   if(same){var fresh=container.querySelector('.repro-canvas');oldCanvas.querySelector('.repro-plot').innerHTML=reproGraphHTML(lay,statuses);fresh.replaceWith(oldCanvas);}
+  reproApplySelection();
   container.onclick=onReproClick;
   reproBindEdges(container);
   container.onkeydown=function(e){if(e.key==='Escape'){reproCloseFloats(true);container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
@@ -1709,7 +1800,7 @@ function drawReproView(container,data) {
   if(place==='fit')reproFit();else if(place==='open')reproOpen();else reproTransform();
   if(focusId){var target=document.getElementById(focusId);if(target)target.focus({preventScroll:true});}
 }
-var _reproPreserve='';
+var _reproPreserve='', _reproDrawn=null;
 function reproEvidenceHTML(evidence){
   return '<ul>'+evidence.map(function(e){return '<li>'+escapeHtml(e.kind==='logical'?'Logical prerequisite · '+e.declaration:(e.producer||e.from)+' → '+(e.consumer||e.to)+' via '+e.via)+'</li>';}).join('')+'</ul>';
 }
@@ -1747,7 +1838,7 @@ function reproTaskDependencies(graph,path) {
 }
 async function reproOpenDeclaration() {
   var selected=_reproSelected;
-  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeRollups();
+  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeRollups();reproApplySelection();
   if(location.hash!==reproHash())history.pushState({wt:ACTIVE_WT},'',reproHash());
   if(currentView==='reproduction'){
     reproSetReader(true);_reproReaderFull=true;
@@ -1778,6 +1869,7 @@ function reproSelectTask(path){
     var indicator=n.querySelector('.rp-selected-inside'),summary=n.querySelector('.rp-task-summary');
     if(indicator)indicator.hidden=true;if(summary)summary.hidden=false;
   });
+  reproApplySelection();
 }
 
 var _reproReaderPreference=null, _reproReaderSizes={side:420,bottom:300}, _reproReaderPlacement='side', _reproReaderCompact=false;
@@ -1995,7 +2087,7 @@ function onReproClick(event) {
     var action = control.dataset.rpAction, value = control.dataset.value;
     var menu=control.closest('.rp-menu');if(menu)menu.open=false;
     if(action==='task')reproSelectTask(value);
-    else if(action==='overview'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
+    else if(action==='overview'){_workspaceFilters={statuses:[],tasks:null,lineage:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
     else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
@@ -2020,6 +2112,7 @@ function onReproClick(event) {
     else if(action==='finding')reproShowFinding(value);
     else if(action==='open'||action==='related')revealReproStep(value);
     else if(action==='select')selectReproStep(value);
+    else if(action==='lineage-step')addLineageAnchor({step:value});
     else if (action === 'fit') reproFit();
     else if (action === 'zoom-in' || action === 'zoom-out') {
       var canvas = document.querySelector('#view-reproduction .repro-canvas');
@@ -2048,6 +2141,33 @@ function reproShowFinding(path) {
   var row=Array.from(menu.querySelectorAll('li[data-finding-task]')).find(function(li){return li.dataset.findingTask===path;});
   if(row){row.scrollIntoView({block:'nearest'});row.focus({preventScroll:true});}
 }
+/* Restyle the drawn graph for the selection without a layout: the selected
+   step and its direct wires light, cards and wires outside the selected task's
+   or step's dependency set fade, and the summary count and Status key cover
+   the visible steps inside it. */
+function reproApplySelection() {
+  var container=document.getElementById('view-reproduction'),drawn=_reproDrawn;
+  if(!container||!drawn||!_reproData)return;
+  var anchor=_reproSelected?{step:_reproSelected}:activePath?{task:activePath}:null;
+  var set=anchor&&reproLineage(_reproData.graph,[anchor],'both'),lit=new Set(),plot=container.querySelector('.repro-plot');
+  if(set)set.tasks.forEach(function(p){lit.add(p);while(p){p=parentPath(p);lit.add(p);}});
+  if(plot)plot.classList.toggle('has-lineage',!!set);
+  container.querySelectorAll('.repro-node').forEach(function(n){n.classList.toggle('is-selected',n.dataset.step===_reproSelected);n.classList.toggle('in-lineage',!!set&&set.steps.has(n.dataset.step));});
+  container.querySelectorAll('.rp-task').forEach(function(n){n.classList.toggle('in-lineage',!!set&&lit.has(n.dataset.task));});
+  var edges=_reproLayoutCache&&_reproLayoutCache.layout.edges||[];
+  container.querySelectorAll('.repro-edges .rp-wire').forEach(function(w){var e=edges[Number(w.dataset.value)]||{evidence:[]};
+    w.classList.toggle('is-lit',!!_reproSelected&&e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;}));
+    w.classList.toggle('in-lineage',!!set&&e.evidence.some(function(r){return set.edges.has(reproLineageKey(r));}));});
+  var scope=reproScopeHTML(drawn,anchor,set),count=document.getElementById('repro-step-count'),legend=container.querySelector('.rp-legend-menu .rp-menu-body');
+  if(count)count.innerHTML=scope.count;if(legend)legend.innerHTML=scope.legend;
+}
+/* The summary count and Status key body over the visible steps in *set*, or over every visible step without one. */
+function reproScopeHTML(drawn,anchor,set) {
+  var members=set?drawn.steps.filter(function(s){return set.steps.has(s.name);}):drawn.steps,tail=window.STANDALONE?' · snapshot':'',label=set&&(anchor.step||reproTaskTitle(anchor.task));
+  return {legend:reproLegendHTML(members,drawn.statuses,drawn.status),
+    count:set?'Dependencies of <b class="repro-scope-name" title="'+escapeAttr(label)+'">'+escapeHtml(label)+'</b>: '+members.length+' of '+drawn.steps.length+' steps'+(members.length?' · <span class="repro-scope-rollup">'+reproRollup(members,drawn.statuses).compact+'</span>':'')+tail
+      :escapeHtml(drawn.steps.length+' steps'+tail)};
+}
 function selectReproStep(name) {
   var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
   _reproSelected = name;
@@ -2057,19 +2177,13 @@ function selectReproStep(name) {
   if (location.hash !== reproHash()) history.pushState({ wt: ACTIVE_WT }, '', reproHash());
   var container = document.getElementById('view-reproduction');
   if (!container) return;
-  container.querySelectorAll('.repro-node').forEach(function(n) {
-    n.classList.toggle('is-selected', n.dataset.step === name);
-  });
   container.querySelectorAll('.rp-task').forEach(function(node){
     node.classList.remove('is-selected');
     var contains=!node.classList.contains('rp-expanded')&&reproWithin(step.task,node.dataset.task);
     var indicator=node.querySelector('.rp-selected-inside'),summary=node.querySelector('.rp-task-summary');
     if(indicator)indicator.hidden=!contains;if(summary)summary.hidden=contains;
   });
-  container.querySelectorAll('.repro-edges path').forEach(function(p) {
-    var edge=_reproLayoutCache&&_reproLayoutCache.layout.edges[Number(p.dataset.value)];
-    p.classList.toggle('is-lit', !!edge&&edge.evidence.some(function(r){return (r.from||r.producer)===name||(r.to||r.consumer)===name;}));
-  });
+  reproApplySelection();
   renderReproDetail(name);
   syncTreeRollups();
   var reader=document.getElementById('task-preview');if(reader)reader.scrollTop=0;
@@ -2324,7 +2438,7 @@ function renderReproDetail(name) {
   host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+'</span></div>'
     +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+escapeHtml(title)+'</h2><code class="repro-detail-name">'+escapeHtml(name)+'</code></header>'
     +'<div class="repro-status-line"><span class="repro-step-state '+ch.cls+'"><span class="repro-glyph">'+ch.glyph+'</span> '+escapeHtml(ch.label)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'+own
-    +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
+    +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+reproButton('Filter to dependencies','lineage-step',name)+'</div>'
     +'<section class="repro-detail-section"><div class="repro-section-head"><h3>Command</h3>'+reproButton('Copy command','copy-command')+'</div><p class="repro-hint">Run from the project directory.</p><pre class="repro-command"><code class="hljs language-bash">'+code+'</code></pre><span class="repro-copy-status" role="status"></span>'
     +(declared!==command?reproDisclosure('declared','Declared command','<pre class="repro-command"><code>'+escapeHtml(declared)+'</code></pre>',opened.has('declared')):'')+'</section>'
     +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproOnlineSummary(outs)+reproFileList(outs.slice(0,3),step.task)+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3),step.task),opened.has('outputs')):'')+'</section>'
@@ -3129,6 +3243,7 @@ async function loadActiveNode(path) {
          downloaded file has no server to re-export from. */
       + (window.STANDALONE ? '' :
          '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file">Share</button>')
+      + ((path && !window.DOC_MODE) ? '<button class="share-btn lineage-btn" type="button" title="Show only this task\'s upstream and downstream dependencies">Filter to dependencies</button>' : '')
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
@@ -3151,8 +3266,10 @@ async function loadActiveNode(path) {
 
     /* Wire the Share button via a closure over `path` — an inline onclick can't
        carry the path safely (a quoted path breaks the double-quoted attribute). */
-    var shareBtn = region.querySelector('.share-btn');
+    var shareBtn = region.querySelector('.share-btn:not(.lineage-btn)');
     if (shareBtn) shareBtn.onclick = function() { shareSubtree(path); };
+    var lineageBtn = region.querySelector('.lineage-btn');
+    if (lineageBtn) lineageBtn.onclick = function() { addLineageAnchor({ task: path }); };
 
     /* a11y: on a user-initiated navigation, move focus to the new heading so
        keyboard/SR users land on the freshly-loaded content. Consume the flag so

@@ -91,3 +91,60 @@ assert.deepEqual(Object.keys(l.pos).sort(),ids.sort());assert.deepEqual(l.edges.
 assert.deepEqual(l.pos,reproHierarchyLayout(make()).pos);
 assert.equal(l.pos['solo-1'].y,l.pos['solo-3'].y);assert(l.pos['solo-4'].y>l.pos['solo-1'].y);
 """)
+
+
+LINEAGE = """
+var tasks=['data','clean','model','model/fit','model/report','docs','notes','other'].map(path=>({path,title:path,status:'in-progress'}));
+var steps=[['raw','data'],['tidy','clean'],['fit','model/fit'],['report','model/report'],['docs-build','docs'],['note','notes'],['other','other']].map(([name,task])=>({name,task}));
+var edges=[['raw','tidy'],['tidy','fit'],['fit','report'],['note','docs-build']].map(([from,to])=>({from,to,via:from+'.csv'}));
+var graph={steps,step_edges:edges,dependencies:{tasks,logical:[{kind:'logical',from:'docs',to:'model',declaration:'model depends_on: docs'}]}};
+const sorted=set=>Array.from(set).sort();
+"""
+
+
+def lineage_run(body):
+    definitions = _extract_js_defs(['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', 'parentPath'])
+    source = "const assert=require('node:assert/strict');\n" + definitions + '\n' + LINEAGE + body
+    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+
+
+def test_step_anchor_follows_file_edges_only():
+    lineage_run("""
+var up=reproLineage(graph,[{step:'fit'}],'up');
+assert.deepEqual(sorted(up.steps),['fit','raw','tidy']);
+assert.deepEqual(sorted(up.tasks),['clean','data','model/fit']);
+var both=reproLineage(graph,[{step:'fit'}],'both');
+assert.deepEqual(sorted(both.up.steps),['fit','raw','tidy']);assert.deepEqual(sorted(both.down.steps),['fit','report']);
+assert(!both.steps.has('docs-build'),'a depends_on-only neighbour stays out of a step anchor');
+assert(!both.edges.has('l\\ndocs\\nmodel'));
+""")
+
+
+def test_task_anchor_adds_depends_on_declared_on_an_ancestor():
+    lineage_run("""
+var up=reproLineage(graph,[{task:'model/fit'}],'up');
+assert.deepEqual(sorted(up.steps),['docs-build','fit','note','raw','tidy']);
+assert(up.tasks.has('docs')&&up.tasks.has('notes')&&!up.tasks.has('model/report'));
+assert(up.edges.has('l\\ndocs\\nmodel')&&up.edges.has('f\\nnote\\ndocs-build'));
+var down=reproLineage(graph,[{task:'docs'}],'down');
+assert.deepEqual(sorted(down.steps),['docs-build','fit','report'],'a task reached through depends_on joins with its subtree');
+assert.deepEqual(sorted(down.tasks),['docs','model','model/fit','model/report']);
+var union=reproLineage(graph,[{step:'raw'},{task:'other'}],'down');
+assert.deepEqual(sorted(union.steps),['fit','other','raw','report','tidy']);
+""")
+
+
+def test_filtered_graph_keeps_chains_through_a_hidden_task():
+    definitions = _extract_js_defs(['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', 'parentPath',
+        'normalizeLineageFilter', 'workspaceLineage', 'workspaceTasks', 'workspaceTaskMatches', 'workspaceVisibility', 'workspaceGraph'])
+    source = "const assert=require('node:assert/strict');var pathTitles={},SEARCH_INDEX=[],_workspaceLineageMemo=null;\n" + definitions + '\n' + LINEAGE + """
+var _reproData={graph,status:{steps:[]}};
+var _workspaceFilters={statuses:[],tasks:tasks.map(t=>t.path).filter(p=>p!=='clean'),lineage:{anchors:[{step:'raw'},{step:'gone'}],direction:'down'}};
+var view=workspaceGraph(graph);
+assert.deepEqual(view.steps.map(s=>s.name).sort(),['fit','raw','report']);
+assert.deepEqual(_workspaceFilters.lineage.anchors,[{step:'raw'}],'an anchor the graph no longer has is dropped');
+assert(!workspaceTaskMatches('docs')&&workspaceTaskMatches('model/fit'));
+"""
+    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
+    assert result.returncode == 0, result.stderr

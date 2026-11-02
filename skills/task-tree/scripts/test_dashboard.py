@@ -7094,7 +7094,7 @@ def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
         "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD",
         "reproStatusIndex", "reproStateOf", "reproChannels", "reproRollup", "reproTaskTitle", "reproHeadHTML",
-        "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches",
+        "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches", "workspaceLineage", "reproScopeHTML",
         "reproControlsHTML", "reproTasks", "reproStronglyConnected", "reproCycleMembers", "reproHierarchy",
         "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
@@ -7123,6 +7123,7 @@ def _run_repro_render_node(harness_body):
         "function reproBindHead(){}\n"
         "function reproBindExplain(){}\n"
         "function renderReproDetail(){}\n"
+        "function reproApplySelection(){}\n"
     )
     body = _extract_js_defs(["drawReproView"])
     proc = subprocess.run(
