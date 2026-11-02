@@ -4,14 +4,19 @@
 from __future__ import annotations
 
 import argparse
+import os
+import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _repro_state import is_online_only
 from _task_snapshot import preflight, print_edit_notes
 from _task_dependencies import task_index
 from _task_io import (
     TASK_ROOT_DIRNAME,
+    _contained_regular_relative,
+    _read_contained_bytes,
     apply_move_link_rewrites,
     cascade_depends_on_rename,
     compute_move_link_rewrites,
@@ -20,8 +25,23 @@ from _task_io import (
     propagate_parent_status,
     resolve_path,
     resolve_plan_root_arg,
+    task_path_rewriter,
     write_task,
 )
+from _task_validate import OUTPUT_CAP
+
+# Authored text a task path can be hard-coded in. Logs, manifests, and data keep
+# the path they recorded, and the lock's evidence stays as written.
+SOURCE_SUFFIXES = frozenset({
+    ".ado", ".bash", ".c", ".cc", ".cfg", ".cpp", ".do", ".go", ".h", ".hpp",
+    ".ini", ".ipynb", ".java", ".jl", ".js", ".lua", ".m", ".md", ".pl", ".ps1",
+    ".py", ".qmd", ".r", ".rb", ".rmd", ".rs", ".rst", ".sas", ".scala", ".sh",
+    ".sql", ".tex", ".toml", ".ts", ".yaml", ".yml", ".zsh",
+})
+SOURCE_NAMES = frozenset({
+    ".gitattributes", ".gitignore", "Dockerfile", "GNUmakefile", "Justfile",
+    "Makefile", "Snakefile", "justfile", "makefile",
+})
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -145,6 +165,87 @@ def _apply_dep_drops(
     return warnings
 
 
+def _tracked_sources(plan_root: Path) -> tuple[Path, list[Path]] | None:
+    """The git worktree holding *plan_root* and its tracked source files, if any."""
+    def git(*args: str, cwd: Path) -> bytes | None:
+        try:
+            done = subprocess.run(
+                ["git", "-C", str(cwd), *args], capture_output=True, check=False
+            )
+        except OSError:
+            return None
+        return done.stdout if done.returncode == 0 else None
+
+    root = plan_root.resolve()
+    top_line = git("rev-parse", "--show-toplevel", cwd=root)
+    if top_line is None:
+        return None
+    top = Path(os.fsdecode(top_line).rstrip("\n")).resolve()
+    listed = git("ls-files", "-z", cwd=top)
+    if listed is None or not root.is_relative_to(top):
+        return None
+    paths = {top / os.fsdecode(name) for name in listed.split(b"\0") if name}
+    return top, sorted(
+        path for path in paths
+        if path.suffix.lower() in SOURCE_SUFFIXES or path.name in SOURCE_NAMES
+    )
+
+
+def _project_path_rewrites(
+    plan_root: Path, from_dir: Path, to_dir: Path
+) -> tuple[Path, dict[Path, str]] | None:
+    """Tracked sources hard-coding the moved task's path, as ``{post_move_path: text}``.
+
+    Task-tree Markdown is `compute_move_link_rewrites`' scope; `comments.yaml` is
+    review history. An online-only file is skipped rather than downloaded. Returns
+    the git worktree with the rewrites, or None outside git.
+    """
+    tracked = _tracked_sources(plan_root)
+    if tracked is None:
+        return None
+    top, sources = tracked
+    root = plan_root.resolve()
+    rewrite = task_path_rewriter(plan_root, from_dir, to_dir)
+    rewrites: dict[Path, str] = {}
+    for path in sources:
+        if path.is_relative_to(root) and (
+            path.suffix.lower() == ".md" or path.name == "comments.yaml"
+        ):
+            continue
+        try:
+            _contained_regular_relative(path, top)
+            if is_online_only(path, path.stat()):
+                continue
+            original = _read_contained_bytes(path, top).decode("utf-8")
+        except (OSError, ValueError):  # unreadable, symlinked, or not UTF-8 text
+            continue
+        rewritten = rewrite(original)
+        if rewritten != original:
+            moved = path.is_relative_to(from_dir)
+            rewrites[to_dir / path.relative_to(from_dir) if moved else path] = rewritten
+    return top, rewrites
+
+
+def _capped(names: list[str], listing_command: str) -> str:
+    listed = ", ".join(names[:OUTPUT_CAP])
+    if len(names) > OUTPUT_CAP:
+        listed += f", and {len(names) - OUTPUT_CAP} more (`{listing_command}` lists them)"
+    return listed
+
+
+def _steps_touched(graph, rewrite, rewritten_files: set[Path], project_root: Path) -> list[str]:
+    """Steps the move changes: a declared path, or the bytes of a file they read."""
+    touched = []
+    for step in graph.steps:
+        declared = [step.cmd_logical, *(dep.logical for dep in step.deps)]
+        declared += [ref.logical for out in step.outs for ref in (out.path, out.sidecar) if ref]
+        if any(rewrite(text) != text for text in declared) or any(
+            project_root / dep.resolved in rewritten_files for dep in step.deps
+        ):
+            touched.append(step.name)
+    return sorted(touched)
+
+
 def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     try:
         from_dir = resolve_path(plan_root, from_path)
@@ -218,18 +319,23 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
 
     # Computed before the rename, while the moved subtree is readable at from_dir.
     link_rewrites = compute_move_link_rewrites(plan_root, from_dir, to_dir, moved_root=from_dir)
+    project_sweep = _project_path_rewrites(plan_root, from_dir, to_dir)
+    project_top, project_rewrites = project_sweep or (None, {})
     from_dir.rename(to_dir)
     try:
-        apply_move_link_rewrites(plan_root, link_rewrites)
+        apply_move_link_rewrites(
+            project_top if project_rewrites else plan_root,
+            {**link_rewrites, **project_rewrites},
+        )
     except (OSError, ValueError) as exc:
         try:
             to_dir.rename(from_dir)
         except OSError as rollback_exc:
             _die(
-                f"unsafe Markdown rewrite after move ({exc}); "
+                f"unsafe path rewrite after move ({exc}); "
                 f"rollback also failed: {rollback_exc}"
             )
-        _die(f"unsafe Markdown rewrite after move; move rolled back: {exc}")
+        _die(f"unsafe path rewrite after move; move rolled back: {exc}")
     print(f"Moved {from_dir} -> {to_dir}")
 
     if from_parent == to_parent:
@@ -243,7 +349,29 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
         if updated:
             print(f"  Updated status rollup in {updated} ancestor task(s)")
     if link_rewrites:
-        print(f"  Rewrote relative markdown links in {len(link_rewrites)} file(s)")
+        print(f"  Rewrote links and task paths in {len(link_rewrites)} Markdown file(s)")
+    if project_rewrites:
+        names = sorted(path.relative_to(project_top).as_posix() for path in project_rewrites)
+        print(
+            f"  Rewrote hard-coded task paths in {len(names)} project file(s): "
+            f"{_capped(names, 'git diff --name-only')}"
+        )
+    if project_sweep is None:
+        print(
+            f"  Not a git worktree, so project files were not searched for "
+            f"{plan_root_resolved.name}/{from_status_path}"
+        )
+    touched = _steps_touched(
+        graph,
+        task_path_rewriter(plan_root, from_dir, to_dir),
+        set(project_rewrites),
+        plan_root_resolved.parent,
+    )
+    if touched:
+        print(
+            f"  Rewritten paths leave {len(touched)} step(s) stale until rebuilt or "
+            f"accepted: {_capped(touched, 'superra repro status .')}"
+        )
     print_edit_notes(graph)
 
 

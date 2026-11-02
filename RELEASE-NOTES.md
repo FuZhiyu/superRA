@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, manifests, data files, and the lock keep the path they recorded. The move lists the project files it changed and the steps left `stale`.
+
 ## [0.5.0] - 2026-10-04
 
 The reproduction release: task-declared build steps that superRA runs itself, content-based reruns, reviewed acceptance, and a dashboard for inspecting how research outputs are produced. Coming from 0.4.1, read [Upgrading from 0.4.1](#upgrading-from-041) first.

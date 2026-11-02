@@ -63,9 +63,17 @@ superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 
 `superra task rename FROM TO` is a compatibility alias for same-parent renames.
 
-`move` carries the whole task directory — `task.md`, `comments.yaml`, attachments, descendants — and resolves relative paths and `depends_on` edges itself. Run it directly rather than rewriting links or rewiring dependencies by hand first.
+`move` carries the whole task directory — `task.md`, `comments.yaml`, attachments, descendants — and resolves relative links, root-relative task paths, and `depends_on` edges itself. Run it directly rather than rewriting them by hand first.
 
 It re-points every relative Markdown link the move would break: links inside the moved files, and links anywhere else in the tree pointing into the moved subtree.
+
+It also re-points each literal `superRA/<task-path>` to the new path, in these files:
+
+- **Task-tree Markdown** — `## Reproduction` declarations and prose alike.
+- **Tracked source files** anywhere in the git worktree — code, notebooks, `.tex`, config, and project Markdown, by file type. Outside git, the move names the path to search for by hand.
+- **Left unchanged** — logs, manifests, data files, `comments.yaml`, `repro-lock.json`, and `repro-acceptance/` keep the path they recorded. So does an online-only file, and a path assembled at runtime (`joinpath("superRA", slug)`).
+
+Moved steps then read `stale`: a rewritten path changes a step's definition, and a rewritten script changes its dep. The move lists them; [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule) decides whether to rebuild or accept. A failed write rolls the whole move back.
 
 Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the move is refused before filesystem writes if it adds a `depends_on` error. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
 

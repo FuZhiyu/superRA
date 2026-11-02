@@ -169,5 +169,5 @@ Everything runs through the committed wrapper `./superRA/superra`. The agent run
 ./superRA/superra repro build <task> --dry-run               # what a build would run, and its last cost
 ```
 
-- **Edit a field directly; restructure through the agent.** Fix an objective, or drop or park a leaf by setting its status, in its `task.md`. To move or rename a task, ask the agent: `task move` carries the directory and repairs links and dependencies.
+- **Edit a field directly; restructure through the agent.** Fix an objective, or drop or park a leaf by setting its status, in its `task.md`. To move or rename a task, ask the agent: `task move` carries the directory and repairs links, hard-coded task paths, and dependencies.
 - **Every command and flag** is in [commands.md](skills/task-tree/references/commands.md); the full skill is [`task-tree`](skills/task-tree/SKILL.md).

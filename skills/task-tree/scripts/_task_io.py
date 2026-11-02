@@ -11,6 +11,7 @@ import os
 import re
 import stat
 import warnings
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -642,9 +643,9 @@ def _contained_regular_relative(path: Path, plan_root: Path) -> Path:
     try:
         relative = candidate.relative_to(root)
     except ValueError:
-        raise ValueError(f"Markdown rewrite target escapes task root: {path}") from None
+        raise ValueError(f"Move rewrite target escapes task root: {path}") from None
     if not relative.parts:
-        raise ValueError(f"Markdown rewrite target is not a file: {path}")
+        raise ValueError(f"Move rewrite target is not a file: {path}")
 
     current = root
     for index, part in enumerate(relative.parts):
@@ -652,17 +653,17 @@ def _contained_regular_relative(path: Path, plan_root: Path) -> Path:
         try:
             info = current.lstat()
         except OSError as exc:
-            raise ValueError(f"Markdown rewrite target is unavailable: {path}") from exc
+            raise ValueError(f"Move rewrite target is unavailable: {path}") from exc
         if stat.S_ISLNK(info.st_mode):
             raise ValueError(
-                f"Markdown rewrite target contains a symlink component: {path}"
+                f"Move rewrite target contains a symlink component: {path}"
             )
         if index < len(relative.parts) - 1 and not stat.S_ISDIR(info.st_mode):
             raise ValueError(
-                f"Markdown rewrite target has a non-directory component: {path}"
+                f"Move rewrite target has a non-directory component: {path}"
             )
     if not stat.S_ISREG(info.st_mode):
-        raise ValueError(f"Markdown rewrite target is not a regular file: {path}")
+        raise ValueError(f"Move rewrite target is not a regular file: {path}")
     return relative
 
 
@@ -677,7 +678,7 @@ def _open_contained_regular(
         and not path.lstat().st_mode
         & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
     ):
-        raise PermissionError(f"Markdown rewrite target is read-only: {path}")
+        raise PermissionError(f"Move rewrite target is read-only: {path}")
     directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     no_follow = getattr(os, "O_NOFOLLOW", 0)
     directory_fd = os.open(root, directory_flags | no_follow)
@@ -700,7 +701,7 @@ def _open_contained_regular(
 
     if not stat.S_ISREG(os.fstat(file_fd).st_mode):
         os.close(file_fd)
-        raise ValueError(f"Markdown rewrite target is not a regular file: {path}")
+        raise ValueError(f"Move rewrite target is not a regular file: {path}")
     return file_fd
 
 
@@ -722,7 +723,7 @@ def _write_fd_bytes(fd: int, payload: bytes) -> None:
     while remaining:
         written = os.write(fd, remaining)
         if written <= 0:
-            raise OSError("short write while applying Markdown rewrite")
+            raise OSError("short write while applying move rewrite")
         remaining = remaining[written:]
 
 
@@ -797,31 +798,51 @@ def _iter_contained_markdown(root: Path, plan_root: Path):
             yield candidate
 
 
+def task_path_rewriter(
+    plan_root: Path, from_dir: Path, to_dir: Path
+) -> Callable[[str], str]:
+    """Return a text rewrite re-pointing ``superRA/<from>`` paths to ``superRA/<to>``.
+
+    Matches the literal path as a whole-segment prefix, so ``superRA/a/attachments``
+    moves with task ``a`` while ``superRA/a-b`` and ``superRA/a.md`` stay put. A
+    leading ``/`` is allowed to catch ``$ROOT/superRA/a`` and ``../superRA/a``.
+    """
+    root = plan_root.resolve()
+    old, new = (
+        f"{root.name}/{directory.resolve().relative_to(root).as_posix()}"
+        for directory in (from_dir, to_dir)
+    )
+    pattern = re.compile(rf"(?<![\w.-]){re.escape(old)}(?![\w-]|\.\w)")
+    return lambda text: pattern.sub(lambda _match: new, text)
+
+
 def compute_move_link_rewrites(
     plan_root: Path, from_dir: Path, to_dir: Path, *, moved_root: Path
 ) -> dict[Path, str]:
-    """Compute every relative-link rewrite a move from ``from_dir`` to ``to_dir``
-    needs so links keep resolving. Shared by the ``task move`` CLI and the
-    post-move hook; the only difference is where the moved subtree is readable —
-    ``moved_root`` is ``from_dir`` when computed before the rename (CLI) and
-    ``to_dir`` when computed after it (hook).
+    """Compute every Move rewrite a move from ``from_dir`` to ``to_dir`` needs
+    so relative links keep resolving and root-relative task paths, ``## Reproduction``
+    declarations among them, keep naming the task. Shared by the ``task move`` CLI
+    and the post-move hook; the only difference is where the moved subtree is
+    readable — ``moved_root`` is ``from_dir`` when computed before the rename (CLI)
+    and ``to_dir`` when computed after it (hook).
 
     Returns ``{post_move_path: new_text}``: the moved subtree's own files (keyed by
     their destination paths, outbound links re-expressed from the new depth) plus
-    every other file in ``plan_root`` whose links point into the moved subtree
-    (keyed by their unchanged paths). Files whose links are unaffected are omitted.
+    every other file in ``plan_root`` that points into the moved subtree (keyed by
+    their unchanged paths). Unaffected files are omitted.
     """
     plan_root = plan_root.resolve(strict=True)
     rewrites: dict[Path, str] = {}
     from_dir_resolved = from_dir.resolve()
     to_dir_resolved = to_dir.resolve()
+    rewrite_paths = task_path_rewriter(plan_root, from_dir, to_dir)
 
     for src_md in _iter_contained_markdown(moved_root, plan_root):
         rel = src_md.relative_to(moved_root)
         original = _read_contained_markdown(src_md, plan_root)
-        rewritten = _rewrite_relative_links(
+        rewritten = rewrite_paths(_rewrite_relative_links(
             original, from_dir / rel, to_dir / rel, from_dir, to_dir
-        )
+        ))
         if rewritten != original:
             rewrites[to_dir / rel] = rewritten
 
@@ -838,9 +859,9 @@ def compute_move_link_rewrites(
         if in_subtree:
             continue  # part of the moved subtree (pre- or post-move) — handled above
         original = _read_contained_markdown(md, plan_root)
-        rewritten = _rewrite_relative_links(
+        rewritten = rewrite_paths(_rewrite_relative_links(
             original, md, md, from_dir, to_dir, only_into_subtree=True
-        )
+        ))
         if rewritten != original:
             rewrites[md] = rewritten
     return rewrites
@@ -897,7 +918,7 @@ def apply_move_link_rewrites(
         details.extend(f"close fd {fd}: {exc}" for fd, exc in close_failures)
         details.extend(rollback_errors)
         details.extend(f"retry close fd {fd}: {exc}" for fd, exc in retry_failures)
-        raise OSError("Markdown rewrite transaction failed: " + "; ".join(details))
+        raise OSError("Move rewrite transaction failed: " + "; ".join(details))
 
 
 def _find_plan_root(task_dir: Path) -> Path | None:
