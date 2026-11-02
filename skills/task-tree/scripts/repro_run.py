@@ -315,6 +315,7 @@ def _schedule(build: Build, n_workers: int) -> None:
     with ThreadPoolExecutor(max_workers=n_workers) as pool:
         try:
             while pending or futures:
+                waiting = len(pending)
                 for name in list(pending):
                     states = [build.outcomes.get(parent, ("",))[0] for parent in parents[name]]
                     culprit = next((p for p, state in zip(parents[name], states) if state in ("failed", "skipped")), None)
@@ -333,6 +334,8 @@ def _schedule(build: Build, n_workers: int) -> None:
                         build.outcomes[name] = ("skipped", "build interrupted")
                     pending.clear()
                 if not futures:
+                    if len(pending) < waiting:
+                        continue  # a dry run settles steps without a future
                     for name in pending:  # only a dependency cycle leaves nothing runnable
                         build.outcomes[name] = ("skipped", "dependency cycle")
                     pending.clear()

@@ -100,6 +100,14 @@ def test_depends_on_cycle_blocks_planning_but_not_builds(tmp_path):
     assert run(root, "repro", "build", "a#a", "--dry-run").returncode == 0
 
 
+def test_a_dry_run_reaches_a_consumer_named_before_its_producer(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "t", steps=[("a", ["b.txt"], ["a.txt"]), ("b", ["c.txt"], ["b.txt"]), ("c", [], ["c.txt"])])
+    dry = run(root, "repro", "build", ".", "--dry-run")
+    assert dry.returncode == 0, dry.stdout + dry.stderr
+    assert "dependency cycle" not in dry.stdout
+
+
 def test_step_cycle_blocks_builds_but_not_planning(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a", steps=[("a", ["b.txt"], ["a.txt"]), ("b", ["a.txt"], ["b.txt"])])
