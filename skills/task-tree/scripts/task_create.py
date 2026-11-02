@@ -105,7 +105,7 @@ def create_task(
         tasks[parent].children.append(Task(path=task_path, dir_path=task_dir, title=title,
                                            depends_on=depends_on, body=f"## Objective\n{objective}\n{details}"))
     try:
-        graph = preflight(plan_root, proposed)
+        graph = preflight(plan_root, proposed, written=[task_path])
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

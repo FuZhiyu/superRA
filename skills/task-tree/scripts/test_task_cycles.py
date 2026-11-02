@@ -219,6 +219,34 @@ def test_a_move_into_an_archived_group_is_refused(tmp_path):
     assert refused.returncode == 1 and "task-level cycle" in refused.stderr
 
 
+def test_archiving_a_group_keeps_its_stored_status_and_returning_it_is_refused(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "g", steps=[("g1", [], ["g1.txt"]), ("g2", ["b1.txt"], [])])
+    task(root, "g/c")
+    task(root, "b", steps=[("b1", ["g1.txt"], ["b1.txt"])])
+    assert len(warnings(root)) == 1
+    archived = run(root, "task", "update", "g", "--status", "archived")
+    assert archived.returncode == 0, archived.stderr
+    assert "archived prerequisite 'g'" in archived.stderr
+    assert warnings(root) == []
+    refused = run(root, "task", "update", "g", "--status", "not-started")
+    assert refused.returncode == 1 and "task-level cycle" in refused.stderr
+    path = root / "g" / "task.md"
+    edited = path.read_text().replace("status: archived", "status: not-started")
+    assert "task cycle at (root)" in hook_gate()._refusal({path: edited})
+
+
+def test_a_new_child_that_reactivates_an_archived_group_is_refused(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "g", status="archived", steps=[("g1", [], ["g1.txt"]), ("g2", ["b1.txt"], [])])
+    task(root, "g/c", status="archived")
+    task(root, "b", steps=[("b1", ["g1.txt"], ["b1.txt"])])
+    assert warnings(root) == []
+    refused = run(root, "task", "create", "g/d", "--title", "D")
+    assert refused.returncode == 1 and "task-level cycle" in refused.stderr
+    assert not (root / "g" / "d").exists()
+
+
 def test_a_refusal_names_the_edge_it_adds(looped):
     task(looped, "c", steps=[("c1", ["a2.txt"], [])])
     refused = run(looped, "task", "dep", "add", "b", "c")
