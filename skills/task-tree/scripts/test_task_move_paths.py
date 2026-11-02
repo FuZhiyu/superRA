@@ -238,7 +238,7 @@ def test_a_citation_the_move_cannot_resolve_is_named(project, capsys):
     move(project)
     assert text(script) == f"cd_relative = '../../{OLD}/x.csv'\n"
     out = capsys.readouterr().out
-    assert f"Left {OLD} in 1 file(s), where it leads elsewhere or could not be resolved: Code/deep.py" in out
+    assert f"Left 1 file(s) citing {OLD} by a path that leads elsewhere, could not be resolved, or no longer reaches the project; check them by hand: Code/deep.py" in out
 
 
 def test_a_rename_into_a_longer_slug_is_not_applied_twice(project):

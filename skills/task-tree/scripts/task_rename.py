@@ -403,8 +403,9 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     if still_citing:
         names = sorted(path.relative_to(project_top).as_posix() for path in still_citing)
         print(
-            f"  Left {old_path} in {len(names)} file(s), where it leads elsewhere or could "
-            f"not be resolved: {_capped(names, f'git grep {old_path}')}"
+            f"  Left {len(names)} file(s) citing {old_path} by a path that leads elsewhere, "
+            f"could not be resolved, or no longer reaches the project; check them by hand: "
+            f"{_capped(names, f'git grep {old_path}')}"
         )
     touched = _steps_touched(
         graph,
