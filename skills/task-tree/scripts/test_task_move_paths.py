@@ -359,3 +359,22 @@ def test_a_moved_files_own_prefix_follows_a_change_of_depth(project):
     assert (moved / ".." / ".." / "superRA" / "01-mover" / "attachments").resolve() == (
         moved / "attachments"
     ).resolve()
+
+
+def test_a_dot_prefix_is_rebuilt_and_a_mixed_one_is_named(project, capsys):
+    mover = project / "01-group" / "01-mover"
+    (mover / "attachments" / "use.py").write_text(
+        f"A = './../../../../{OLD}/a.csv'\nB = 'x/../../../../../{OLD}/b.csv'\n",
+        encoding="utf-8",
+    )
+    track(project)
+
+    task_rename.rename_task(project, "01-group/01-mover", "01-mover")
+
+    moved = project / "01-mover" / "attachments" / "use.py"
+    lines = text(moved).splitlines()
+    assert lines[0] == "A = '../../../superRA/01-mover/a.csv'"
+    assert lines[1] == "B = 'x/../../../../../superRA/01-mover/b.csv'"
+    left = [line for line in capsys.readouterr().out.splitlines() if "Left " in line]
+    assert left and "01-mover/attachments/use.py" in left[0]
+    assert "01-mover/attachments/build.py" not in left[0]

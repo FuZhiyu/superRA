@@ -252,7 +252,7 @@ def _project_path_rewrites(
             unchecked += old_path.encode() in raw
             continue
         rewritten = rewrite(original, path.parent, after_move(path).parent)
-        if citation.search(rewritten):
+        if citation.search(rewritten) or rewrite.stranded:
             still_citing.append(after_move(path))
         if rewritten != original and not (in_tree and path.suffix.lower() == ".md"):
             rewrites[after_move(path)] = rewritten

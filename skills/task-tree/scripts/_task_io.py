@@ -842,17 +842,24 @@ def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
 
 def _rebased(
     prefix: str, base_dir: Path | None, new_base_dir: Path | None, project_root: Path
-) -> str:
-    """*prefix* with a leading ``../`` run rebuilt to lead to *project_root* from *new_base_dir*."""
+) -> tuple[str, bool]:
+    """*prefix* rebuilt to lead to *project_root* from *new_base_dir*, and whether it is stranded.
+
+    A prefix of only `.` and `..` steps is rebuilt. Any other prefix that led to the
+    project from the file's own directory is stranded when the move changes its depth.
+    """
     if base_dir is None or new_base_dir is None:
-        return prefix
+        return prefix, False
     tail = _past_open_bracket(prefix)
-    if not tail.startswith("../") or tail.replace("../", ""):
-        return prefix
+    if not tail.endswith("/") or tail == "/" or tail.startswith(("/", "~")):
+        return prefix, False
     if os.path.normpath(os.path.join(base_dir, tail)) != str(project_root):
-        return prefix
-    rebuilt = os.path.relpath(project_root, new_base_dir)
-    return prefix[: len(prefix) - len(tail)] + rebuilt + "/"
+        return prefix, False
+    if all(step in (".", "..") for step in tail[:-1].split("/")):
+        rebuilt = os.path.relpath(project_root, new_base_dir)
+        return prefix[: len(prefix) - len(tail)] + rebuilt + "/", False
+    reaches = os.path.normpath(os.path.join(new_base_dir, tail)) == str(project_root)
+    return prefix, not reaches
 
 
 def task_path_pattern(plan_root: Path, directory: Path) -> re.Pattern[str]:
@@ -872,8 +879,8 @@ def task_path_rewriter(
     Matches the literal path as a whole-segment prefix, so ``superRA/a/attachments``
     moves with task ``a`` while ``superRA/a-b`` and ``superRA/a.md`` stay put.
     ``base_dir`` is the citing file's directory, defaulting to the project root.
-    ``new_base_dir`` is where a moved file will live: its own ``../`` prefix is rebuilt
-    from there so it still leads to the project root.
+    ``new_base_dir`` is where a moved file will live: its own ``.``/``..`` prefix is
+    rebuilt from there; ``rewrite.stranded`` reports any other prefix it could not.
     """
     root = plan_root.resolve()
     project_root = root.parent
@@ -884,6 +891,7 @@ def task_path_rewriter(
     def rewrite(
         text: str, base_dir: Path | None = None, new_base_dir: Path | None = None
     ) -> str:
+        rewrite.stranded = False  # a file-relative prefix the move could not rebuild
         if old not in text:
             return text
 
@@ -894,11 +902,14 @@ def task_path_rewriter(
             if not _URL_SO_FAR.search(line) and _leads_to_project(
                 prefix, base_dir or project_root, project_root
             ):
-                return _rebased(prefix, base_dir, new_base_dir, project_root) + new
+                prefix, stranded = _rebased(prefix, base_dir, new_base_dir, project_root)
+                rewrite.stranded = rewrite.stranded or stranded
+                return prefix + new
             return match.group(0)
 
         return pattern.sub(replace, text)
 
+    rewrite.stranded = False
     return rewrite
 
 
