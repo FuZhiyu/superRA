@@ -130,8 +130,38 @@ def _edge_reason(reasons: list[dict]) -> str:
     return named[0] + (f" and {len(named) - 1} more" if len(named) > 1 else "")
 
 
+def _loop_through(pairs, edge: tuple[str, str]) -> list[str]:
+    """The shortest loop using *edge*; empty when none does."""
+    source, target = edge
+    adjacency = {}
+    for a, b in sorted(pairs):
+        adjacency.setdefault(a, []).append(b)
+    paths, seen = deque([[target]]), {target}
+    while paths:
+        path = paths.popleft()
+        if path[-1] == source:
+            return [source, *path]
+        for node in adjacency.get(path[-1], ()):
+            if node not in seen:
+                seen.add(node)
+                paths.append([*path, node])
+    return []
+
+
+def _cycle_message(cycle: dict, loop: list[str], added: tuple[str, str] | None = None) -> str:
+    edges = cycle["edges"]
+    size = f" ({len(cycle['members'])} nodes in all)" if len(cycle["members"]) > len(loop) - 1 else ""
+    return (
+        f"task cycle at {cycle['boundary'] or '(root)'}: {' -> '.join(map(_node_label, loop))}{size}; "
+        + "; ".join(f"{_node_label(a)} -> {_node_label(b)} by {_edge_reason(edges[a, b])}"
+                    + (" (new edge)" if (a, b) == added else "")
+                    for a, b in zip(loop, loop[1:]))
+        + f"; {CYCLE_REMEDY}"
+    )
+
+
 def _task_cycles(boundary: str, edges: dict) -> list[dict]:
-    """Loops at one boundary, as ``{members, message}``.
+    """Loops at one boundary, as ``{boundary, members, edges, message}``.
 
     A loop of steps alone is a step cycle and a loop of `depends_on` alone a
     `depends_on` cycle; both already have their own error.
@@ -143,23 +173,28 @@ def _task_cycles(boundary: str, edges: dict) -> list[dict]:
             reason["kind"] == "logical" for pair in inner for reason in edges[pair]
         ):
             continue
-        loop = shortest_loop(inner)
-        size = f" ({len(members)} nodes in all)" if len(members) > len(loop) - 1 else ""
-        cycles.append({"members": members, "message": (
-            f"task cycle at {boundary or '(root)'}: {' -> '.join(map(_node_label, loop))}{size}; "
-            + "; ".join(f"{_node_label(a)} -> {_node_label(b)} by {_edge_reason(edges[a, b])}"
-                        for a, b in zip(loop, loop[1:]))
-            + f"; {CYCLE_REMEDY}"
-        )})
+        cycle = {"boundary": boundary, "members": members, "edges": {pair: edges[pair] for pair in inner}}
+        cycles.append({**cycle, "message": _cycle_message(cycle, shortest_loop(inner))})
     return cycles
 
 
+def _refusal_message(cycle: dict, earlier_edges: set[tuple[str, str]]) -> str:
+    """Describe *cycle* through an edge the edit added, which the default witness can miss."""
+    added = sorted(set(cycle["edges"]) - earlier_edges)
+    if not added:
+        return cycle["message"]
+    loops = {edge: _loop_through(cycle["edges"], edge) for edge in added}
+    edge = min(added, key=lambda pair: len(loops[pair]))
+    return _cycle_message(cycle, loops[edge], edge)
+
+
 def new_cycles(before: Dependencies, after: Dependencies, moved: tuple[str, str] | None = None) -> list[str]:
-    """Messages of loops in *after* that no single loop in *before* contains.
+    """Messages of loops in *after* whose tasks no single loop in *before* contains.
 
     Containment covers a new loop, a new member, and two loops merging; an edit
-    inside a loop or one that shrinks it adds nothing. *moved* is a task's
-    ``(old, new)`` path, so a moved loop still matches itself.
+    inside a loop or one that shrinks it adds nothing. Steps are not compared, so
+    renaming one inside a loop adds nothing either. *moved* is a task's ``(old, new)``
+    path, so a moved loop still matches itself.
     """
     def relocate(path: str) -> str:
         return moved[1] + path[len(moved[0]):] if moved and path and within(path, moved[0]) else path
@@ -167,12 +202,20 @@ def new_cycles(before: Dependencies, after: Dependencies, moved: tuple[str, str]
     def relocate_node(node: str) -> str:
         return "task:" + relocate(node[5:]) if node.startswith("task:") else node
 
+    def tasks_in(cycle: dict) -> set[str]:
+        return {node for node in cycle["members"] if node.startswith("task:")}
+
     known: dict[str, list[set[str]]] = {}
     for boundary, cycles in before.cycles.items():
         known.setdefault(relocate(boundary), []).extend(
-            {relocate_node(n) for n in cycle["members"]} for cycle in cycles)
-    return [cycle["message"] for boundary, cycles in after.cycles.items() for cycle in cycles
-            if not any(cycle["members"] <= old for old in known.get(boundary, ()))]
+            {relocate_node(n) for n in tasks_in(cycle)} for cycle in cycles)
+    earlier_edges: dict[str, set[tuple[str, str]]] = {}
+    for boundary, view in before.boundaries.items():
+        earlier_edges.setdefault(relocate(boundary), set()).update(
+            (relocate_node(e["from"]), relocate_node(e["to"])) for e in view["edges"])
+    return [_refusal_message(cycle, earlier_edges.get(boundary, set()))
+            for boundary, cycles in after.cycles.items() for cycle in cycles
+            if not any(tasks_in(cycle) <= old for old in known.get(boundary, ()))]
 
 
 @dataclass
@@ -223,10 +266,12 @@ class Dependencies:
             task.children.sort(key=lambda c: (ranks.get("task:" + c.path, len(ranks)), c.path))
 
     def cycles_touching(self, paths):
-        """Messages of the task-level loops holding one of *paths*, or a group around it."""
-        return {cycle["message"] for cycles in self.cycles.values() for cycle in cycles
-                if any(node.startswith("task:") and within(path, node[5:])
-                       for node in cycle["members"] for path in paths)}
+        """Messages of the task-level loops holding one of *paths*, a group around it, or its step."""
+        def holds(boundary, node, path):
+            return within(path, node[5:]) if node.startswith("task:") else path == boundary
+
+        return {cycle["message"] for boundary, cycles in self.cycles.items() for cycle in cycles
+                if any(holds(boundary, node, path) for node in cycle["members"] for path in paths)}
 
     def prerequisite_edges(self, path):
         """`depends_on` edges gating this task, declared on it or an ancestor."""

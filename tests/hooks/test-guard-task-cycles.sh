@@ -91,7 +91,8 @@ expect_steps "['a1', 'b1']"
 task="$project/superRA/a/task.md"
 out=$(run_hook Edit "$(edit_input "$task" "$a1" "$a1
 $a2")")
-expect 'Edit adding a step that closes a loop is denied' deny "$out" 'task cycle at (root): a -> b -> a'
+expect 'Edit adding a step that closes a loop is denied' deny "$out" 'task cycle at (root): b -> a -> b'
+expect 'The denial marks the edge the edit adds' deny "$out" 'b -> a by b1.txt (new edge)'
 expect 'The denial says how to restructure' deny "$out" 'make this boundary one-way'
 
 reset_one_way

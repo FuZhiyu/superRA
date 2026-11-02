@@ -142,7 +142,7 @@ def test_a_move_that_loops_two_groups_is_refused(tmp_path):
     assert warnings(root) == []
     before = snapshot(root)
     refused = run(root, "task", "move", "g2/q", "g1/q")
-    assert refused.returncode == 1 and "task cycle at (root): g1 -> g2 -> g1" in refused.stderr
+    assert refused.returncode == 1 and "task cycle at (root): g2 -> g1 -> g2" in refused.stderr
     assert snapshot(root) == before and (root / "g2/q/task.md").exists()
 
 
@@ -192,6 +192,51 @@ def test_a_large_loop_stays_one_finding(tmp_path):
     assert warnings(root)[0].count(" -> ") <= 8
 
 
+def archived_group(root):
+    """`p/c` and `b` read each other's outputs, but `p` rolls up to archived."""
+    task(root, "p", status="archived")
+    task(root, "p/c", status="archived", steps=[("c1", [], ["c1.txt"]), ("c2", ["b1.txt"], [])])
+    task(root, "b", steps=[("b1", ["c1.txt"], ["b1.txt"])])
+
+
+def test_reactivating_an_archived_group_is_refused(tmp_path):
+    root = tmp_path / "superRA"
+    archived_group(root)
+    assert warnings(root) == []
+    before = snapshot(root)
+    refused = run(root, "task", "update", "p/c", "--status", "not-started")
+    assert refused.returncode == 1 and "task-level cycle" in refused.stderr
+    assert snapshot(root) == before
+
+
+def test_a_move_into_an_archived_group_is_refused(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "b", steps=[("b1", [], ["b1.txt"]), ("b2", ["d1.txt"], [])])
+    task(root, "d", steps=[("d1", ["b1.txt"], ["d1.txt"])])
+    task(root, "g", status="archived")
+    task(root, "g/old", status="archived")
+    refused = run(root, "task", "move", "d", "g/d")
+    assert refused.returncode == 1 and "task-level cycle" in refused.stderr
+
+
+def test_a_refusal_names_the_edge_it_adds(looped):
+    task(looped, "c", steps=[("c1", ["a2.txt"], [])])
+    refused = run(looped, "task", "dep", "add", "b", "c")
+    assert "c -> b -> a -> c" in refused.stderr
+    assert "(new edge)" in refused.stderr.split("c -> b by")[1].split(";")[0]
+
+
+def test_a_new_loop_at_a_new_boundary_is_described_through_its_edge(tmp_path):
+    root = tmp_path / "superRA"
+    groups(root, "p")
+    task(root, "p/a", steps=[("a1", [], ["a1.txt"])])
+    task(root, "p/b", steps=[("b1", ["a1.txt"], ["b1.txt"])])
+    refused = run(root, "task", "dep", "add", "p/a", "b")
+    assert refused.returncode == 1
+    assert "task cycle at p: b -> a -> b" in refused.stderr
+    assert "(new edge)" in refused.stderr
+
+
 def hook_gate():
     import sys
     from pathlib import Path
@@ -236,3 +281,47 @@ def test_a_member_nested_in_a_looped_group_hears_of_the_loop(tmp_path):
     task(root, "g2/r", steps=[("r", ["p.txt"], ["r.txt"])])
     feedback = task_hook._reconcile(root, task_path="g1/q", scope=["g1/q"], session_key="s4")
     assert any("task cycle at (root)" in line for line in feedback)
+
+
+def stepped_parent(root):
+    """`p`'s own step sits in a loop with its child `p/c`."""
+    task(root, "p", steps=[("setup", ["c2.txt"], ["s.txt"])])
+    task(root, "p/c", steps=[("c1", ["s.txt"], ["c1.txt"]), ("c2", [], ["c2.txt"])])
+
+
+def test_renaming_a_step_inside_a_loop_passes_the_gate(tmp_path):
+    root = tmp_path / "superRA"
+    stepped_parent(root)
+    path = root / "p" / "task.md"
+    assert len(warnings(root)) == 1
+    assert hook_gate()._refusal({path: path.read_text().replace("setup", "prep")}) is None
+
+
+def test_the_task_owning_a_looped_step_hears_of_the_loop(tmp_path):
+    import task_hook
+    root = tmp_path / "superRA"
+    stepped_parent(root)
+    feedback = task_hook._reconcile(root, task_path="p", scope=["p"], session_key="s5")
+    assert any("task cycle at p" in line for line in feedback)
+
+
+@pytest.mark.parametrize("damage", [
+    lambda text: text.replace('deps: ["b1.txt"]', 'deps: ["b1.txt"'),  # the whole section
+    lambda text: text.replace("cmd: echo a2\n", ""),  # one step
+])
+def test_repairing_a_broken_section_in_a_loop_passes_the_gate(looped, damage):
+    path = looped / "a" / "task.md"
+    intact = path.read_text()
+    broken = damage(intact)
+    assert broken != intact
+    path.write_text(broken)
+    assert warnings(looped) == []
+    assert hook_gate()._refusal({path: intact}) is None
+
+
+def test_the_gate_refuses_reactivating_an_archived_group(tmp_path):
+    root = tmp_path / "superRA"
+    archived_group(root)
+    path = root / "p" / "c" / "task.md"
+    edited = path.read_text().replace("status: archived", "status: not-started")
+    assert "task cycle at (root)" in hook_gate()._refusal({path: edited})

@@ -132,9 +132,6 @@ def update_task(
                     if within(path, task_path) and descendant.is_leaf:
                         if descendant.status != "archived" or status == "archived":
                             descendant.status = status
-                for node in reversed(list(tasks.values())):
-                    if node.children:
-                        node.status = compute_status(node)
             else:
                 target.status = status
         try:

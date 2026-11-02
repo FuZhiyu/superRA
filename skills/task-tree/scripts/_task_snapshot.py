@@ -6,7 +6,7 @@ import sys
 from _repro import build_graph
 from _repro_state import STALE_RULE
 from _task_dependencies import new_cycles, task_index
-from _task_io import parse_task, walk_plan
+from _task_io import compute_status, parse_task, walk_plan
 
 INPUT_NOTE = "not blocking; decide before relying on it"
 CURRENT = {"fresh", "saved", "unverified"}  # a build never runs an unverified producer
@@ -23,6 +23,14 @@ def require_valid(graph):
             if f["severity"] == "error"))
 
 
+def rolled_up(root):
+    """Give each group the status the rollup after a write would, archival included."""
+    for node in reversed(list(task_index(root).values())):
+        if node.children:
+            node.status = compute_status(node)
+    return root
+
+
 def preflight(plan_root, edit, *, moved=None):
     """Validate an in-memory proposed tree before any filesystem mutation.
 
@@ -30,10 +38,10 @@ def preflight(plan_root, edit, *, moved=None):
     `edit_notes` on the returned graph names new warnings and the tasks that leave
     the frontier. *moved* is a moved task's `(old, new)` path.
     """
-    before = build_graph(plan_root, resolve_vars=False)
+    before = build_graph(plan_root, root=rolled_up(walk_plan(plan_root)), resolve_vars=False)
     root = walk_plan(plan_root)
     edit(root, task_index(root))
-    graph = build_graph(plan_root, root=root, resolve_vars=False)
+    graph = build_graph(plan_root, root=rolled_up(root), resolve_vars=False)
     old = set(dependency_errors(before))
     new = [m for m in dependency_errors(graph) if m not in old]
     if new:
@@ -58,19 +66,23 @@ def preflight(plan_root, edit, *, moved=None):
 def edit_adds_cycles(plan_root, overlays):
     """Task-level cycles the `{task.md path: new text}` overlays would add.
 
-    A new task's parent must already be a task, or this raises KeyError.
+    An edit to a task whose declarations do not parse adds none: the loops they
+    hold are invisible to the comparison, so a repair would read as new. A new
+    task's parent must already be a task, or this raises KeyError.
     """
-    before = build_graph(plan_root, resolve_vars=False)
+    before = build_graph(plan_root, root=rolled_up(walk_plan(plan_root)), resolve_vars=False)
     root = walk_plan(plan_root)
     tasks = task_index(root)
     for task_md, text in overlays.items():
         edited = parse_task(task_md, plan_root, text=text)
         current = tasks.get(edited.path)
+        if edited.path in before.unregistered or (current and current.parse_error):
+            return []
         if current is None:
             tasks[edited.path.rpartition("/")[0]].children.append(edited)
         else:
             current.status, current.depends_on, current.body = edited.status, edited.depends_on, edited.body
-    graph = build_graph(plan_root, root=root, resolve_vars=False)
+    graph = build_graph(plan_root, root=rolled_up(root), resolve_vars=False)
     return new_cycles(before.dependencies, graph.dependencies)
 
 
