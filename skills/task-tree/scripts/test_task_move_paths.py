@@ -156,6 +156,7 @@ def test_a_path_that_only_resembles_the_task_stays(project, line):
     (f"\\input{{../{OLD}/t.tex}}", f"\\input{{../{NEW}/t.tex}}"),
     (f"\\graphicspath{{{{../{OLD}/}}}}", f"\\graphicspath{{{{../{NEW}/}}}}"),
     (f"read({OLD}/x.csv)", f"read({NEW}/x.csv)"),
+    (f"/{OLD}/big/", f"/{NEW}/big/"),
 ])
 def test_each_spelling_of_the_task_path_moves(project, before, after):
     script = project.parent / "Code" / "other.py"
@@ -271,6 +272,13 @@ def test_an_online_only_source_is_skipped_without_opening_it(project, monkeypatc
     move(project)
     assert text(script) == f"ROOT / '{OUT}'\n"
     assert f"1 tracked source file(s) are online-only or not UTF-8, so search them by hand for {OLD}" in capsys.readouterr().out
+
+
+def test_an_online_only_tree_markdown_file_is_not_named_for_a_hand_search(project, monkeypatch, capsys):
+    track(project)
+    monkeypatch.setattr(task_rename, "is_online_only", lambda path, _info: path.name == "task.md")
+    move(project)
+    assert "online-only" not in capsys.readouterr().out
 
 
 def test_a_source_that_is_not_utf8_is_left_alone_and_named(project, capsys):

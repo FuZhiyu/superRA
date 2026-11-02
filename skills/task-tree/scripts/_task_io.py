@@ -821,12 +821,12 @@ def _past_open_bracket(prefix: str) -> str:
 def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
     """Whether *prefix*, the path text before a task path, leads to *project_root*.
 
-    A root variable or substitution counts, alone or with `.` and `..` after it.
+    No prefix counts, as does a root anchor or variable, with `.` and `..` after a variable.
     Anything else must resolve there, from the citing file or the project root, so a
     path into another project and a URL both fail.
     """
     prefix = _past_open_bracket(prefix)
-    if not prefix:
+    if prefix in ("", "/"):  # bare, or anchored at the root as in `.gitignore`
         return True
     if not prefix.endswith("/"):
         return False

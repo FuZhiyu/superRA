@@ -241,7 +241,7 @@ def _project_path_rewrites(
         try:
             _contained_regular_relative(path, top)
             if is_online_only(path, path.stat()):
-                unchecked += 1
+                unchecked += not (in_tree and path.suffix.lower() == ".md")
                 continue
             raw = _read_contained_bytes(path, top)
         except (OSError, ValueError):  # unreadable or symlinked
@@ -346,7 +346,10 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
             node.path = to_status_path + old_path[len(from_status_path):]
             node.dir_path = plan_root / node.path
     try:
-        graph = preflight(plan_root, proposed, moved=(from_status_path, to_status_path))
+        graph = preflight(
+            plan_root, proposed, moved=(from_status_path, to_status_path),
+            written=() if from_parent == to_parent else (from_status_path, to_status_path),
+        )
     except ValueError as exc:
         _die(str(exc))
 

@@ -38,13 +38,13 @@ def preflight(plan_root, edit, *, moved=None, written=()):
 
     Refuses only `depends_on` errors and task-level cycles the edit introduces;
     `edit_notes` on the returned graph names new warnings and the tasks that leave
-    the frontier. *moved* is a moved task's `(old, new)` path; it and *written* name the
-    tasks whose ancestors the write rolls up, which can re-activate an archived group.
+    the frontier. *moved* is a moved task's `(old, new)` path. *written* names the tasks
+    whose ancestors the write rolls up, which can re-activate an archived group.
     """
     before = build_graph(plan_root, resolve_vars=False)
     root = walk_plan(plan_root)
     edit(root, task_index(root))
-    roll_up_ancestors(root, (*written, *(moved or ())))
+    roll_up_ancestors(root, written)
     graph = build_graph(plan_root, root=root, resolve_vars=False)
     old = set(dependency_errors(before))
     new = [m for m in dependency_errors(graph) if m not in old]

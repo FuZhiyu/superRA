@@ -236,6 +236,31 @@ def test_archiving_a_group_keeps_its_stored_status_and_returning_it_is_refused(t
     assert "task cycle at (root)" in hook_gate()._refusal({path: edited})
 
 
+def stored_archived_loop(root):
+    """Group `g` is stored archived over an active child, which hides its loop with `b`."""
+    task(root, "g", status="archived", steps=[("g1", [], ["g1.txt"]), ("g2", ["b1.txt"], [])])
+    task(root, "g/c")
+    task(root, "b", steps=[("b1", ["g1.txt"], ["b1.txt"])])
+
+
+def test_a_cascade_elsewhere_passes_a_group_hiding_a_loop(tmp_path):
+    root = tmp_path / "superRA"
+    stored_archived_loop(root)
+    task(root, "k")
+    task(root, "k/leaf")
+    done = run(root, "task", "status", "cascade", "k", "--status", "archived")
+    assert done.returncode == 0, done.stderr
+    assert warnings(root) == []
+
+
+def test_renaming_inside_a_group_hiding_a_loop_passes(tmp_path):
+    root = tmp_path / "superRA"
+    stored_archived_loop(root)
+    moved = run(root, "task", "move", "g/c", "g/c2")
+    assert moved.returncode == 0, moved.stderr
+    assert warnings(root) == []
+
+
 def test_a_new_child_that_reactivates_an_archived_group_is_refused(tmp_path):
     root = tmp_path / "superRA"
     task(root, "g", status="archived", steps=[("g1", [], ["g1.txt"]), ("g2", ["b1.txt"], [])])
