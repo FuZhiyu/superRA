@@ -148,3 +148,38 @@ assert(!workspaceTaskMatches('docs')&&workspaceTaskMatches('model/fit'));
 """
     result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
     assert result.returncode == 0, result.stderr
+
+
+def _summary_source(extra):
+    definitions = _extract_js_defs(['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', 'parentPath',
+        'normalizeLineageFilter', 'workspaceLineage', 'workspaceTasks', 'workspaceTaskMatches', 'workspaceVisibility',
+        'updateWorkspaceFilterSummary', 'lineageAnchorLabel'])
+    return "const assert=require('node:assert/strict');var pathTitles={},SEARCH_INDEX=[],_workspaceLineageMemo=null,activePath='',_reproData=null;\n" + definitions + '\n' + LINEAGE + extra
+
+
+def test_unavailable_graph_is_reported_in_the_filter_summary():
+    source = _summary_source("""
+var LINEAGE_DIRECTIONS={both:'B',up:'U',down:'D'},host={hidden:true,innerHTML:''};
+var document={getElementById:id=>id==='workspace-filter-summary'?host:id==='filter-trigger'?{classList:{toggle(){}}}:null};
+var escapeHtml=x=>x,escapeAttr=x=>x,reproTaskTitle=x=>x;
+var _workspaceFilters={statuses:[],tasks:null,lineage:{anchors:[{step:'raw'}],direction:'down'}};
+updateWorkspaceFilterSummary();
+assert(!host.hidden&&host.innerHTML.includes('graph unavailable'));
+""")
+    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+
+
+def test_anchor_sets_are_built_once_across_visibility_calls():
+    source = _summary_source("""
+_reproData={graph,status:{steps:[]}};
+var _workspaceFilters={statuses:[],tasks:null,lineage:{anchors:[{step:'raw'}],direction:'down'}};
+var calls=0,real=workspaceTasks;workspaceTasks=function(){calls++;return real();};
+var first=workspaceVisibility(),afterFirst=calls;
+workspaceVisibility();workspaceVisibility();
+assert.equal(afterFirst,2,'one catalog read for the memo, one for the visibility pass');
+assert.equal(calls,afterFirst+2,'later calls read the catalog once each and reuse the memo sets');
+assert(first.matches.has('data')&&!first.matches.has('docs'));
+""")
+    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
+    assert result.returncode == 0, result.stderr

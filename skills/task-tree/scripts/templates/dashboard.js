@@ -508,13 +508,15 @@ function normalizeLineageFilter(value) {
 function workspaceLineage() {
   var filter=_workspaceFilters.lineage;
   if(!filter||!_reproData)return null;
-  var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
-  var anchors=filter.anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
-  if(anchors.length!==filter.anchors.length)filter=_workspaceFilters.lineage=anchors.length?{anchors:anchors,direction:filter.direction}:null;
-  if(!filter)return null;
-  var key=JSON.stringify(filter);
-  if(!_workspaceLineageMemo||_workspaceLineageMemo.data!==_reproData||_workspaceLineageMemo.key!==key)_workspaceLineageMemo={data:_reproData,key:key,set:reproLineage(graph,filter.anchors,filter.direction)};
-  return _workspaceLineageMemo.set;
+  var key=JSON.stringify(filter),memo=_workspaceLineageMemo;
+  if(!memo||memo.data!==_reproData||memo.key!==key){
+    var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
+    var anchors=filter.anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
+    if(anchors.length!==filter.anchors.length)filter=_workspaceFilters.lineage=anchors.length?{anchors:anchors,direction:filter.direction}:null;
+    if(!filter)return null;
+    memo=_workspaceLineageMemo={data:_reproData,key:JSON.stringify(filter),set:reproLineage(graph,filter.anchors,filter.direction)};
+  }
+  return memo.set;
 }
 function lineageAnchorLabel(anchor) { return anchor.step?anchor.step:reproTaskTitle(anchor.task); }
 function addLineageAnchor(anchor) {
@@ -578,7 +580,8 @@ function updateWorkspaceFilterSummary() {
   host.hidden=!active;
   host.innerHTML=(_workspaceFilters.statuses.length?'<span>Status: '+escapeHtml(_workspaceFilters.statuses.join(', '))+'</span>':'')
     +(_workspaceFilters.tasks!==null?'<span>'+_workspaceFilters.tasks.length+' of '+workspaceTasks().length+' tasks selected</span>':'')
-    +(lineage?'<span class="filter-lineage-summary">'+LINEAGE_DIRECTIONS[lineage.direction]+' '+lineage.anchors.map(function(a){var label=lineageAnchorLabel(a);return '<b title="'+escapeAttr(label)+'">'+escapeHtml(label)+'</b>';}).join(', ')+'</span>':'')
+    +(lineage&&!_reproData?'<span class="filter-lineage-summary">Dependency filter: graph unavailable</span>':'')
+    +(lineage&&_reproData?'<span class="filter-lineage-summary">'+LINEAGE_DIRECTIONS[lineage.direction]+' '+lineage.anchors.map(function(a){var label=lineageAnchorLabel(a);return '<b title="'+escapeAttr(label)+'">'+escapeHtml(label)+'</b>';}).join(', ')+'</span>':'')
     +'<button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>';
   var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=active?'Filter · '+active:'Filter';trigger.classList.toggle('active',!!active);}
   var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear filters to show this task in navigation.';}
