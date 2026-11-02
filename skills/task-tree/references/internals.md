@@ -424,6 +424,8 @@ A successful step's receipt is captured only after its declared outs are verifie
 | `tests/test_artifacts.py` | Companion discovery, secure APIs, watcher events, worktree/root variants, and bounded standalone packing |
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
 | `test_task_dependencies.py` | Public command journeys for unified dependencies, archival, hierarchy, preflight and resolution |
+| `test_task_cycles.py` | Task-level cycle detection, refusal in the CLI and edit gate, and rollup scope |
+| `test_task_move_paths.py` | Task move path rewrites — root-relative task paths, `## Reproduction` declarations, TeX arguments, URLs, other trees |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
 | `test_repro_acceptance.py` | Actual engine acceptance, baseline, concurrency, fan-out, and cascade scenarios |
 | `test_repro_runner.py` | Runner — hash cache, status classification, target selection, build, rerun, and lock behavior |
