@@ -120,6 +120,11 @@ def test_tracked_sources_follow_the_task_and_evidence_does_not(project):
     f"x{OLD}/data.csv",
     f"my-{OLD}/data.csv",
     "01-group/01-mover/data.csv",  # not rooted at the task root
+    f"../other-project/{OLD}/x.csv",
+    f"/abs/other-repo/{OLD}/x.csv",
+    f"https://github.com/org/repo/blob/main/{OLD}/x.py",
+    f"p2/{OLD}/x.csv",
+    f"$ROOT/other/{OLD}/x.csv",
 ])
 def test_a_path_that_only_resembles_the_task_stays(project, line):
     script = project.parent / "Code" / "other.py"
@@ -137,6 +142,13 @@ def test_a_path_that_only_resembles_the_task_stays(project, line):
     (f"./{OLD}/x.csv", f"./{NEW}/x.csv"),
     (f"lives in {OLD}.", f"lives in {NEW}."),
     (f"{OLD}/01-child/x.csv", f"{NEW}/01-child/x.csv"),
+    (f"[out]({OLD}/x.csv)", f"[out]({NEW}/x.csv)"),
+    (f"[out](../{OLD}/x.csv)", f"[out](../{NEW}/x.csv)"),
+    (f"${{ROOT}}/{OLD}/x.csv", f"${{ROOT}}/{NEW}/x.csv"),
+    (f'f"{{ROOT}}/{OLD}/x.csv"', f'f"{{ROOT}}/{NEW}/x.csv"'),
+    (f"$(git rev-parse --show-toplevel)/{OLD}", f"$(git rev-parse --show-toplevel)/{NEW}"),
+    (f'"$(@__DIR__)/../{OLD}/x.csv"', f'"$(@__DIR__)/../{NEW}/x.csv"'),
+    (f"--out={OLD}/x.csv", f"--out={NEW}/x.csv"),
 ])
 def test_each_spelling_of_the_task_path_moves(project, before, after):
     script = project.parent / "Code" / "other.py"
@@ -144,6 +156,46 @@ def test_each_spelling_of_the_task_path_moves(project, before, after):
     track(project)
     move(project)
     assert text(script) == f"{after}\n"
+
+
+def test_an_absolute_path_into_this_project_moves(project):
+    script = project.parent / "Code" / "other.py"
+    script.write_text(f"'{project.parent.resolve()}/{OLD}/x.csv'\n", encoding="utf-8")
+    track(project)
+    move(project)
+    assert text(script) == f"'{project.parent.resolve()}/{NEW}/x.csv'\n"
+
+
+def test_a_relative_path_resolving_elsewhere_stays(project):
+    script = project.parent / "Code" / "deep" / "other.py"
+    script.parent.mkdir()
+    script.write_text(f"../{OLD}/x.csv\n", encoding="utf-8")  # names Code/superRA/...
+    track(project)
+    move(project)
+    assert text(script) == f"../{OLD}/x.csv\n"
+
+
+def test_another_project_in_the_repo_is_left_alone(tmp_path):
+    def tree(name):
+        root = tmp_path / name / "superRA"
+        (root / "data").mkdir(parents=True)
+        (root / "grp").mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        _write_task_md(root / "grp" / "task.md", "Grp", "not-started")
+        _write_task_md(root / "data" / "task.md", "Data", "not-started",
+                       objective="Reads superRA/data/in.csv.")
+        code = root.parent / "Code"
+        code.mkdir()
+        (code / "run.py").write_text("'superRA/data/in.csv'\n", encoding="utf-8")
+        return root
+
+    ours, theirs = tree("p1"), tree("p2")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+    task_rename.rename_task(ours, "data", "grp/data")
+    assert text(ours.parent / "Code" / "run.py") == "'superRA/grp/data/in.csv'\n"
+    assert text(theirs.parent / "Code" / "run.py") == "'superRA/data/in.csv'\n"
+    assert "superRA/data/in.csv" in text(theirs / "data" / "task.md")
 
 
 def test_a_rename_into_a_longer_slug_is_not_applied_twice(project):
@@ -170,20 +222,24 @@ def test_a_failed_project_write_rolls_the_whole_move_back(project):
     assert text(script) == f"ROOT / '{OUT}'\n"
 
 
-def test_an_online_only_source_is_skipped_without_opening_it(project, monkeypatch):
+def test_an_online_only_source_is_skipped_without_opening_it(project, monkeypatch, capsys):
     script = project.parent / "Code" / "read.py"
     track(project)
-    monkeypatch.setattr(task_rename, "is_online_only", lambda path, _info: path == script)
+    monkeypatch.setattr(task_rename, "is_online_only", lambda path, _info: path.resolve() == script.resolve())
     move(project)
     assert text(script) == f"ROOT / '{OUT}'\n"
+    assert f"1 tracked source file(s) are online-only or not UTF-8, so search them by hand for {OLD}" in capsys.readouterr().out
 
 
-def test_a_binary_source_is_left_alone(project):
+def test_a_source_that_is_not_utf8_is_left_alone_and_named(project, capsys):
     data = project.parent / "Code" / "blob.m"
     data.write_bytes(b"\xff\xfe" + OLD.encode())
+    other = project.parent / "Code" / "unrelated.m"
+    other.write_bytes(b"\xff\xfe")
     track(project)
     move(project)
     assert data.read_bytes() == b"\xff\xfe" + OLD.encode()
+    assert "1 tracked source file(s) are online-only or not UTF-8" in capsys.readouterr().out
 
 
 def test_outside_git_the_tree_moves_and_the_search_is_named(project, capsys):
@@ -198,7 +254,8 @@ def test_output_names_rewritten_files_and_stale_steps(project, capsys):
     move(project)
     out = capsys.readouterr().out
     assert "in 2 project file(s): Code/read.py," in out
-    assert "leave 2 step(s) stale until rebuilt or accepted: build, read" in out
+    assert "changed 2 step(s), so they and anything downstream read stale" in out
+    assert out.rstrip().endswith("build, read")
 
 
 def test_output_stays_bounded(project, capsys):

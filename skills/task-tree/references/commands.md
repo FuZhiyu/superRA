@@ -70,10 +70,12 @@ It re-points every relative Markdown link the move would break: links inside the
 It also re-points each literal `superRA/<task-path>` to the new path, in these files:
 
 - **Task-tree Markdown** — `## Reproduction` declarations and prose alike.
-- **Tracked source files** anywhere in the git worktree — code, notebooks, `.tex`, config, and project Markdown, by file type. Outside git, the move names the path to search for by hand.
-- **Left unchanged** — logs, manifests, data files, `comments.yaml`, `repro-lock.json`, and `repro-acceptance/` keep the path they recorded. So does an online-only file, and a path assembled at runtime (`joinpath("superRA", slug)`).
+- **Tracked source files** in this project — code, notebooks, `.tex`, config, and project Markdown, by file type. Outside git, the move names the path to search for by hand.
+- **Left unchanged** — logs, JSON, data files, `comments.yaml`, `repro-lock.json`, and `repro-acceptance/` keep the path they recorded. Untracked files do too, as does a path assembled at runtime (`joinpath("superRA", slug)`).
+- **Not matched** — a path that leads to another project, a URL, and any file inside another project in the same repo. A path needs no prefix, a root variable (`$ROOT/`), or one that resolves to this project.
+- **Named for a hand search** — online-only files, which are never downloaded, and files that are not UTF-8.
 
-Moved steps then read `stale`: a rewritten path changes a step's definition, and a rewritten script changes its dep. The move lists them; [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule) decides whether to rebuild or accept. A failed write rolls the whole move back.
+Steps then read `stale`: a rewritten path changes a step's definition, and a rewritten script changes its dep. The move names the steps it changed directly, and `repro status` lists everything downstream; [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule) decides whether to rebuild or accept. A failed write rolls the whole move back.
 
 Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the move is refused before filesystem writes if it adds a `depends_on` error or a task-level cycle. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
 

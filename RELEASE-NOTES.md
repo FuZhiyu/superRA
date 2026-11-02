@@ -9,7 +9,7 @@
 ### Fixed
 
 - **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.
-- **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, manifests, data files, and the lock keep the path they recorded. The move lists the project files it changed and the steps left `stale`.
+- **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, JSON, data files, and the lock keep the path they recorded, and paths into other projects are left alone. The move lists the project files and the steps it changed.
 
 ## [0.5.0] - 2026-10-04
 

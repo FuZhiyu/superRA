@@ -15,6 +15,7 @@ from _task_snapshot import preflight, print_edit_notes
 from _task_dependencies import task_index
 from _task_io import (
     TASK_ROOT_DIRNAME,
+    TASK_ROOT_DIRNAMES,
     _contained_regular_relative,
     _read_contained_bytes,
     apply_move_link_rewrites,
@@ -166,7 +167,11 @@ def _apply_dep_drops(
 
 
 def _tracked_sources(plan_root: Path) -> tuple[Path, list[Path]] | None:
-    """The git worktree holding *plan_root* and its tracked source files, if any."""
+    """The git worktree holding *plan_root* and its tracked source files, if any.
+
+    A repo can hold several projects. A file inside another one is left out: its
+    `superRA/...` paths name that project's tree.
+    """
     def git(*args: str, cwd: Path) -> bytes | None:
         try:
             done = subprocess.run(
@@ -185,20 +190,33 @@ def _tracked_sources(plan_root: Path) -> tuple[Path, list[Path]] | None:
     if listed is None or not root.is_relative_to(top):
         return None
     paths = {top / os.fsdecode(name) for name in listed.split(b"\0") if name}
+    projects = {
+        Path(*path.parts[:index])
+        for path in paths
+        for index, part in enumerate(path.parts)
+        if part in TASK_ROOT_DIRNAMES
+    }
+
+    def owner(path: Path) -> Path | None:
+        return max((p for p in projects if path.is_relative_to(p)), key=lambda p: len(p.parts), default=None)
+
+    project = root.parent
     return top, sorted(
         path for path in paths
-        if path.suffix.lower() in SOURCE_SUFFIXES or path.name in SOURCE_NAMES
+        if (path.suffix.lower() in SOURCE_SUFFIXES or path.name in SOURCE_NAMES)
+        and owner(path) in (None, project)
     )
 
 
 def _project_path_rewrites(
-    plan_root: Path, from_dir: Path, to_dir: Path
-) -> tuple[Path, dict[Path, str]] | None:
+    plan_root: Path, from_dir: Path, to_dir: Path, old_path: str
+) -> tuple[Path, dict[Path, str], int] | None:
     """Tracked sources hard-coding the moved task's path, as ``{post_move_path: text}``.
 
     Task-tree Markdown is `compute_move_link_rewrites`' scope; `comments.yaml` is
-    review history. An online-only file is skipped rather than downloaded. Returns
-    the git worktree with the rewrites, or None outside git.
+    review history. Returns the git worktree, the rewrites, and how many files could
+    not be checked: online-only, which are never downloaded, or not UTF-8 yet naming
+    *old_path*. Returns None outside git.
     """
     tracked = _tracked_sources(plan_root)
     if tracked is None:
@@ -207,6 +225,7 @@ def _project_path_rewrites(
     root = plan_root.resolve()
     rewrite = task_path_rewriter(plan_root, from_dir, to_dir)
     rewrites: dict[Path, str] = {}
+    unchecked = 0
     for path in sources:
         if path.is_relative_to(root) and (
             path.suffix.lower() == ".md" or path.name == "comments.yaml"
@@ -215,15 +234,21 @@ def _project_path_rewrites(
         try:
             _contained_regular_relative(path, top)
             if is_online_only(path, path.stat()):
+                unchecked += 1
                 continue
-            original = _read_contained_bytes(path, top).decode("utf-8")
-        except (OSError, ValueError):  # unreadable, symlinked, or not UTF-8 text
+            raw = _read_contained_bytes(path, top)
+        except (OSError, ValueError):  # unreadable or symlinked
             continue
-        rewritten = rewrite(original)
+        try:
+            original = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            unchecked += old_path.encode() in raw
+            continue
+        rewritten = rewrite(original, path.parent)
         if rewritten != original:
             moved = path.is_relative_to(from_dir)
             rewrites[to_dir / path.relative_to(from_dir) if moved else path] = rewritten
-    return top, rewrites
+    return top, rewrites, unchecked
 
 
 def _capped(names: list[str], listing_command: str) -> str:
@@ -319,8 +344,9 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
 
     # Computed before the rename, while the moved subtree is readable at from_dir.
     link_rewrites = compute_move_link_rewrites(plan_root, from_dir, to_dir, moved_root=from_dir)
-    project_sweep = _project_path_rewrites(plan_root, from_dir, to_dir)
-    project_top, project_rewrites = project_sweep or (None, {})
+    old_path = f"{plan_root_resolved.name}/{from_status_path}"
+    project_sweep = _project_path_rewrites(plan_root, from_dir, to_dir, old_path)
+    project_top, project_rewrites, unchecked = project_sweep or (None, {}, 0)
     from_dir.rename(to_dir)
     try:
         apply_move_link_rewrites(
@@ -357,9 +383,11 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
             f"{_capped(names, 'git diff --name-only')}"
         )
     if project_sweep is None:
+        print(f"  Not a git worktree, so project files were not searched for {old_path}")
+    if unchecked:
         print(
-            f"  Not a git worktree, so project files were not searched for "
-            f"{plan_root_resolved.name}/{from_status_path}"
+            f"  {unchecked} tracked source file(s) are online-only or not UTF-8, "
+            f"so search them by hand for {old_path}"
         )
     touched = _steps_touched(
         graph,
@@ -369,8 +397,9 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     )
     if touched:
         print(
-            f"  Rewritten paths leave {len(touched)} step(s) stale until rebuilt or "
-            f"accepted: {_capped(touched, 'superra repro status .')}"
+            f"  Rewritten paths changed {len(touched)} step(s), so they and anything "
+            f"downstream read stale until rebuilt or accepted: "
+            f"{_capped(touched, 'superra repro status .')}"
         )
     print_edit_notes(graph)
 

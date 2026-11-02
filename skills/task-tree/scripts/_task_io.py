@@ -801,22 +801,63 @@ def _iter_contained_markdown(root: Path, plan_root: Path):
             yield candidate
 
 
+_PATH_CHARS = r"[\w.~$@{}()%/-]"
+
+
+def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
+    """Whether *prefix*, the path text before a task path, leads to *project_root*.
+
+    A root variable or substitution counts, alone or with `.` and `..` after it.
+    Anything else must resolve there, from the citing file or the project root, so a
+    path into another project and a URL both fail.
+    """
+    prefix = prefix.lstrip("({")  # the opening of a Markdown link or a call
+    if not prefix:
+        return True
+    if not prefix.endswith("/"):
+        return False
+    head, *rest = prefix[:-1].split("/")
+    if head.startswith(("$", "%")) or head.endswith((")", "}")):
+        return all(part in (".", "..") for part in rest)
+    expanded = os.path.expanduser(prefix)
+    return any(
+        os.path.normpath(os.path.join(base, expanded)) == str(project_root)
+        for base in (base_dir, project_root)
+    )
+
+
 def task_path_rewriter(
     plan_root: Path, from_dir: Path, to_dir: Path
-) -> Callable[[str], str]:
-    """Return a text rewrite re-pointing ``superRA/<from>`` paths to ``superRA/<to>``.
+) -> Callable[..., str]:
+    """Return ``rewrite(text, base_dir=None)``, re-pointing ``superRA/<from>`` to ``<to>``.
 
     Matches the literal path as a whole-segment prefix, so ``superRA/a/attachments``
-    moves with task ``a`` while ``superRA/a-b`` and ``superRA/a.md`` stay put. A
-    leading ``/`` is allowed to catch ``$ROOT/superRA/a`` and ``../superRA/a``.
+    moves with task ``a`` while ``superRA/a-b`` and ``superRA/a.md`` stay put.
+    ``base_dir`` is the citing file's directory, defaulting to the project root.
     """
     root = plan_root.resolve()
+    project_root = root.parent
     old, new = (
         f"{root.name}/{directory.resolve().relative_to(root).as_posix()}"
         for directory in (from_dir, to_dir)
     )
-    pattern = re.compile(rf"(?<![\w.-]){re.escape(old)}(?![\w-]|\.\w)")
-    return lambda text: pattern.sub(lambda _match: new, text)
+    pattern = re.compile(
+        rf"(?<!{_PATH_CHARS})(?P<prefix>{_PATH_CHARS}*?){re.escape(old)}(?![\w-]|\.\w)"
+    )
+
+    def rewrite(text: str, base_dir: Path | None = None) -> str:
+        if old not in text:
+            return text
+
+        def replace(match: re.Match[str]) -> str:
+            prefix = match.group("prefix")
+            if _leads_to_project(prefix, base_dir or project_root, project_root):
+                return prefix + new
+            return match.group(0)
+
+        return pattern.sub(replace, text)
+
+    return rewrite
 
 
 def compute_move_link_rewrites(
@@ -845,7 +886,7 @@ def compute_move_link_rewrites(
         original = _read_contained_markdown(src_md, plan_root)
         rewritten = rewrite_paths(_rewrite_relative_links(
             original, from_dir / rel, to_dir / rel, from_dir, to_dir
-        ))
+        ), (from_dir / rel).parent)
         if rewritten != original:
             rewrites[to_dir / rel] = rewritten
 
@@ -864,7 +905,7 @@ def compute_move_link_rewrites(
         original = _read_contained_markdown(md, plan_root)
         rewritten = rewrite_paths(_rewrite_relative_links(
             original, md, md, from_dir, to_dir, only_into_subtree=True
-        ))
+        ), md.parent)
         if rewritten != original:
             rewrites[md] = rewritten
     return rewrites
