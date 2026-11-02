@@ -190,3 +190,49 @@ def test_a_large_loop_stays_one_finding(tmp_path):
         ])
     assert len(warnings(root)) == 1
     assert warnings(root)[0].count(" -> ") <= 8
+
+
+def hook_gate():
+    import sys
+    from pathlib import Path
+    hooks = str(Path(__file__).resolve().parents[3] / "hooks")
+    if hooks not in sys.path:
+        sys.path.insert(0, hooks)
+    import task_cycle_gate
+    return task_cycle_gate
+
+
+def test_an_edit_leaving_the_graph_alone_builds_none(looped, monkeypatch):
+    import _task_snapshot
+    gate = hook_gate()
+    monkeypatch.setattr(_task_snapshot, "edit_adds_cycles", lambda *_: pytest.fail("built a graph"))
+    path = looped / "a" / "task.md"
+    assert gate._refusal({path: path.read_text().replace("Fixture task.", "Reworded.")}) is None
+
+
+def test_a_cycle_warning_reaches_a_member_once_per_session(looped):
+    import task_hook
+    first = task_hook._reconcile(looped, task_path="a", scope=["a"], session_key="s1")
+    again = task_hook._reconcile(looped, task_path="a", scope=["a"], session_key="s1")
+    fresh = task_hook._reconcile(looped, task_path="b", scope=["b"], session_key="s2")
+    assert any("task cycle" in line for line in first)
+    assert not any("task cycle" in line for line in again)
+    assert any("task cycle" in line for line in fresh)
+
+
+def test_a_cycle_warning_skips_a_task_outside_the_loop(looped):
+    import task_hook
+    task(looped, "c")
+    feedback = task_hook._reconcile(looped, task_path="c", scope=["c"], session_key="s3")
+    assert not any("task cycle" in line for line in feedback)
+
+
+def test_a_member_nested_in_a_looped_group_hears_of_the_loop(tmp_path):
+    import task_hook
+    root = tmp_path / "superRA"
+    groups(root, "g1", "g2")
+    task(root, "g1/p", steps=[("p", [], ["p.txt"])])
+    task(root, "g1/q", steps=[("q", ["r.txt"], [])])
+    task(root, "g2/r", steps=[("r", ["p.txt"], ["r.txt"])])
+    feedback = task_hook._reconcile(root, task_path="g1/q", scope=["g1/q"], session_key="s4")
+    assert any("task cycle at (root)" in line for line in feedback)

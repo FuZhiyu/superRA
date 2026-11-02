@@ -222,6 +222,12 @@ class Dependencies:
             ranks = {n: i for i, n in enumerate(ordered)}
             task.children.sort(key=lambda c: (ranks.get("task:" + c.path, len(ranks)), c.path))
 
+    def cycles_touching(self, paths):
+        """Messages of the task-level loops holding one of *paths*, or a group around it."""
+        return {cycle["message"] for cycles in self.cycles.values() for cycle in cycles
+                if any(node.startswith("task:") and within(path, node[5:])
+                       for node in cycle["members"] for path in paths)}
+
     def prerequisite_edges(self, path):
         """`depends_on` edges gating this task, declared on it or an ancestor."""
         return [e for e in self.logical if within(path, e["to"])]

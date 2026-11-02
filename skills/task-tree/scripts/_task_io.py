@@ -432,8 +432,10 @@ def _to_list(val: str | list[str]) -> list[str]:
     return [val]
 
 
-def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
-    """Parse a task.md file into a Task object.
+def parse_task(
+    task_md_path: Path, plan_root: Path | None = None, *, text: str | None = None
+) -> Task:
+    """Parse a task.md file into a Task object; *text* stands in for its contents.
 
     ``path`` is always relative to the *resolved task root*. Pass ``plan_root``
     when the caller already resolved it (every tree walk and CLI command does) so
@@ -465,7 +467,8 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
             )
         path = str(rel) if str(rel) != "." else ""
 
-    text = task_md_path.read_text(encoding="utf-8")
+    if text is None:
+        text = task_md_path.read_text(encoding="utf-8")
     fm, body = parse_frontmatter(text)
 
     title = str(fm.get("title", ""))
