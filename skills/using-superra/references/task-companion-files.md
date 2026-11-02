@@ -14,7 +14,7 @@ Every retained companion goes in `attachments/`; only `task.md` and child-task d
 
 ## Record and Reproduce
 
-Link every companion from the owning task's `## Results`, path relative to `task.md`. Record the generating command, input paths, and source provenance; for a hand-authored companion, record the source or decision basis instead. A file generated only from unrecorded REPL state is not retainable — recreate it from a recorded script or notebook, or classify it as scratch.
+Link every companion from the owning task's `## Results`, path relative to `task.md`; an interactive HTML page is written and linked per [html.md](../../communicate/references/html.md). Record the generating command, input paths, and source provenance; for a hand-authored companion, record the source or decision basis instead. A file generated only from unrecorded REPL state is not retainable — recreate it from a recorded script or notebook, or classify it as scratch.
 
 ## Promote
 

@@ -115,7 +115,10 @@ def two_worktrees(tmp_path):
         wt_b = plan_dashboard._worktree_id_for_plan_root(root_b)
         assert wt_a != wt_b
 
-        client = TestClient(plan_dashboard.app, raise_server_exceptions=True)
+        # A loopback Host, as a browser on this machine sends: the comment
+        # routes refuse an untrusted one.
+        client = TestClient(plan_dashboard.app, raise_server_exceptions=True,
+                            base_url="http://127.0.0.1:8995")
         try:
             yield client, wt_a, wt_b
         finally:

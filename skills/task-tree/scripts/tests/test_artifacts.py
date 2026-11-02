@@ -526,6 +526,184 @@ class TestArtifactAPI:
             assert manifest.json()["files"][0]["path"] == "attachments/note.md"
 
 
+# The execution environment the html-artifacts task fixes for every host,
+# written out here rather than read from the constant under test.
+CONVENTION_SANDBOX = {"allow-scripts", "allow-popups", "allow-popups-to-escape-sandbox", "allow-downloads"}
+CONVENTION_CSP = {
+    "default-src": {"'none'"},
+    "script-src": {"'unsafe-inline'", "'unsafe-eval'", "https://cdnjs.cloudflare.com",
+                   "https://cdn.jsdelivr.net/npm/", "https://unpkg.com"},
+    "style-src": {"'unsafe-inline'", "https://fonts.googleapis.com"},
+    "font-src": {"https://fonts.gstatic.com", "data:"},
+    "img-src": {"data:", "blob:"},
+    "connect-src": {"'none'"},
+    "form-action": {"'none'"},
+}
+
+
+def _csp_directives(policy: str) -> dict[str, set[str]]:
+    directives = {}
+    for part in policy.split(";"):
+        name, *values = part.split()
+        directives[name] = set(values)
+    return directives
+
+
+def _html_tree(tmp_path: Path) -> Path:
+    root = _tree(tmp_path)
+    (root / "attachments").mkdir()
+    (root / "attachments" / "page.html").write_text(
+        "<!doctype html><html><head><title>P</title></head><body>hi</body></html>",
+        encoding="utf-8",
+    )
+    (root / "attachments" / "plain.htm").write_text("<p>no doctype</p>", encoding="utf-8")
+    (root / "attachments" / "app.js").write_text("alert(1)", encoding="utf-8")
+    (root / "attachments" / "note.md").write_text("# n", encoding="utf-8")
+    return root
+
+
+class TestHtmlArtifactFrame:
+    def test_html_is_its_own_previewable_kind_and_other_active_types_stay_download_only(self):
+        assert _artifacts.classify(Path("a.html")) == ("html", "text/html", True)
+        assert _artifacts.classify(Path("a.HTM"))[0] == "html"
+        for name in ("a.js", "a.mjs", "a.svg", "a.xml"):
+            assert _artifacts.classify(Path(name))[2] is False, name
+
+    def test_frame_serves_html_inline_under_the_convention_sandbox_and_csp(self, tmp_path):
+        root = _html_tree(tmp_path)
+        with _client_for(root) as client:
+            frame = client.get("/api/artifact-frame",
+                               params={"task": "", "path": "attachments/page.html", "theme": "dark"})
+        assert frame.status_code == 200
+        assert frame.headers["content-type"].startswith("text/html")
+        assert frame.headers["content-disposition"].startswith("inline")
+        assert frame.headers["x-content-type-options"] == "nosniff"
+        directives = _csp_directives(frame.headers["content-security-policy"])
+        assert directives.pop("sandbox") == CONVENTION_SANDBOX
+        assert directives == CONVENTION_CSP
+        assert "allow-same-origin" not in frame.headers["content-security-policy"]
+        assert "nonce-" not in frame.headers["content-security-policy"]
+        assert "sha256-" not in frame.headers["content-security-policy"]
+        body = frame.text
+        assert body.startswith("<!doctype html><script>")
+        assert "set(\"dark\")" in body
+        assert body.endswith("<html><head><title>P</title></head><body>hi</body></html>")
+
+    def test_frame_theme_and_insertion_point(self, tmp_path):
+        root = _html_tree(tmp_path)
+        with _client_for(root) as client:
+            unset = client.get("/api/artifact-frame",
+                               params={"task": "", "path": "attachments/plain.htm", "theme": "x\"</script>"})
+        assert unset.text.startswith("<script>")
+        assert "set(\"\")" in unset.text and "x\"" not in unset.text
+        assert unset.text.endswith("</script><p>no doctype</p>")
+
+    def test_theme_script_follows_leading_comments_and_doctype(self):
+        page = b"\xef\xbb\xbf<!-- generated -->\n<!-- by a tool -->\n<!DOCTYPE html><html>"
+        injected = _artifacts.inject_theme_script(page, "light")
+        prefix = b"\xef\xbb\xbf<!-- generated -->\n<!-- by a tool -->\n<!DOCTYPE html><script>"
+        assert injected.startswith(prefix)
+        assert injected.endswith(b"</script><html>")
+        # HTML closes these comments early, so what follows is page content and
+        # the script goes before it.
+        for opener in (b"<!-->", b"<!--->", b"<!-- a --!>"):
+            page = opener + b"<script src=x></script><!-- -->\n<!doctype html><html>"
+            injected = _artifacts.inject_theme_script(page, "")
+            assert injected.startswith(opener + b"<script>(function"), opener
+            assert injected.endswith(b"</script>" + page[len(opener):]), opener
+
+    def test_markup_media_types_download_whatever_the_suffix(self, tmp_path, monkeypatch):
+        """A host mime table can map another suffix to text/html (Debian's maps
+        .shtml); served inline, it would run unsandboxed on the dashboard origin."""
+        import mimetypes
+
+        mimetypes.guess_type("x.txt")  # initialize the table before patching it
+        monkeypatch.setitem(mimetypes.types_map, ".shtml", "text/html")
+        monkeypatch.setitem(mimetypes.types_map, ".xhtml", "application/xhtml+xml")
+        assert mimetypes.guess_type("x.shtml")[0] == "text/html"
+        root = _html_tree(tmp_path)
+        for name in ("x.shtml", "x.xhtml"):
+            (root / "attachments" / name).write_text("<script>1</script>", encoding="utf-8")
+            assert _artifacts.classify(Path(name))[2] is False, name
+        with _client_for(root) as client:
+            for name in ("x.shtml", "x.xhtml"):
+                response = client.get("/api/artifact", params={"task": "", "path": f"attachments/{name}"})
+                assert response.status_code == 200, name
+                assert response.headers["content-disposition"].startswith("attachment"), name
+                assert client.get("/api/artifact-frame", params={
+                    "task": "", "path": f"attachments/{name}"}).status_code == 404, name
+
+    def test_frame_refuses_non_html_traversal_and_oversized(self, tmp_path, monkeypatch):
+        root = _html_tree(tmp_path)
+        with _client_for(root) as client:
+            for path in ("attachments/app.js", "attachments/note.md"):
+                assert client.get("/api/artifact-frame",
+                                  params={"task": "", "path": path}).status_code == 404
+            assert client.get("/api/artifact-frame",
+                              params={"task": "", "path": "../page.html"}).status_code == 400
+            monkeypatch.setattr(_artifacts, "DEFAULT_ARTIFACT_LIMITS",
+                                _artifacts.ArtifactLimits(max_preview_bytes=8))
+            too_large = client.get("/api/artifact-frame",
+                                   params={"task": "", "path": "attachments/page.html"})
+        assert too_large.status_code == 413
+        assert too_large.json()["detail"]["reason"] == "preview-byte-limit"
+
+    def test_html_outside_the_frame_route_downloads_or_is_sandboxed(self, tmp_path):
+        """A top-level GET of an HTML attachment that bypasses the frame route
+        downloads from /api/artifact and is CSP-sandboxed from /files/."""
+        root = _html_tree(tmp_path)
+        with _client_for(root) as client:
+            for download in ("false", "true"):
+                direct = client.get("/api/artifact", params={
+                    "task": "", "path": "attachments/page.html", "download": download})
+                assert direct.status_code == 200
+                assert direct.headers["content-disposition"].startswith("attachment")
+            files = client.get(f"/files/{root.name}/attachments/page.html")
+        policy = files.headers["content-security-policy"]
+        assert policy == plan_dashboard.FILES_SANDBOX
+        assert "allow-same-origin" not in policy
+
+    def test_project_file_peek_of_html_stays_a_text_peek(self, tmp_path):
+        root = _html_tree(tmp_path)
+        (root.parent / "site.html").write_text("<p>project page</p>", encoding="utf-8")
+        with _client_for(root) as client:
+            project = client.get("/api/file-peek", params={"path": "site.html"}).json()
+            attachment = client.get("/api/artifacts", params={"task": ""}).json()
+        assert (project["kind"], project["previewable"], project["download_only"]) == ("text", False, True)
+        assert project["head"] == "<p>project page</p>"
+        page = next(f for f in attachment["files"] if f["path"] == "attachments/page.html")
+        assert (page["kind"], page["previewable"], page["download_only"]) == ("html", True, False)
+
+    def test_standalone_export_carries_the_same_frame_policy(self, tmp_path):
+        root = _html_tree(tmp_path)
+        html = plan_dashboard.render_standalone_html(root)
+        match = re.search(r"var HTML_FRAME = (.*?);\n", html)
+        frame = json.loads(match.group(1))
+        assert set(frame["sandbox"].split()) == CONVENTION_SANDBOX
+        assert _csp_directives(frame["csp"]) == CONVENTION_CSP
+        assert frame["theme_script"] == _artifacts.HTML_THEME_SCRIPT
+        payload = _standalone_payload(html)
+        page = payload["contents"][""]["attachments/page.html"]
+        assert base64.b64decode(page["data"]).startswith(b"<!doctype html>")
+
+    def test_authoring_guidance_allows_exactly_the_frame_csp_hosts(self):
+        """html.md's §Libraries names each CSP host under its directive's role:
+        script hosts, then the stylesheet host, then the font host. No URL in
+        the file, bare or linked, falls outside that list."""
+        text = (SCRIPTS_DIR.parents[1] / "communicate" / "references" / "html.md").read_text(encoding="utf-8")
+        url = r"https?://[^\s`)\]>\"']+"
+        libraries = text.split("\n## Libraries\n", 1)[1].split("\n## ", 1)[0]
+        scripts, styles = libraries.split("**Stylesheets", 1)
+        styles, fonts = styles.split("font files from", 1)
+        named = {"script-src": set(re.findall(url, scripts)),
+                 "style-src": set(re.findall(url, styles)),
+                 "font-src": set(re.findall(url, fonts))}
+        for directive, sources in _csp_directives(_artifacts.HTML_FRAME_CSP).items():
+            hosts = {source for source in sources if source.startswith("https://")}
+            assert named.get(directive, set()) == hosts, directive
+        assert set(re.findall(url, text)) == set().union(*named.values())
+
+
 class TestArtifactWatcher:
     def _events(self, state, changes):
         broadcaster = AsyncMock()
