@@ -100,6 +100,14 @@ def test_depends_on_cycle_blocks_planning_but_not_builds(tmp_path):
     assert run(root, "repro", "build", "a#a", "--dry-run").returncode == 0
 
 
+def test_a_dry_run_reaches_a_consumer_named_before_its_producer(tmp_path):
+    root = tmp_path / "superRA"
+    task(root, "t", steps=[("a", ["b.txt"], ["a.txt"]), ("b", ["c.txt"], ["b.txt"]), ("c", [], ["c.txt"])])
+    dry = run(root, "repro", "build", ".", "--dry-run")
+    assert dry.returncode == 0, dry.stdout + dry.stderr
+    assert "dependency cycle" not in dry.stdout
+
+
 def test_step_cycle_blocks_builds_but_not_planning(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a", steps=[("a", ["b.txt"], ["a.txt"]), ("b", ["a.txt"], ["b.txt"])])
@@ -123,21 +131,17 @@ def test_loops_from_grouping_file_edges_are_views(tmp_path):
     assert read(root, "paper")["readiness"]["inputs"][0]["producer"] == "robustness#robust"
 
 
-def test_depends_on_against_the_file_flow_warns_with_the_file(tmp_path):
+def test_depends_on_against_the_file_flow_is_refused_with_the_file(tmp_path):
     root = tmp_path / "superRA"
     task(root, "a", steps=[("a", [], ["a.txt"])])
     task(root, "b", steps=[("b", ["a.txt"], ["b.txt"])])
     before = {p: p.read_bytes() for p in root.rglob("task.md")}
-    result = run(root, "task", "dep", "add", "a", "b")
-    assert result.returncode == 0, result.stderr
-    assert ("depends_on 'b' runs against the file flow: b reads this task's output a.txt; "
-            "not blocking, but best avoided") in result.stderr
-    check = run(root, "task", "check", "--category", "dependency")
-    assert "0 error(s), 1 warning(s)" in check.stdout and "runs against the file flow" in check.stdout
-    assert set(frontier(root)) == {"b"}
+    refused = run(root, "task", "dep", "add", "a", "b")
+    assert refused.returncode == 1
+    assert "task-level cycle" in refused.stderr and "a -> b by a.txt" in refused.stderr
+    assert {p: p.read_bytes() for p in root.rglob("task.md")} == before
     cycle = run(root, "task", "dep", "add", "b", "a")
-    assert cycle.returncode == 1 and "depends_on cycle" in cycle.stderr and "b/task.md depends_on: a" in cycle.stderr
-    assert (root / "b/task.md").read_bytes() == before[root / "b/task.md"]
+    assert cycle.returncode == 0, cycle.stderr
 
 
 def test_child_stays_ready_when_parent_setup_goes_stale(tmp_path):

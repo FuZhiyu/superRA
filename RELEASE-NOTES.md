@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **New task-level cycles are refused.** A loop at a task boundary, over `depends_on` and file edges together, makes the graph very hard to trace even though builds run. `task dep add`, `move`, `create`, and `update` now refuse an edit that creates one or pulls another task into one, and a new `guard-task-cycles` hook denies the same edit made directly to a `task.md`. An existing cycle reads as a `task check` warning and blocks nothing, builds included. A `depends_on` against the file flow is one of these loops, so its former warning is gone.
+
+### Fixed
+
+- **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.
+- **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, JSON, data files, and the lock keep the path they recorded, and paths into other projects are left alone. The move lists the project files and the steps it changed.
+
 ## [0.5.1] - 2026-11-01
 
 ### Added

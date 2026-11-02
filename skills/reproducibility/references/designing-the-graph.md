@@ -49,6 +49,8 @@ Open the producer and list what it opens: its real reads are `deps`, its real wr
 
 Validate before building: `superra task check`. Fix a reported cycle through the declarations or task ownership, keeping true consumed-artifact edges.
 
+**Keep every task boundary one-way.** An edit that adds a [task-level cycle](../../task-tree/references/task-file-contract.md#effective-dependencies) is refused. Two groups reading each other's outputs: move the step to the group it feeds, or split the shared producer into its own task.
+
 ## Step lifecycle
 
 - **Retire a step only when its result or check is no longer retained and no retained consumer reads its outs.**

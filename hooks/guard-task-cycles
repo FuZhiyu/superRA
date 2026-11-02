@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# PreToolUse gate: a task.md edit cannot add a task-level cycle.
+
+case "$0" in
+  */*) script_dir=${0%/*} ;;
+  *) script_dir=. ;;
+esac
+gate="task_cycle_gate.py"
+. "$script_dir/run-python-gate"

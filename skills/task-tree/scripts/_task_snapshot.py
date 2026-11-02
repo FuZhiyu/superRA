@@ -5,8 +5,8 @@ import sys
 
 from _repro import build_graph
 from _repro_state import STALE_RULE
-from _task_dependencies import task_index
-from _task_io import walk_plan
+from _task_dependencies import new_cycles, task_index, within
+from _task_io import compute_status, parse_task, walk_plan
 
 INPUT_NOTE = "not blocking; decide before relying on it"
 CURRENT = {"fresh", "saved", "unverified"}  # a build never runs an unverified producer
@@ -23,20 +23,36 @@ def require_valid(graph):
             if f["severity"] == "error"))
 
 
-def preflight(plan_root, edit):
+def roll_up_ancestors(root, paths):
+    """Apply the rollup a write of *paths* runs: only their strict ancestors, deepest first.
+
+    A group's own stored status stands, because `task update` can archive a group.
+    """
+    for path, node in reversed(list(task_index(root).items())):
+        if node.children and any(within(edited, path) and edited != path for edited in paths):
+            node.status = compute_status(node)
+
+
+def preflight(plan_root, edit, *, moved=None, written=()):
     """Validate an in-memory proposed tree before any filesystem mutation.
 
-    Refuses only `depends_on` errors the edit introduces; `edit_notes` on the
-    returned graph names new warnings and the tasks that leave the frontier.
+    Refuses only `depends_on` errors and task-level cycles the edit introduces;
+    `edit_notes` on the returned graph names new warnings and the tasks that leave
+    the frontier. *moved* is a moved task's `(old, new)` path. *written* names the tasks
+    whose ancestors the write rolls up, which can re-activate an archived group.
     """
     before = build_graph(plan_root, resolve_vars=False)
     root = walk_plan(plan_root)
     edit(root, task_index(root))
+    roll_up_ancestors(root, written)
     graph = build_graph(plan_root, root=root, resolve_vars=False)
     old = set(dependency_errors(before))
     new = [m for m in dependency_errors(graph) if m not in old]
     if new:
         raise ValueError("the edit would make the depends_on graph invalid:\n" + "\n".join(new))
+    cycles = new_cycles(before.dependencies, graph.dependencies, moved)
+    if cycles:
+        raise ValueError("the edit would add a task-level cycle:\n" + "\n".join(cycles))
     seen = {(f["task_path"], f["message"]) for f in before.dependencies.findings}
     graph.edit_notes = [f"Warning: {f['task_path'] or '(root)'}: {f['message']}"
                         for f in graph.dependencies.findings
@@ -49,6 +65,32 @@ def preflight(plan_root, edit):
             if waits:
                 graph.edit_notes.append(f"Now blocked: {path} waits on {waits}")
     return graph
+
+
+def edit_adds_cycles(plan_root, overlays):
+    """Task-level cycles the `{task.md path: new text}` overlays would add.
+
+    An edit to a task whose declarations do not parse adds none: the loops they
+    hold are invisible to the comparison, so a repair would read as new. A new
+    task's parent must already be a task, or this raises KeyError.
+    """
+    before = build_graph(plan_root, resolve_vars=False)
+    root = walk_plan(plan_root)
+    tasks = task_index(root)
+    written = []
+    for task_md, text in overlays.items():
+        edited = parse_task(task_md, plan_root, text=text)
+        written.append(edited.path)
+        current = tasks.get(edited.path)
+        if edited.path in before.unregistered or (current and current.parse_error):
+            return []
+        if current is None:
+            tasks[edited.path.rpartition("/")[0]].children.append(edited)
+        else:
+            current.status, current.depends_on, current.body = edited.status, edited.depends_on, edited.body
+    roll_up_ancestors(root, written)
+    graph = build_graph(plan_root, root=root, resolve_vars=False)
+    return new_cycles(before.dependencies, graph.dependencies)
 
 
 def print_edit_notes(graph):

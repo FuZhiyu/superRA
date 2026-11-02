@@ -208,6 +208,20 @@ def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str)
     return project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR / session_key / digest
 
 
+def _mentioned(project_root: Path, session_key: str, text: str) -> bool:
+    """Whether *text* has already been shown in this session."""
+    return _repro_marker_path(project_root, session_key, text).exists()
+
+
+def _record_mention(project_root: Path, session_key: str, text: str) -> None:
+    marker = _repro_marker_path(project_root, session_key, text)
+    try:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+    except OSError:
+        pass
+
+
 def _no_shell(command: str, cwd: Path) -> str:
     """Stand-in for a `shell:` resolver: an inert placeholder no real path matches."""
     return "${shell}"
@@ -616,6 +630,7 @@ def _reconcile(
     task_path: str | None,
     scope: list[str] | None = None,
     propagate: bool = True,
+    session_key: str | None = None,
 ) -> list[str]:
     """Validate and propagate parent status for a plan tree.
 
@@ -624,7 +639,9 @@ def _reconcile(
     whose precise location is unknown), parent status is recomputed across the
     whole tree rather than along a single ancestor chain. `scope` (the edited
     task paths) limits the validation warnings to those tasks; None reports the
-    whole tree. `propagate=False` validates without writing any task file.
+    whole tree. A task-level cycle, filed on its boundary, reaches the scope of a
+    task inside it, once per `session_key`. `propagate=False` validates without
+    writing any task file.
     The dashboard is not regenerated here; it is produced only on explicit
     `superra dashboard export`.
     """
@@ -670,18 +687,35 @@ def _reconcile(
                 wanted = {path or "(root)" for path in scope}
                 validation_warnings = [w for w in validation_warnings
                                        if w.split(": ", 1)[0] in wanted]
-                findings = [f for f in findings if f.task_path in scope]
+                dependencies = graph.dependencies
+                cycles = {c["message"] for loops in dependencies.cycles.values() for c in loops}
+                touched = dependencies.cycles_touching(scope)
+
+                def reported(finding) -> bool:
+                    if finding.message not in cycles:
+                        return finding.task_path in scope
+                    return finding.message in touched and (
+                        session_key is None
+                        or not _mentioned(plan_root.parent, session_key, finding.message)
+                    )
+
+                findings = [f for f in findings if reported(f)]
             # Errors first, so the cap below never drops one behind a warning.
             ordered = (
                 [f.to_text() for f in findings if f.severity == "error"]
                 + validation_warnings
                 + [f.to_text() for f in findings if f.severity != "error"]
             )
-        feedback.extend(_capped(
+        shown = _capped(
             [f"Validation warning in {plan_root}: {w}" for w in ordered],
             "{n} more validation warning(s) in " + str(plan_root)
             + "; run `superra task check --all` to see them.",
-        ))
+        )
+        feedback.extend(shown)
+        if scope is not None and session_key is not None:
+            for message in cycles:  # only a cycle warning that survived the cap counts as shown
+                if any(line.endswith(f": {message}") for line in shown):
+                    _record_mention(plan_root.parent, session_key, message)
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 
@@ -1130,6 +1164,7 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
                 task_path=task_paths[0] if len(task_paths) == 1 else None,
                 scope=task_paths,
                 propagate=not frozen,
+                session_key=_repro_session_key(data),
             )
         )
         for task_path in task_paths:

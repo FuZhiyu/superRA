@@ -79,4 +79,4 @@ Field-by-field anatomy and body-section ownership: `references/task-file-contrac
 | Dashboard server mechanics (idempotent ensure-running, task URLs, artifact export) | `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-Intentional task path changes go through `superra task move` (`task rename` for same-parent compatibility), never raw `mv` / `git mv`. It resolves the fallout — relative Markdown links tree-wide and sibling-only `depends_on` edges — so run the move directly rather than rewriting links or rewiring dependencies by hand first. Mechanics and cross-parent dependency rules: `references/commands.md §Move / rename a task`.
+Intentional task path changes go through `superra task move` (`task rename` for same-parent compatibility), never raw `mv` / `git mv`. It resolves the fallout — relative Markdown links, root-relative task paths, and sibling-only `depends_on` edges — so run the move directly rather than rewriting them by hand first. Mechanics and cross-parent dependency rules: `references/commands.md §Move / rename a task`.

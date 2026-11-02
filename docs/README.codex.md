@@ -52,8 +52,8 @@ rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.
 Run `/hooks` in Codex after installing the plugin. When plugin hooks
 are enabled, Codex should list superRA hooks from `hooks/hooks-codex.json`.
 The Codex hook list should include `autoload-superra`, `agent-model-guard`,
-`guard-task-approval`, `guard-foreign-checkout`, `ensure-communicate`,
-`merge-guard`, task-tree `PostToolUse` hooks, and `codex-plan-stop`.
+`guard-task-approval`, `guard-task-cycles`, `guard-foreign-checkout`,
+`ensure-communicate`, `merge-guard`, task-tree `PostToolUse` hooks, and `codex-plan-stop`.
 
 ## Hook Coverage
 

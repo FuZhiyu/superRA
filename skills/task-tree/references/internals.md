@@ -95,9 +95,11 @@ The reproduction YAML subset ([contract](task-file-contract.md#the-yaml-subset))
 
 ## Hook Architecture
 
-`task_hook.py` is the task tree's PostToolUse hook. `hooks/task_approval_gate.py` is the PreToolUse approval gate. Wiring lives in the harness manifests under `hooks/`.
+`task_hook.py` is the task tree's PostToolUse hook. `hooks/task_approval_gate.py` and `hooks/task_cycle_gate.py` are the PreToolUse gates. Wiring lives in the harness manifests under `hooks/`.
 
 **Approval gate.** `guard-task-approval` denies an `Edit`, `Write`, or Codex `apply_patch` whose result would leave `status: approved` with `[BLOCKING]` inside `## Review Notes`. Advisory findings and `[BLOCKING]` text outside that section remain valid. A Bash-made edit cannot be inspected before it runs: the PostToolUse reconcile reports the same invariant as non-blocking feedback, as does `task check`.
+
+**Cycle gate.** `guard-task-cycles` denies an `Edit`, `Write`, or Codex `apply_patch` on a `task.md` whose result adds a [task-level cycle](task-file-contract.md#effective-dependencies), by overlaying the reconstructed text on the tree (`edit_adds_cycles`) and comparing before with after. An edit that leaves `## Reproduction`, `depends_on`, and archival alone builds no graph. The gate stays off during a merge, rebase, cherry-pick, or revert, and fails open on anything it cannot reconstruct or parse, including an edit to a task whose declarations do not parse; Bash edits land too. Whatever lands surfaces as the warning, which the PostToolUse hook gives once per session to a task inside the loop or owning a step in it.
 
 **Checkout-isolation gate.** `guard-foreign-checkout` (`hooks/checkout_isolation_gate.py`) returns `ask` for an `Edit`, `Write`, or `apply_patch` on a `task.md` whose task root belongs to neither the session's cwd nor its repository, and for a git history-writing `Bash` command redirected by `cd`, `git -C`, or `--git-dir`/`--work-tree` into another task-tree checkout. `ask` rather than `deny` leaves a route through for cross-checkout work the researcher set up deliberately, while an unattended session still stops. Membership is the git common dir, so every worktree of the session's own repository passes; the rule and the session anchor it is measured from both live in `skills/task-tree/scripts/_checkout_scope.py` (`is_foreign`, `session_anchor`), and the PostToolUse edit detector calls the same two, so the hook writes nowhere this gate would prompt about. The anchor is `CLAUDE_PROJECT_DIR` when the harness sets it, since a `cd` during the session moves the payload `cwd` into the foreign checkout, and the payload `cwd` otherwise. It fails open wherever identity is unresolvable (no git, unreadable payload). `deny_reason()` carries the whole decision; the live Agent-SDK trace harness registers it as an in-process PreToolUse hook and hard-denies on it, since a traced session has no approver.
 
@@ -118,7 +120,7 @@ The reproduction YAML subset ([contract](task-file-contract.md#the-yaml-subset))
 
 **Reproduction reminder at `implemented`.** When a `task.md` edit leaves a leaf at `status: implemented`, `_implemented_coverage_reminder` reports the generated-looking files its `## Results` links that no step produces or reads (`references/task-file-contract.md` §Validation, same rule as the `task check` warning), pointing at `superRA:reproducibility`. Its marker key is the task rather than the session, cleared whenever the task is not `implemented`, so the reminder follows the transition rather than the session. Cheap gates — status, leaf, a link in `## Results` — run before any graph build, and that build uses `_hook_graph` like the edit reminder. An out or dep still carrying an unresolved `${VAR}` is matched on its literal tail, found as a run of whole path segments, so a variable-rooted directory (`${OUT}/estimates`) covers the files under it and a declaration that is only a variable covers everything.
 
-**Same-parent rename auto-cascade.** On a same-parent `mv`/`git mv` rename (`_detect_same_parent_rename`: two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task), the hook runs the same lossless maintenance as `superra task move` via the shared `_task_io` core — cascading sibling `depends_on` (`cascade_depends_on_rename`) and re-pointing relative Markdown links into and out of the renamed task (`compute_move_link_rewrites`) before reconcile, so `validate_plan` sees a coherent tree. Cross-parent moves, task deletes, and merges are ambiguous post-hoc state with no clean from→to: they warn via normal dangling-dependency validation rather than auto-mutating.
+**Same-parent rename auto-cascade.** On a same-parent `mv`/`git mv` rename (`_detect_same_parent_rename`: two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task), the hook runs `superra task move`'s task-tree maintenance via the shared `_task_io` core, leaving tracked source files to `task move` — cascading sibling `depends_on` (`cascade_depends_on_rename`) and re-pointing relative Markdown links and root-relative task paths in task-tree Markdown (`compute_move_link_rewrites`) before reconcile, so `validate_plan` sees a coherent tree. Cross-parent moves, task deletes, and merges are ambiguous post-hoc state with no clean from→to: they warn via normal dangling-dependency validation rather than auto-mutating.
 
 **Dashboard.** The hook does not regenerate the dashboard. Only `superra dashboard export` writes a static file.
 
@@ -401,7 +403,7 @@ A successful step's receipt is captured only after its declared outs are verifie
 | `task_add_result.py` | Append a finding to a task's `## Results` section |
 | `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
-| `task_rename.py` | Move or rename a task directory; rewrites relative links and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
+| `task_rename.py` | Move or rename a task directory; rewrites relative links and root-relative task paths, tracked sources included, and cascades/drops sibling `depends_on` (mechanics in `references/commands.md §Move / rename a task`) |
 | `task_check.py` | Read-only diagnostic — validates status, dependencies, cycles, and (category `reproduction`) the `## Reproduction` build-graph contract; use `task status fix` to repair branch status fields |
 | `repro_run.py` | `superra repro` — the build loop and the status/explain/impact/accept/revoke/dag commands |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
@@ -422,6 +424,8 @@ A successful step's receipt is captured only after its declared outs are verifie
 | `tests/test_artifacts.py` | Companion discovery, secure APIs, watcher events, worktree/root variants, and bounded standalone packing |
 | `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
 | `test_task_dependencies.py` | Public command journeys for unified dependencies, archival, hierarchy, preflight and resolution |
+| `test_task_cycles.py` | Task-level cycle detection, refusal in the CLI and edit gate, and rollup scope |
+| `test_task_move_paths.py` | Task move path rewrites — root-relative task paths, `## Reproduction` declarations, TeX arguments, URLs, other trees |
 | `test_repro.py` | Reproduction graph model — YAML subset, section extraction, variables, include closures, edges, findings |
 | `test_repro_acceptance.py` | Actual engine acceptance, baseline, concurrency, fan-out, and cascade scenarios |
 | `test_repro_runner.py` | Runner — hash cache, status classification, target selection, build, rerun, and lock behavior |
