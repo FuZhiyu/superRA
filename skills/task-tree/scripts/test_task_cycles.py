@@ -318,6 +318,17 @@ def test_a_cycle_warning_reaches_a_member_once_per_session(looped):
     assert any("task cycle" in line for line in fresh)
 
 
+def test_a_cycle_warning_the_cap_drops_reappears_on_the_next_edit(looped, monkeypatch):
+    import task_hook
+    import _task_validate
+    with monkeypatch.context() as capped:
+        capped.setattr(_task_validate, "OUTPUT_CAP", 0)
+        dropped = task_hook._reconcile(looped, task_path="a", scope=["a"], session_key="s6")
+    assert not any("task cycle" in line for line in dropped)
+    again = task_hook._reconcile(looped, task_path="a", scope=["a"], session_key="s6")
+    assert any("task cycle" in line for line in again)
+
+
 def test_a_cycle_warning_skips_a_task_outside_the_loop(looped):
     import task_hook
     task(looped, "c")

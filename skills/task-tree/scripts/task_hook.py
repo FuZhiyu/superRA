@@ -208,17 +208,18 @@ def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str)
     return project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR / session_key / digest
 
 
-def _first_mention(project_root: Path, session_key: str, text: str) -> bool:
-    """True the first time *text* comes up in this session; records that it has."""
+def _mentioned(project_root: Path, session_key: str, text: str) -> bool:
+    """Whether *text* has already been shown in this session."""
+    return _repro_marker_path(project_root, session_key, text).exists()
+
+
+def _record_mention(project_root: Path, session_key: str, text: str) -> None:
     marker = _repro_marker_path(project_root, session_key, text)
-    if marker.exists():
-        return False
     try:
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.touch()
     except OSError:
         pass
-    return True
 
 
 def _no_shell(command: str, cwd: Path) -> str:
@@ -695,7 +696,7 @@ def _reconcile(
                         return finding.task_path in scope
                     return finding.message in touched and (
                         session_key is None
-                        or _first_mention(plan_root.parent, session_key, finding.message)
+                        or not _mentioned(plan_root.parent, session_key, finding.message)
                     )
 
                 findings = [f for f in findings if reported(f)]
@@ -705,11 +706,16 @@ def _reconcile(
                 + validation_warnings
                 + [f.to_text() for f in findings if f.severity != "error"]
             )
-        feedback.extend(_capped(
+        shown = _capped(
             [f"Validation warning in {plan_root}: {w}" for w in ordered],
             "{n} more validation warning(s) in " + str(plan_root)
             + "; run `superra task check --all` to see them.",
-        ))
+        )
+        feedback.extend(shown)
+        if scope is not None and session_key is not None:
+            for message in cycles:  # only a cycle warning that survived the cap counts as shown
+                if any(line.endswith(f": {message}") for line in shown):
+                    _record_mention(plan_root.parent, session_key, message)
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 
