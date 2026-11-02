@@ -98,7 +98,7 @@ Commit figures to `attachments/` beside the task's `task.md` and embed relative 
 
 **Author only logical prerequisites in `depends_on`.** The effective graph combines them with the consumed-output edges inferred from reproduction steps. Removing a logical declaration leaves any inferred edge intact.
 
-**Validate at every task boundary.** Nodes are direct child task groups and the containing task's own steps; edges inside one collapsed child stay internal. `depends_on` cycles and step cycles are errors. A loop that appears only when file edges are grouped by task is not an error; a `depends_on` running against the file flow is a warning naming the file. A parent's setup step → child task → parent's report step is valid; adding a child preserves existing step identities and hashes.
+**Validate at every task boundary.** Nodes are direct child task groups and the containing task's own steps; edges inside one collapsed child stay internal. `depends_on` cycles and step cycles are errors. Any other loop at a boundary, over `depends_on` and file edges together, is a **task-level cycle**: a warning naming the loop. An edit that creates one or pulls another task into one is refused; nothing else is, so an existing cycle blocks no edit, frontier, or build. A parent's setup step → child task → parent's report step is valid; adding a child preserves existing step identities and hashes.
 
 **Only `depends_on` gates readiness.** Active prerequisites at `implemented`, `approved`, or `revise` satisfy the gate; `not-started`, `in-progress`, or `postponed` block. A group's prerequisites apply to its descendants. File edges never gate: `task frontier` and `task read` report each input whose producer is `stale`, `missing`, or `failed` — file, producer, and state — then one line asking for the stale-rule decision, with the `build --dry-run` and `explain` commands. A missing input fails only the build that reads it. Stale steps are listed by `repro status`, not the frontier.
 
@@ -220,7 +220,7 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 - **Dependencies:** step cycles, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; an `include` that could not be resolved or lies outside the project root and every `${VAR}` directory; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; a task-level cycle; an `include` that could not be resolved or lies outside the project root and every `${VAR}` directory; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
 
 **Unregistered results artifact** — an advisory `[WARNING]` that never blocks, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 

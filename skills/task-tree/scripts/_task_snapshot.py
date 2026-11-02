@@ -5,7 +5,7 @@ import sys
 
 from _repro import build_graph
 from _repro_state import STALE_RULE
-from _task_dependencies import task_index
+from _task_dependencies import new_cycles, task_index
 from _task_io import walk_plan
 
 INPUT_NOTE = "not blocking; decide before relying on it"
@@ -23,11 +23,12 @@ def require_valid(graph):
             if f["severity"] == "error"))
 
 
-def preflight(plan_root, edit):
+def preflight(plan_root, edit, *, moved=None):
     """Validate an in-memory proposed tree before any filesystem mutation.
 
-    Refuses only `depends_on` errors the edit introduces; `edit_notes` on the
-    returned graph names new warnings and the tasks that leave the frontier.
+    Refuses only `depends_on` errors and task-level cycles the edit introduces;
+    `edit_notes` on the returned graph names new warnings and the tasks that leave
+    the frontier. *moved* is a moved task's `(old, new)` path.
     """
     before = build_graph(plan_root, resolve_vars=False)
     root = walk_plan(plan_root)
@@ -37,6 +38,9 @@ def preflight(plan_root, edit):
     new = [m for m in dependency_errors(graph) if m not in old]
     if new:
         raise ValueError("the edit would make the depends_on graph invalid:\n" + "\n".join(new))
+    cycles = new_cycles(before.dependencies, graph.dependencies, moved)
+    if cycles:
+        raise ValueError("the edit would add a task-level cycle:\n" + "\n".join(cycles))
     seen = {(f["task_path"], f["message"]) for f in before.dependencies.findings}
     graph.edit_notes = [f"Warning: {f['task_path'] or '(root)'}: {f['message']}"
                         for f in graph.dependencies.findings

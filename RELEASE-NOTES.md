@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **New task-level cycles are refused.** A loop at a task boundary, over `depends_on` and file edges together, makes the graph very hard to trace even though builds run. `task dep add`, `move`, `create`, and `update` now refuse an edit that creates one or pulls another task into one. An existing cycle reads as a `task check` warning and blocks nothing, builds included. A `depends_on` against the file flow is one of these loops, so its former warning is gone.
+
 ### Fixed
 
 - **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.

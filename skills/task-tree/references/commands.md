@@ -50,7 +50,7 @@ superra task dep remove 01-data/03-filter 02-merge
 ```
 
 - **`dep remove` removes only the `depends_on`:** a file edge between the same tasks remains, and the command names its file.
-- **Preflight refuses only a new `depends_on` error** (a cycle or an unresolved slug), leaving task files and directories unchanged. Otherwise the command prints each new warning — a `depends_on` against the file flow, a postponed or archived prerequisite — and each task it takes off the frontier.
+- **Preflight refuses only a new `depends_on` error** (a cycle or an unresolved slug) **or a new [task-level cycle](task-file-contract.md#effective-dependencies)**, leaving task files and directories unchanged. Otherwise the command prints each new warning — a postponed or archived prerequisite — and each task it takes off the frontier.
 
 ## Move / rename a task
 
@@ -75,7 +75,7 @@ It also re-points each literal `superRA/<task-path>` to the new path, in these f
 
 Moved steps then read `stale`: a rewritten path changes a step's definition, and a rewritten script changes its dep. The move lists them; [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule) decides whether to rebuild or accept. A failed write rolls the whole move back.
 
-Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the move is refused before filesystem writes if it adds a `depends_on` error. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
+Authored `depends_on` is sibling-only. Inferred dependencies are recomputed from step ownership after a proposed move; the move is refused before filesystem writes if it adds a `depends_on` error or a task-level cycle. Same-parent rename: sibling `depends_on: old-slug` cascades to `new-slug`. Cross-parent move: each edge that no longer resolves under the new parent is dropped with a warning — an old sibling's edge to the moved slug, or the moved task's edge to a slug absent from the destination. Re-add a dropped edge that should still hold with `superra task dep add`.
 
 The PostToolUse hook still revalidates raw filesystem moves and keeps the same-parent auto-cascade guardrail, but is not the canonical move mechanism. Raw `mv` / `git mv` only for recovery from tool failure, then `superra task check`.
 

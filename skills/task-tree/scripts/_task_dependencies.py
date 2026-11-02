@@ -1,6 +1,7 @@
 """Pure composition of logical task prerequisites and file-derived step edges."""
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
 
 SATISFIED = {"implemented", "approved", "revise"}
 ACTIONABLE = {"not-started", "in-progress", "implemented", "revise"}
+CYCLE_REMEDY = "make this boundary one-way: move the step, or split the shared producer into its own task"
 
 
 def task_index(root: Task) -> dict[str, Task]:
@@ -58,6 +60,121 @@ def cycle_path(edges) -> list[str] | None:
     return None
 
 
+def cyclic_components(edges) -> list[set[str]]:
+    """Strongly connected components that hold a cycle, in a stable order."""
+    adjacency: dict[str, list[str]] = {}
+    for a, b in edges:
+        adjacency.setdefault(a, []).append(b)
+        adjacency.setdefault(b, [])
+    index: dict[str, int] = {}
+    low: dict[str, int] = {}
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    components: list[set[str]] = []
+
+    def visit(node: str) -> None:
+        index[node] = low[node] = len(index)
+        stack.append(node)
+        on_stack.add(node)
+        for target in sorted(adjacency[node]):
+            if target not in index:
+                visit(target)
+                low[node] = min(low[node], low[target])
+            elif target in on_stack:
+                low[node] = min(low[node], index[target])
+        if low[node] == index[node]:
+            component = set()
+            while True:
+                member = stack.pop()
+                on_stack.discard(member)
+                component.add(member)
+                if member == node:
+                    break
+            if len(component) > 1 or node in adjacency[node]:
+                components.append(component)
+
+    for node in sorted(adjacency):
+        if node not in index:
+            visit(node)
+    return sorted(components, key=min)
+
+
+def shortest_loop(pairs) -> list[str]:
+    """The shortest loop through *pairs*, first by node name on a tie."""
+    adjacency = {}
+    for source, target in sorted(pairs):
+        adjacency.setdefault(source, []).append(target)
+    best = []
+    for start in sorted(adjacency):
+        paths, seen = deque([[start]]), {start}
+        while paths:
+            path = paths.popleft()
+            for target in adjacency.get(path[-1], ()):
+                if target == start:
+                    if not best or len(path) + 1 < len(best):
+                        best = [*path, start]
+                    paths.clear()
+                    break
+                if target not in seen:
+                    seen.add(target)
+                    paths.append([*path, target])
+    return best
+
+
+def _node_label(node: str) -> str:
+    return node[5:].rsplit("/", 1)[-1] if node.startswith("task:") else f"step {node[5:]}"
+
+
+def _edge_reason(reasons: list[dict]) -> str:
+    named = sorted({e.get("via") or e["declaration"] for e in reasons})
+    return named[0] + (f" and {len(named) - 1} more" if len(named) > 1 else "")
+
+
+def _task_cycles(boundary: str, edges: dict) -> list[dict]:
+    """Loops at one boundary, as ``{members, message}``.
+
+    A loop of steps alone is a step cycle and a loop of `depends_on` alone a
+    `depends_on` cycle; both already have their own error.
+    """
+    cycles = []
+    for members in cyclic_components(edges):
+        inner = [pair for pair in edges if pair[0] in members and pair[1] in members]
+        if not any(node.startswith("task:") for node in members) or all(
+            reason["kind"] == "logical" for pair in inner for reason in edges[pair]
+        ):
+            continue
+        loop = shortest_loop(inner)
+        size = f" ({len(members)} nodes in all)" if len(members) > len(loop) - 1 else ""
+        cycles.append({"members": members, "message": (
+            f"task cycle at {boundary or '(root)'}: {' -> '.join(map(_node_label, loop))}{size}; "
+            + "; ".join(f"{_node_label(a)} -> {_node_label(b)} by {_edge_reason(edges[a, b])}"
+                        for a, b in zip(loop, loop[1:]))
+            + f"; {CYCLE_REMEDY}"
+        )})
+    return cycles
+
+
+def new_cycles(before: Dependencies, after: Dependencies, moved: tuple[str, str] | None = None) -> list[str]:
+    """Messages of loops in *after* that no single loop in *before* contains.
+
+    Containment covers a new loop, a new member, and two loops merging; an edit
+    inside a loop or one that shrinks it adds nothing. *moved* is a task's
+    ``(old, new)`` path, so a moved loop still matches itself.
+    """
+    def relocate(path: str) -> str:
+        return moved[1] + path[len(moved[0]):] if moved and path and within(path, moved[0]) else path
+
+    def relocate_node(node: str) -> str:
+        return "task:" + relocate(node[5:]) if node.startswith("task:") else node
+
+    known: dict[str, list[set[str]]] = {}
+    for boundary, cycles in before.cycles.items():
+        known.setdefault(relocate(boundary), []).extend(
+            {relocate_node(n) for n in cycle["members"]} for cycle in cycles)
+    return [cycle["message"] for boundary, cycles in after.cycles.items() for cycle in cycles
+            if not any(cycle["members"] <= old for old in known.get(boundary, ()))]
+
+
 @dataclass
 class Dependencies:
     tasks: dict[str, Task] = field(default_factory=dict)
@@ -67,6 +184,7 @@ class Dependencies:
     logical: list[dict] = field(default_factory=list)
     files: list[dict] = field(default_factory=list)
     findings: list[dict] = field(default_factory=list)
+    cycles: dict[str, list[dict]] = field(default_factory=dict)  # boundary -> task-level loops
     complete: bool = True
 
     @property
@@ -197,7 +315,11 @@ def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]
             edges.setdefault((source, target), []).append(item)
         result.boundaries[boundary] = {"nodes": sorted(nodes), "edges": [
             {"from": a, "to": b, "evidence": reasons} for (a, b), reasons in sorted(edges.items())]}
-        # Grouping file edges by task is a view; only `depends_on` loops are errors here.
+        # A task-level loop warns: an error would empty the frontier for the whole tree.
+        for cycle in _task_cycles(boundary, edges):
+            result.cycles.setdefault(boundary, []).append(cycle)
+            result.findings.append(dict(task_path=boundary, category="dependency", severity="warning",
+                                        message=cycle["message"]))
         logical = {pair: [e for e in reasons if e["kind"] == "logical"] for pair, reasons in edges.items()}
         logical = {pair: reasons for pair, reasons in logical.items() if reasons}
         cycle = cycle_path(logical)
@@ -205,13 +327,6 @@ def compose(root: Task, steps: list[Step], step_edges: list[tuple[str, str, str]
             detail = "; ".join(e["declaration"] for a, b in zip(cycle, cycle[1:]) for e in logical[a, b])
             result.findings.append(dict(task_path=boundary, category="dependency", severity="error",
                 message=f"depends_on cycle at {boundary or '(root)'}: {' -> '.join(cycle)}; {detail}"))
-        for (source, target), reasons in logical.items():
-            against = [e for e in edges.get((target, source), []) if e["kind"] == "inferred"]
-            if against:
-                files = ", ".join(sorted({e["via"] for e in against}))
-                result.findings.append(dict(task_path=target[5:], category="dependency", severity="warning",
-                    message=f"depends_on '{source[5:].rsplit('/', 1)[-1]}' runs against the file flow: "
-                            f"{source[5:]} reads this task's output {files}; not blocking, but best avoided"))
 
     grouped = {}
     for view in result.boundaries.values():

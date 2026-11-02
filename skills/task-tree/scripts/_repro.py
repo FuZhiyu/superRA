@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from _task_io import VALID_STATUSES, Task, parse_body_sections, walk_plan
-from _task_dependencies import Dependencies, archived_paths, compose, cycle_path, within
+from _task_dependencies import Dependencies, archived_paths, compose, cycle_path, cyclic_components, within
 from _task_validate import Finding
 
 
@@ -1293,7 +1293,7 @@ def build_graph(
             _finding(finding.task_path, "warning", finding.message)
     graph.section_tasks = [p for p in graph.section_tasks if p not in archived]
     _link(graph, project_root)
-    for component in _cyclic_components(graph.step_edges):
+    for component in cyclic_components((a, b) for a, b, _ in graph.step_edges):
         inner = [(a, b) for a, b, _ in graph.step_edges if a in component and b in component]
         cycle = cycle_path(inner)
         witness = [f"{a} -> {b} via {via}" for a, b, via in graph.step_edges
@@ -1306,45 +1306,6 @@ def build_graph(
     graph.task_edges = [(e["from"], e["to"]) for e in graph.dependencies.edges]
     graph.dependencies.order_tree()
     return graph
-
-
-def _cyclic_components(edges) -> list[set[str]]:
-    """Strongly connected components that hold a cycle, in a stable order."""
-    adjacency: dict[str, list[str]] = {}
-    for a, b, _ in edges:
-        adjacency.setdefault(a, []).append(b)
-        adjacency.setdefault(b, [])
-    index: dict[str, int] = {}
-    low: dict[str, int] = {}
-    stack: list[str] = []
-    on_stack: set[str] = set()
-    components: list[set[str]] = []
-
-    def visit(node: str) -> None:
-        index[node] = low[node] = len(index)
-        stack.append(node)
-        on_stack.add(node)
-        for target in sorted(adjacency[node]):
-            if target not in index:
-                visit(target)
-                low[node] = min(low[node], low[target])
-            elif target in on_stack:
-                low[node] = min(low[node], index[target])
-        if low[node] == index[node]:
-            component = set()
-            while True:
-                member = stack.pop()
-                on_stack.discard(member)
-                component.add(member)
-                if member == node:
-                    break
-            if len(component) > 1 or node in adjacency[node]:
-                components.append(component)
-
-    for node in sorted(adjacency):
-        if node not in index:
-            visit(node)
-    return sorted(components, key=min)
 
 
 def _unregister(graph: Graph, task_path: str, outs: list[PathRef]) -> None:

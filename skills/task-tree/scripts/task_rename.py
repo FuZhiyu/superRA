@@ -313,7 +313,7 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
             node.path = to_status_path + old_path[len(from_status_path):]
             node.dir_path = plan_root / node.path
     try:
-        graph = preflight(plan_root, proposed)
+        graph = preflight(plan_root, proposed, moved=(from_status_path, to_status_path))
     except ValueError as exc:
         _die(str(exc))
 
