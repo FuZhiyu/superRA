@@ -337,3 +337,25 @@ def test_the_hook_rewrite_core_covers_reproduction_after_a_raw_rename(project):
     _task_io.apply_move_link_rewrites(project, rewrites)
     assert OLD not in text(renamed / "task.md")
     assert "superRA/01-group/01-renamed/attachments/out.csv" in text(project / "03-reader" / "task.md")
+
+
+def test_a_moved_files_own_prefix_follows_a_change_of_depth(project):
+    mover = project / "01-group" / "01-mover"
+    (mover / "attachments" / "use.py").write_text(
+        f"A = '../../../../{OLD}/attachments/x.csv'\nB = 'other/../{OLD}/y.csv'\n",
+        encoding="utf-8",
+    )
+    with (mover / "task.md").open("a", encoding="utf-8") as handle:
+        handle.write(f"\nSee ../../../{OLD}/attachments/x.csv\n")
+    track(project)
+
+    task_rename.rename_task(project, "01-group/01-mover", "01-mover")
+
+    moved = project / "01-mover"
+    assert "See ../../superRA/01-mover/attachments/x.csv" in text(moved / "task.md")
+    assert text(moved / "attachments" / "use.py").splitlines()[0] == (
+        "A = '../../../superRA/01-mover/attachments/x.csv'"
+    )
+    assert (moved / ".." / ".." / "superRA" / "01-mover" / "attachments").resolve() == (
+        moved / "attachments"
+    ).resolve()

@@ -251,7 +251,7 @@ def _project_path_rewrites(
         except UnicodeDecodeError:
             unchecked += old_path.encode() in raw
             continue
-        rewritten = rewrite(original, path.parent)
+        rewritten = rewrite(original, path.parent, after_move(path).parent)
         if citation.search(rewritten):
             still_citing.append(after_move(path))
         if rewritten != original and not (in_tree and path.suffix.lower() == ".md"):

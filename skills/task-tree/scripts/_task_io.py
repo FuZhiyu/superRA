@@ -840,6 +840,21 @@ def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
     )
 
 
+def _rebased(
+    prefix: str, base_dir: Path | None, new_base_dir: Path | None, project_root: Path
+) -> str:
+    """*prefix* with a leading ``../`` run rebuilt to lead to *project_root* from *new_base_dir*."""
+    if base_dir is None or new_base_dir is None:
+        return prefix
+    tail = _past_open_bracket(prefix)
+    if not tail.startswith("../") or tail.replace("../", ""):
+        return prefix
+    if os.path.normpath(os.path.join(base_dir, tail)) != str(project_root):
+        return prefix
+    rebuilt = os.path.relpath(project_root, new_base_dir)
+    return prefix[: len(prefix) - len(tail)] + rebuilt + "/"
+
+
 def task_path_pattern(plan_root: Path, directory: Path) -> re.Pattern[str]:
     """Match a citation of *directory*'s task path, with the path text before it."""
     root = plan_root.resolve()
@@ -857,6 +872,8 @@ def task_path_rewriter(
     Matches the literal path as a whole-segment prefix, so ``superRA/a/attachments``
     moves with task ``a`` while ``superRA/a-b`` and ``superRA/a.md`` stay put.
     ``base_dir`` is the citing file's directory, defaulting to the project root.
+    ``new_base_dir`` is where a moved file will live: its own ``../`` prefix is rebuilt
+    from there so it still leads to the project root.
     """
     root = plan_root.resolve()
     project_root = root.parent
@@ -864,7 +881,9 @@ def task_path_rewriter(
     new = f"{root.name}/{to_dir.resolve().relative_to(root).as_posix()}"
     pattern = task_path_pattern(plan_root, from_dir)
 
-    def rewrite(text: str, base_dir: Path | None = None) -> str:
+    def rewrite(
+        text: str, base_dir: Path | None = None, new_base_dir: Path | None = None
+    ) -> str:
         if old not in text:
             return text
 
@@ -875,7 +894,7 @@ def task_path_rewriter(
             if not _URL_SO_FAR.search(line) and _leads_to_project(
                 prefix, base_dir or project_root, project_root
             ):
-                return prefix + new
+                return _rebased(prefix, base_dir, new_base_dir, project_root) + new
             return match.group(0)
 
         return pattern.sub(replace, text)
@@ -909,7 +928,7 @@ def compute_move_link_rewrites(
         original = _read_contained_markdown(src_md, plan_root)
         rewritten = rewrite_paths(_rewrite_relative_links(
             original, from_dir / rel, to_dir / rel, from_dir, to_dir
-        ), (from_dir / rel).parent)
+        ), (from_dir / rel).parent, (to_dir / rel).parent)
         if rewritten != original:
             rewrites[to_dir / rel] = rewritten
 
