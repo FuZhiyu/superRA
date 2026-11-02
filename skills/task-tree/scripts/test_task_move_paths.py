@@ -125,6 +125,8 @@ def test_tracked_sources_follow_the_task_and_evidence_does_not(project):
     f"https://github.com/org/repo/blob/main/{OLD}/x.py",
     f"p2/{OLD}/x.csv",
     f"$ROOT/other/{OLD}/x.csv",
+    f"https://dash.example/view?task={OLD}",
+    f"https://dash.example/#{OLD}",
 ])
 def test_a_path_that_only_resembles_the_task_stays(project, line):
     script = project.parent / "Code" / "other.py"
@@ -149,6 +151,11 @@ def test_a_path_that_only_resembles_the_task_stays(project, line):
     (f"$(git rev-parse --show-toplevel)/{OLD}", f"$(git rev-parse --show-toplevel)/{NEW}"),
     (f'"$(@__DIR__)/../{OLD}/x.csv"', f'"$(@__DIR__)/../{NEW}/x.csv"'),
     (f"--out={OLD}/x.csv", f"--out={NEW}/x.csv"),
+    (f"\\input{{{OLD}/t.tex}}", f"\\input{{{NEW}/t.tex}}"),
+    (f"\\includegraphics[width=2cm]{{{OLD}/f.pdf}}", f"\\includegraphics[width=2cm]{{{NEW}/f.pdf}}"),
+    (f"\\input{{../{OLD}/t.tex}}", f"\\input{{../{NEW}/t.tex}}"),
+    (f"\\graphicspath{{{{../{OLD}/}}}}", f"\\graphicspath{{{{../{NEW}/}}}}"),
+    (f"read({OLD}/x.csv)", f"read({NEW}/x.csv)"),
 ])
 def test_each_spelling_of_the_task_path_moves(project, before, after):
     script = project.parent / "Code" / "other.py"
@@ -196,6 +203,41 @@ def test_another_project_in_the_repo_is_left_alone(tmp_path):
     assert text(ours.parent / "Code" / "run.py") == "'superRA/grp/data/in.csv'\n"
     assert text(theirs.parent / "Code" / "run.py") == "'superRA/data/in.csv'\n"
     assert "superRA/data/in.csv" in text(theirs / "data" / "task.md")
+
+
+def test_a_directory_named_like_the_task_root_is_not_a_project(project):
+    helper = project.parent / "Code" / "superRA" / "h.py"
+    helper.parent.mkdir()
+    helper.write_text("HELPER = 1\n", encoding="utf-8")
+    track(project)
+    move(project)
+    assert text(project.parent / "Code" / "read.py") == f"ROOT / '{NEW}/attachments/out.csv'\n"
+
+
+def test_a_repo_inside_a_directory_named_like_the_task_root_is_swept(tmp_path):
+    outer = tmp_path / "superRA" / "repo"
+    root = outer / "superRA"
+    (root / "data").mkdir(parents=True)
+    (root / "grp").mkdir()
+    _write_task_md(root / "task.md", "Root", "not-started")
+    _write_task_md(root / "data" / "task.md", "Data", "not-started")
+    _write_task_md(root / "grp" / "task.md", "Grp", "not-started")
+    (outer / "shared").mkdir()
+    (outer / "shared" / "x.py").write_text("'superRA/data/in.csv'\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(outer)], check=True)
+    subprocess.run(["git", "-C", str(outer), "add", "-A"], check=True)
+    task_rename.rename_task(root, "data", "grp/data")
+    assert text(outer / "shared" / "x.py") == "'superRA/grp/data/in.csv'\n"
+
+
+def test_a_citation_the_move_cannot_resolve_is_named(project, capsys):
+    script = project.parent / "Code" / "deep.py"
+    script.write_text(f"cd_relative = '../../{OLD}/x.csv'\n", encoding="utf-8")
+    track(project)
+    move(project)
+    assert text(script) == f"cd_relative = '../../{OLD}/x.csv'\n"
+    out = capsys.readouterr().out
+    assert f"Left {OLD} in 1 file(s), where it leads elsewhere or could not be resolved: Code/deep.py" in out
 
 
 def test_a_rename_into_a_longer_slug_is_not_applied_twice(project):

@@ -72,8 +72,9 @@ It also re-points each literal `superRA/<task-path>` to the new path, in these f
 - **Task-tree Markdown** — `## Reproduction` declarations and prose alike.
 - **Tracked source files** in this project — code, notebooks, `.tex`, config, and project Markdown, by file type. Outside git, the move names the path to search for by hand.
 - **Left unchanged** — logs, JSON, data files, `comments.yaml`, `repro-lock.json`, and `repro-acceptance/` keep the path they recorded. Untracked files do too, as does a path assembled at runtime (`joinpath("superRA", slug)`).
-- **Not matched** — a path that leads to another project, a URL, and any file inside another project in the same repo. A path needs no prefix, a root variable (`$ROOT/`), or one that resolves to this project.
-- **Named for a hand search** — online-only files, which are never downloaded, and files that are not UTF-8.
+- **Not matched** — a URL, any file inside another project in the same repo, and a path whose prefix does not lead here. A path needs no prefix, a root variable (`$ROOT/`), or a prefix resolving to this project from the citing file or the project root.
+- **Kept as written** — a variable prefix counts as this project's root, and a moved file's own `../` prefix keeps its depth.
+- **Named for a hand search** — online-only files, which are never downloaded, files that are not UTF-8, and each file still citing the old path after the rewrite, such as a path relative to a `cd` in a command.
 
 Steps then read `stale`: a rewritten path changes a step's definition, and a rewritten script changes its dep. The move names the steps it changed directly, and `repro status` lists everything downstream; [the stale rule](../../reproducibility/references/rerun-or-accept.md#the-stale-rule) decides whether to rebuild or accept. A failed write rolls the whole move back.
 

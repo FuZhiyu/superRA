@@ -802,6 +802,20 @@ def _iter_contained_markdown(root: Path, plan_root: Path):
 
 
 _PATH_CHARS = r"[\w.~$@{}()%/-]"
+_URL_SO_FAR = re.compile(r"""://[^\s"'`<>]*$""")
+
+
+def _past_open_bracket(prefix: str) -> str:
+    """*prefix* after its last unclosed bracket, which opens a TeX argument or a call."""
+    closed = 0
+    for index in range(len(prefix) - 1, -1, -1):
+        if prefix[index] in ")}":
+            closed += 1
+        elif prefix[index] in "({":
+            if not closed:
+                return prefix[index + 1:]
+            closed -= 1
+    return prefix
 
 
 def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
@@ -811,7 +825,7 @@ def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
     Anything else must resolve there, from the citing file or the project root, so a
     path into another project and a URL both fail.
     """
-    prefix = prefix.lstrip("({")  # the opening of a Markdown link or a call
+    prefix = _past_open_bracket(prefix)
     if not prefix:
         return True
     if not prefix.endswith("/"):
@@ -826,6 +840,15 @@ def _leads_to_project(prefix: str, base_dir: Path, project_root: Path) -> bool:
     )
 
 
+def task_path_pattern(plan_root: Path, directory: Path) -> re.Pattern[str]:
+    """Match a citation of *directory*'s task path, with the path text before it."""
+    root = plan_root.resolve()
+    old = f"{root.name}/{directory.resolve().relative_to(root).as_posix()}"
+    return re.compile(
+        rf"(?<!{_PATH_CHARS})(?P<prefix>{_PATH_CHARS}*?){re.escape(old)}(?![\w-]|\.\w)"
+    )
+
+
 def task_path_rewriter(
     plan_root: Path, from_dir: Path, to_dir: Path
 ) -> Callable[..., str]:
@@ -837,13 +860,9 @@ def task_path_rewriter(
     """
     root = plan_root.resolve()
     project_root = root.parent
-    old, new = (
-        f"{root.name}/{directory.resolve().relative_to(root).as_posix()}"
-        for directory in (from_dir, to_dir)
-    )
-    pattern = re.compile(
-        rf"(?<!{_PATH_CHARS})(?P<prefix>{_PATH_CHARS}*?){re.escape(old)}(?![\w-]|\.\w)"
-    )
+    old = f"{root.name}/{from_dir.resolve().relative_to(root).as_posix()}"
+    new = f"{root.name}/{to_dir.resolve().relative_to(root).as_posix()}"
+    pattern = task_path_pattern(plan_root, from_dir)
 
     def rewrite(text: str, base_dir: Path | None = None) -> str:
         if old not in text:
@@ -851,7 +870,11 @@ def task_path_rewriter(
 
         def replace(match: re.Match[str]) -> str:
             prefix = match.group("prefix")
-            if _leads_to_project(prefix, base_dir or project_root, project_root):
+            start = match.end("prefix")
+            line = text[text.rfind("\n", 0, start) + 1:start]
+            if not _URL_SO_FAR.search(line) and _leads_to_project(
+                prefix, base_dir or project_root, project_root
+            ):
                 return prefix + new
             return match.group(0)
 
