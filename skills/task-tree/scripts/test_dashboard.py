@@ -2095,7 +2095,7 @@ class TestTouchPolish:
         """The polish primitives survive the live render (server path): markup
         stays inline, CSS/JS are served from the extracted static files."""
         text = client.get("/").text
-        assert 'id="workspace-filter"' in text
+        assert 'id="workspace-filter-bar"' in text
         assert re.search(r'<link rel="stylesheet" href="/static/dashboard\.css\?v=[0-9a-f]{12}">', text)
         assert re.search(r'<script src="/static/dashboard\.js\?v=[0-9a-f]{12}"></script>', text)
         css = client.get("/static/dashboard.css").text
@@ -7094,7 +7094,8 @@ def _run_repro_render_node(harness_body):
     defs = _extract_js_defs([
         "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD",
         "reproStatusIndex", "reproStateOf", "reproChannels", "reproRollup", "reproTaskTitle", "reproHeadHTML",
-        "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches", "workspaceLineage", "reproScopeHTML",
+        "reproProject", "reproWithin", "reproButton", "workspaceGraph", "workspaceTaskMatches", "workspaceLineage",
+        "workspaceFilterCount", "workspaceStepIndex", "workspaceStepMatches", "workspaceFiltersForHash", "reproScopeHTML",
         "reproControlsHTML", "reproTasks", "reproStronglyConnected", "reproCycleMembers", "reproHierarchy",
         "reproHierarchyLayout", "reproGraphHTML", "reproEdgeLabel", "reproLogicalOnly", "parentPath",
         "reproLegendHTML", "reproFindingsHTML", "reproNodeId", "reproDuration", "reproOutLabel",
@@ -7106,7 +7107,7 @@ def _run_repro_render_node(harness_body):
     # drawReproView writes into a container and rebinds handlers; the harness
     # supplies just enough DOM and module state for the pure render path.
     shim = (
-        "var _workspaceFilters={statuses:[],tasks:null};\n"
+        "var _workspaceFilters={status:{neg:false,values:[]},steps:[],scope:{neg:false,paths:[]},lineage:[]};\n"
         "var _reproSelected='', _reproData=null, pathTitles={};\n"
         "var window={}; var _reproNav={selected:'',expanded:[]};\n"
         "var _reproNotice='', _reproLayoutCache=null, _reproViewNext='open', _reproPreserve='';\n"

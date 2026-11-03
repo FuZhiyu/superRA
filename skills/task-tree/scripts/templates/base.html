@@ -79,7 +79,7 @@
   <div class="header-controls">
     <button class="hc-btn workspace-search" id="btn-find" type="button" aria-haspopup="dialog"
             title="Search tasks, steps, files, and task text (/ or Ctrl-K)" onclick="openSearchPalette()">Search tasks, steps, files…</button>
-    <button class="hc-btn" id="filter-trigger" type="button" aria-haspopup="dialog" onclick="openWorkspaceFilter()">Filter</button>
+    <button class="hc-btn" id="filter-trigger" type="button" aria-haspopup="dialog" onclick="openWorkspaceFilter(this)">Filter</button>
     <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Tree</button>
     <button class="hc-btn" id="btn-reproduction" onclick="showView('reproduction')">Graph</button>
     <button class="hc-btn" id="navigation-toggle" onclick="toggleNavigationPane()">Hide sidebar</button>
@@ -87,18 +87,7 @@
   </div>
 </div>
 
-<div id="workspace-filter-summary" class="workspace-filter-summary" hidden></div>
-<dialog id="workspace-filter" class="workspace-filter" aria-labelledby="workspace-filter-title">
-  <div class="workspace-filter-head"><strong id="workspace-filter-title">Filter tasks</strong><button class="hc-btn" onclick="closeWorkspaceFilter()">Done</button></div>
-  <fieldset><legend>Task status</legend><div id="workspace-status-options"></div></fieldset>
-  <fieldset class="workspace-lineage-filter"><legend>Dependencies</legend><div id="workspace-lineage-options"></div></fieldset>
-  <section class="workspace-task-filter" aria-labelledby="workspace-task-filter-title"><h3 id="workspace-task-filter-title">Tasks to show</h3>
-    <input id="workspace-task-query" type="search" placeholder="Find a task in this list…" aria-label="Find a task in filter list" oninput="renderWorkspaceTaskOptions()">
-    <div class="filter-task-actions"><button class="hc-btn" onclick="selectAllWorkspaceTasks(true)">Select all</button><button class="hc-btn" onclick="selectAllWorkspaceTasks(false)">Deselect all</button></div>
-    <div id="workspace-task-options"></div>
-  </section>
-  <button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>
-</dialog>
+<div id="workspace-filter-bar" class="workspace-filter-bar" role="region" aria-label="Active filters" hidden></div>
 
 {#- Full-text search palette: a centered command-palette overlay that searches
     node titles + body text over the embedded SEARCH_INDEX and navigates to the

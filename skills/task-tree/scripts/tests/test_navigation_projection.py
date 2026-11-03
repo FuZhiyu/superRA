@@ -135,45 +135,140 @@ assert.deepEqual(sorted(union.steps),['fit','other','raw','report','tidy']);
 """)
 
 
+FILTER_DEFS = ['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', 'parentPath', 'REPRO_CLOUD', 'REPRO_STATES', 'REPRO_GLYPHS',
+    'reproStatusIndex', 'reproStateOf', 'reproChannels', 'reproTaskTitle', 'WORKSPACE_STATUSES', 'emptyWorkspaceFilters',
+    'workspaceStrings', 'workspaceScopeRoots', 'workspaceScopeFromSelection', 'normalizeWorkspaceFilters', 'workspaceAnchorKey',
+    'normalizeLineageFilter', 'workspaceFilterCount', 'workspaceFiltersForHash', 'workspaceLineage', 'workspaceStepIndex',
+    'lineageAnchorLabel', 'workspaceTaskTitle', 'workspaceScopeAdd', 'workspaceTasks', 'workspaceStepMatches',
+    'workspaceTaskMatches', 'workspaceVisibility', 'workspaceFacetCounts', 'workspaceResultCount', 'workspaceGraph']
+
+# Statuses and reported step states over the LINEAGE graph. `fit` and `report`
+# are stale only through `tidy`; their own state is fresh.
+FILTER_FIXTURE = """
+var statusOf={data:'approved',clean:'implemented',model:'in-progress','model/fit':'revise','model/report':'not-started',docs:'approved',notes:'postponed',other:'archived'};
+tasks.forEach(t=>{t.status=statusOf[t.path];});
+var SEARCH_INDEX=[{path:'',title:'Root',status:'in-progress'}].concat(tasks.map(t=>({path:t.path,title:t.path,status:t.status})));
+var stepStatus=[['raw','fresh'],['tidy','stale'],['fit','stale','fresh'],['report','stale','fresh'],['docs-build','missing'],['note','failed'],['other','unverified']].map(([name,status,local_status])=>({name,status,local_status}));
+var _reproData={graph,status:{steps:stepStatus}},_workspaceFilters=emptyWorkspaceFilters();
+function use(f){_workspaceFilters=normalizeWorkspaceFilters(f);return workspaceVisibility();}
+function matched(f){return sorted(use(f).matches);}
+"""
+
+
+def filter_run(body, extra_defs=(), prelude=''):
+    definitions = _extract_js_defs(FILTER_DEFS + list(extra_defs))
+    source = ("const assert=require('node:assert/strict');var pathTitles={},SEARCH_INDEX=[],_workspaceLineageMemo=null,_workspaceStepMemo=null,activePath='';\n"
+              + prelude + definitions + '\n' + LINEAGE + FILTER_FIXTURE + body)
+    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+
+
+def test_facets_and_together_with_negation():
+    filter_run("""
+assert.deepEqual(matched({status:{neg:true,values:['archived','postponed']}}),['','clean','data','docs','model','model/fit','model/report']);
+assert.deepEqual(matched({scope:{neg:false,paths:['model']}}),['model','model/fit','model/report']);
+assert.deepEqual(matched({scope:{neg:true,paths:['model','docs']}}),['','clean','data','notes','other']);
+assert.deepEqual(matched({status:{values:['in-progress','revise']},scope:{paths:['model']}}),['model','model/fit'],'facets AND, values OR');
+var v=use({scope:{paths:['model/fit']}});
+assert(v.visible.has('model')&&v.visible.has('')&&!v.matches.has('model'),'ancestors show as context');
+""")
+
+
+def test_counts_apply_every_other_facet():
+    filter_run("""
+use({status:{values:['revise']},scope:{paths:['model']}});
+assert.deepEqual(workspaceFacetCounts('status'),{'in-progress':1,revise:1,'not-started':1},'status counts ignore the status facet only');
+assert.deepEqual(workspaceFacetCounts('scope'),{'model/fit':1,model:1,'':1});
+assert.deepEqual(workspaceFacetCounts('steps'),{stale:1});
+use({steps:['failed']});
+assert.deepEqual(workspaceFacetCounts('steps'),{fresh:1,stale:3,missing:1,failed:1,unverified:1});
+assert.deepEqual(workspaceFacetCounts('status'),{postponed:1},'a zero-count value is absent');
+""")
+
+
+def test_step_state_matches_the_reported_state():
+    filter_run("""
+assert.deepEqual(matched({steps:['stale']}),['clean','model/fit','model/report'],'a step stale through its producer matches stale');
+assert.deepEqual(workspaceGraph(graph).steps.map(s=>s.name).sort(),['fit','report','tidy'],'Graph drops steps outside the states');
+assert.deepEqual(matched({steps:['fresh']}),['data']);
+assert.deepEqual(matched({steps:['stale'],lineage:[{step:'tidy',direction:'up'}]}),['clean'],'the owned step must also pass the dependency filter');
+assert.equal(workspaceResultCount(use({steps:['stale','missing']})),'<b>4</b> of 9 tasks · <b>4</b> of 7 steps');
+_reproData=null;_workspaceStepMemo=null;
+assert.equal(matched({steps:['stale']}).length,9,'step states wait for the graph');
+""")
+
+
+def test_each_anchor_walks_its_own_direction():
+    filter_run("""
+use({lineage:[{step:'fit',direction:'up'},{step:'note',direction:'down'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['docs-build','fit','note','raw','tidy']);
+use({lineage:[{step:'fit',direction:'down'},{task:'docs',direction:'both'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['docs-build','fit','note','report']);
+assert.deepEqual(matched({lineage:[{step:'gone'}]}).length,9);
+assert.deepEqual(_workspaceFilters.lineage,[],'an anchor the graph no longer has is dropped');
+""")
+
+
+def test_hash_round_trips_and_legacy_forms_load():
+    filter_run("""
+var f=normalizeWorkspaceFilters({status:{neg:true,values:['postponed','bogus']},steps:['stale','nope'],scope:{neg:false,paths:['model/fit','model']},lineage:[{task:'docs',direction:'up'},{step:'fit'},{task:'docs'},{task:''}]});
+assert.deepEqual(f,{status:{neg:true,values:['postponed']},steps:['stale'],scope:{neg:false,paths:['model']},lineage:[{task:'docs',direction:'up'},{step:'fit',direction:'both'}]});
+assert.deepEqual(normalizeWorkspaceFilters(JSON.parse(JSON.stringify(workspaceFiltersForHash(f)))),f);
+assert.equal(workspaceFiltersForHash(emptyWorkspaceFilters()),undefined);
+var legacy=normalizeWorkspaceFilters({statuses:['revise'],tasks:null,lineage:{anchors:[{step:'fit'},{task:'docs'}],direction:'up'}});
+assert.deepEqual(legacy.status,{neg:false,values:['revise']});
+assert.deepEqual(legacy.lineage,[{step:'fit',direction:'up'},{task:'docs',direction:'up'}],'a shared direction applies to every anchor');
+var all=SEARCH_INDEX.map(t=>t.path);
+assert.deepEqual(normalizeWorkspaceFilters({tasks:all.filter(p=>!p.startsWith('model'))}).scope,{neg:true,paths:['model']});
+assert.deepEqual(normalizeWorkspaceFilters({tasks:['model/fit','model/report']}).scope,{neg:false,paths:['model/fit','model/report']});
+assert.deepEqual(normalizeWorkspaceFilters({tasks:all}).scope,{neg:false,paths:[]},'a full selection is no filter');
+assert.deepEqual(normalizeWorkspaceFilters({hidden:['docs','notes']}).scope,{neg:true,paths:['docs','notes']});
+var v=use({tasks:['model/fit','model/report']});
+assert(v.visible.has('model')&&!v.matches.has('model'),'an unselected parent of a selected child shows as context');
+""")
+
+
+def test_hiding_inside_an_included_subtree_keeps_the_rest():
+    filter_run("""
+_workspaceFilters=normalizeWorkspaceFilters({scope:{paths:['model']}});
+workspaceScopeAdd('model/fit',true);
+assert.deepEqual(_workspaceFilters.scope,{neg:false,paths:['model/report']});
+workspaceScopeAdd('model/report',true);
+assert.deepEqual(_workspaceFilters.scope,{neg:true,paths:['model/report']},'hiding the last included subtree switches to exclusion');
+workspaceScopeAdd('docs',true);
+assert.deepEqual(_workspaceFilters.scope,{neg:true,paths:['docs','model/report']});
+workspaceScopeAdd('data',false);
+assert.deepEqual(_workspaceFilters.scope,{neg:false,paths:['data']},'show only replaces an exclusion');
+""")
+
+
 def test_filtered_graph_keeps_chains_through_a_hidden_task():
-    definitions = _extract_js_defs(['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', 'parentPath',
-        'normalizeLineageFilter', 'workspaceLineage', 'workspaceTasks', 'workspaceTaskMatches', 'workspaceVisibility', 'workspaceGraph'])
-    source = "const assert=require('node:assert/strict');var pathTitles={},SEARCH_INDEX=[],_workspaceLineageMemo=null;\n" + definitions + '\n' + LINEAGE + """
-var _reproData={graph,status:{steps:[]}};
-var _workspaceFilters={statuses:[],tasks:tasks.map(t=>t.path).filter(p=>p!=='clean'),lineage:{anchors:[{step:'raw'},{step:'gone'}],direction:'down'}};
+    filter_run("""
+use({scope:{neg:true,paths:['clean']},lineage:[{step:'raw',direction:'down'},{step:'gone'}]});
 var view=workspaceGraph(graph);
 assert.deepEqual(view.steps.map(s=>s.name).sort(),['fit','raw','report']);
-assert.deepEqual(_workspaceFilters.lineage.anchors,[{step:'raw'}],'an anchor the graph no longer has is dropped');
+assert.deepEqual(_workspaceFilters.lineage,[{step:'raw',direction:'down'}],'an anchor the graph no longer has is dropped');
 assert(!workspaceTaskMatches('docs')&&workspaceTaskMatches('model/fit'));
-"""
-    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
-    assert result.returncode == 0, result.stderr
-
-
-def _summary_source(extra):
-    definitions = _extract_js_defs(['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', 'parentPath',
-        'normalizeLineageFilter', 'workspaceLineage', 'workspaceTasks', 'workspaceTaskMatches', 'workspaceVisibility',
-        'updateWorkspaceFilterSummary', 'lineageAnchorLabel'])
-    return "const assert=require('node:assert/strict');var pathTitles={},SEARCH_INDEX=[],_workspaceLineageMemo=null,activePath='',_reproData=null;\n" + definitions + '\n' + LINEAGE + extra
-
-
-def test_unavailable_graph_is_reported_in_the_filter_summary():
-    source = _summary_source("""
-var LINEAGE_DIRECTIONS={both:'B',up:'U',down:'D'},host={hidden:true,innerHTML:''};
-var document={getElementById:id=>id==='workspace-filter-summary'?host:id==='filter-trigger'?{classList:{toggle(){}}}:null};
-var escapeHtml=x=>x,escapeAttr=x=>x,reproTaskTitle=x=>x;
-var _workspaceFilters={statuses:[],tasks:null,lineage:{anchors:[{step:'raw'}],direction:'down'}};
-updateWorkspaceFilterSummary();
-assert(!host.hidden&&host.innerHTML.includes('graph unavailable'));
 """)
-    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
-    assert result.returncode == 0, result.stderr
+
+
+def test_unavailable_graph_is_reported_in_the_filter_bar():
+    filter_run("""
+_reproData=null;
+var host={hidden:true,innerHTML:'',contains(){return false;},querySelector(){return null;}};
+var document={activeElement:null,getElementById:id=>id==='workspace-filter-bar'?host:null};
+var escapeHtml=x=>x,escapeAttr=x=>x;
+_workspaceFilters=normalizeWorkspaceFilters({lineage:[{step:'raw',direction:'down'}]});
+renderWorkspaceFilterBar();
+assert(!host.hidden&&host.innerHTML.includes('graph unavailable')&&host.innerHTML.includes('Downstream of'));
+assert(host.innerHTML.includes('<b>9</b> of 9 tasks')&&!host.innerHTML.includes('steps'));
+""", extra_defs=['LINEAGE_DIRECTIONS', 'LINEAGE_ARROWS', 'workspaceSummarize', 'workspaceGlyphHTML', 'workspaceStateHTML',
+                 'workspaceChipHTML', 'renderWorkspaceFilterBar'])
 
 
 def test_anchor_sets_are_built_once_across_visibility_calls():
-    source = _summary_source("""
-_reproData={graph,status:{steps:[]}};
-var _workspaceFilters={statuses:[],tasks:null,lineage:{anchors:[{step:'raw'}],direction:'down'}};
+    filter_run("""
+_workspaceFilters=normalizeWorkspaceFilters({lineage:[{step:'raw',direction:'down'}]});
 var calls=0,real=workspaceTasks;workspaceTasks=function(){calls++;return real();};
 var first=workspaceVisibility(),afterFirst=calls;
 workspaceVisibility();workspaceVisibility();
@@ -181,5 +276,3 @@ assert.equal(afterFirst,2,'one catalog read for the memo, one for the visibility
 assert.equal(calls,afterFirst+2,'later calls read the catalog once each and reuse the memo sets');
 assert(first.matches.has('data')&&!first.matches.has('docs'));
 """)
-    result = subprocess.run([NODE, '-e', source], text=True, capture_output=True, timeout=20)
-    assert result.returncode == 0, result.stderr

@@ -483,46 +483,149 @@ function postHtmlFrameTheme(frame) {
   }
 }
 
-/* Shared navigation state: layout changes do not change what is selected or filtered. */
-var _workspaceFilters={statuses:[],tasks:null,lineage:null};
+/* Shared navigation state: layout changes do not change what is selected or filtered.
+   Facets AND together, values within a facet OR, and dependency anchors union,
+   each walking its own direction. */
+var WORKSPACE_STATUSES=['not-started','in-progress','implemented','revise','approved','archived','postponed'];
+var WORKSPACE_STATUS_GROUPS=[['Open',['not-started','in-progress','revise']],['In review',['implemented']],['Done',['approved']],['Shelved',['postponed','archived']]];
+var WORKSPACE_STEP_GROUPS=[['Needs attention',['stale','missing','failed']],['Up to date',['fresh']],['Other',['unverified','unknown']]];
+var WORKSPACE_QUICK_FILTERS=[
+  {label:'Active work',desc:'not-started, in-progress, revise',apply:function(f){f.status={neg:false,values:['in-progress','not-started','revise']};}},
+  {label:'Awaiting review',desc:'implemented',apply:function(f){f.status={neg:false,values:['implemented']};}},
+  {label:'Needs a rebuild',desc:'steps stale, missing, or failed',apply:function(f){f.steps=['failed','missing','stale'];}},
+  {label:'Hide shelved',desc:'status is not postponed or archived',apply:function(f){f.status={neg:true,values:['archived','postponed']};}}
+];
+var LINEAGE_DIRECTIONS={both:'Dependencies of',up:'Upstream of',down:'Downstream of'};
+var LINEAGE_ARROWS={up:'⇡',down:'⇣',both:'⇅'};
+var LINEAGE_NEXT={up:'down',down:'both',both:'up'};
+function emptyWorkspaceFilters() { return {status:{neg:false,values:[]},steps:[],scope:{neg:false,paths:[]},lineage:[]}; }
+var _workspaceFilters=emptyWorkspaceFilters();
 var _workspaceLineageMemo=null;
+var _workspaceStepMemo=null;
 var _treeSidebarHidden=false;
-var _filterExpanded=new Set(['']);
+function workspaceStrings(list, allowed) {
+  return Array.isArray(list)?Array.from(new Set(list.filter(function(v){return typeof v==='string'&&(!allowed||allowed.includes(v));}))).sort():[];
+}
+/* The fewest subtree roots that cover `paths`. */
+function workspaceScopeRoots(paths) {
+  return paths.filter(function(p){return !paths.some(function(r){return r!==p&&reproWithin(p,r);});});
+}
+/* A legacy `tasks` selection becomes the one-polarity subtree filter that
+   matches the same tasks, or the fewest others: an unselected parent of a
+   selected child cannot be expressed and shows as context. */
+function workspaceScopeFromSelection(selected) {
+  var all=workspaceTasks().map(function(t){return t.path;}),chosen=new Set(selected);
+  function form(neg) {
+    var whole=new Set(all.filter(function(p){return all.every(function(q){return !reproWithin(q,p)||chosen.has(q)!==neg;});}));
+    var paths=all.filter(function(p){if(!whole.has(p))return false;for(var a=parentPath(p);a!==null;a=parentPath(a))if(whole.has(a))return false;return true;});
+    var misses=all.filter(function(p){return (!paths.length||paths.some(function(r){return reproWithin(p,r);})!==neg)!==chosen.has(p);}).length;
+    return {neg:neg,paths:paths,misses:misses};
+  }
+  var a=form(false),b=form(true),best=b.misses<a.misses||(b.misses===a.misses&&b.paths.length<a.paths.length)?b:a;
+  return {neg:best.paths.length?best.neg:false,paths:best.paths};
+}
+/* Accepts the current hash shape and both legacy forms: `statuses`, and a
+   `tasks` selection or `hidden` list. */
 function normalizeWorkspaceFilters(value) {
-  value=value||{};
-  var selected=Array.isArray(value.tasks)?Array.from(new Set(value.tasks.filter(function(p){return typeof p==='string';}))).sort():null;
-  if(selected===null&&Array.isArray(value.hidden)&&value.hidden.length)selected=workspaceTasks().filter(function(t){return !value.hidden.some(function(p){return typeof p==='string'&&reproWithin(t.path,p);});}).map(function(t){return t.path;});
-  return {statuses:Array.isArray(value.statuses)?Array.from(new Set(value.statuses.filter(function(s){return ['not-started','in-progress','implemented','revise','approved','archived','postponed'].includes(s);}))).sort():[],tasks:selected,lineage:normalizeLineageFilter(value.lineage)};
+  value=value&&typeof value==='object'?value:{};
+  var out=emptyWorkspaceFilters(),status=value.status&&typeof value.status==='object'?value.status:{values:value.statuses},scope=value.scope&&typeof value.scope==='object'?value.scope:null;
+  out.status={neg:status.neg===true,values:workspaceStrings(status.values,WORKSPACE_STATUSES)};
+  out.steps=workspaceStrings(value.steps,REPRO_STATES.map(function(s){return s.key;}));
+  if(scope)out.scope={neg:scope.neg===true,paths:workspaceScopeRoots(workspaceStrings(scope.paths))};
+  else if(Array.isArray(value.tasks))out.scope=workspaceScopeFromSelection(workspaceStrings(value.tasks));
+  else if(Array.isArray(value.hidden))out.scope={neg:true,paths:workspaceScopeRoots(workspaceStrings(value.hidden))};
+  if(!out.status.values.length)out.status.neg=false;
+  if(!out.scope.paths.length)out.scope.neg=false;
+  out.lineage=normalizeLineageFilter(value.lineage);
+  return out;
 }
-/* The dependency filter: anchors ({task} or {step}) and a direction, or null. */
+function workspaceAnchorKey(a) { return a.step?'step:'+a.step:'task:'+a.task; }
+/* Dependency anchors, each {task} or {step} with its direction. A legacy
+   {anchors, direction} object gives every anchor the shared direction. */
 function normalizeLineageFilter(value) {
-  if(!value||!Array.isArray(value.anchors))return null;
-  var seen=new Set(),anchors=value.anchors.filter(function(a){
-    var key=a&&(typeof a.step==='string'&&a.step?'step:'+a.step:typeof a.task==='string'&&a.task?'task:'+a.task:'');
-    if(!key||seen.has(key))return false;seen.add(key);return true;
-  }).map(function(a){return typeof a.step==='string'&&a.step?{step:a.step}:{task:a.task};});
-  return anchors.length?{anchors:anchors,direction:['up','down'].includes(value.direction)?value.direction:'both'}:null;
+  var legacy=!!value&&!Array.isArray(value)&&Array.isArray(value.anchors),shared=legacy&&['up','down'].includes(value.direction)?value.direction:'both';
+  var seen=new Set();
+  return (Array.isArray(value)?value:legacy?value.anchors:[]).map(function(a){
+    if(!a)return null;
+    var direction=legacy?shared:['up','down'].includes(a.direction)?a.direction:'both';
+    return typeof a.step==='string'&&a.step?{step:a.step,direction:direction}:typeof a.task==='string'&&a.task?{task:a.task,direction:direction}:null;
+  }).filter(function(a){if(!a||seen.has(workspaceAnchorKey(a)))return false;seen.add(workspaceAnchorKey(a));return true;});
 }
-/* The dependency filter's set on the full graph, or null when no filter is active
-   or the graph has not loaded. Anchors the graph no longer has are dropped. */
+function workspaceFilterCount(f) {
+  f=f||_workspaceFilters;
+  return (f.status.values.length?1:0)+(f.steps.length?1:0)+(f.scope.paths.length?1:0)+f.lineage.length;
+}
+/* Only active facets enter the hash: {status:{neg,values}, steps, scope:{neg,paths}, lineage:[{task|step, direction}]}. */
+function workspaceFiltersForHash(f) {
+  if(!workspaceFilterCount(f))return undefined;
+  var out={};
+  if(f.status.values.length)out.status={neg:f.status.neg,values:f.status.values};
+  if(f.steps.length)out.steps=f.steps;
+  if(f.scope.paths.length)out.scope={neg:f.scope.neg,paths:f.scope.paths};
+  if(f.lineage.length)out.lineage=f.lineage;
+  return out;
+}
+/* The dependency filter's set on the full graph: the union of every anchor's
+   walk in its own direction. Null when no anchor is set or the graph has not
+   loaded; anchors the graph no longer has are dropped. */
 function workspaceLineage() {
-  var filter=_workspaceFilters.lineage;
-  if(!filter||!_reproData)return null;
-  var key=JSON.stringify(filter),memo=_workspaceLineageMemo;
+  var anchors=_workspaceFilters.lineage;
+  if(!anchors.length||!_reproData)return null;
+  var key=JSON.stringify(anchors),memo=_workspaceLineageMemo;
   if(!memo||memo.data!==_reproData||memo.key!==key){
     var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
-    var anchors=filter.anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
-    if(anchors.length!==filter.anchors.length)filter=_workspaceFilters.lineage=anchors.length?{anchors:anchors,direction:filter.direction}:null;
-    if(!filter)return null;
-    memo=_workspaceLineageMemo={data:_reproData,key:JSON.stringify(filter),set:reproLineage(graph,filter.anchors,filter.direction)};
+    var kept=anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
+    if(kept.length!==anchors.length)_workspaceFilters.lineage=kept;
+    if(!kept.length)return null;
+    var set={steps:new Set(),tasks:new Set()};
+    ['up','down','both'].forEach(function(direction){
+      var group=kept.filter(function(a){return a.direction===direction;});
+      if(!group.length)return;
+      var found=reproLineage(graph,group,direction);
+      found.steps.forEach(function(n){set.steps.add(n);});found.tasks.forEach(function(p){set.tasks.add(p);});
+    });
+    memo=_workspaceLineageMemo={data:_reproData,key:JSON.stringify(kept),set:set};
   }
   return memo.set;
 }
-function lineageAnchorLabel(anchor) { return anchor.step?anchor.step:reproTaskTitle(anchor.task); }
-function addLineageAnchor(anchor) {
-  var current=_workspaceFilters.lineage||{anchors:[],direction:'both'};
-  _workspaceFilters.lineage=normalizeLineageFilter({anchors:current.anchors.concat([anchor]),direction:current.direction});
+/* Each step's reported state (the one its Graph card shows) and each task's
+   steps, or null before the graph loads. */
+function workspaceStepIndex() {
+  if(!_reproData)return null;
+  if(!_workspaceStepMemo||_workspaceStepMemo.data!==_reproData){
+    var statuses=reproStatusIndex(_reproData),state={},byTask={};
+    (_reproData.graph.steps||[]).forEach(function(s){state[s.name]=reproChannels(statuses[s.name]).state;(byTask[s.task]||(byTask[s.task]=[])).push(s.name);});
+    _workspaceStepMemo={data:_reproData,state:state,byTask:byTask};
+  }
+  return _workspaceStepMemo;
+}
+function lineageAnchorLabel(anchor) { return anchor.step?anchor.step:workspaceTaskTitle(anchor.task); }
+function workspaceTaskTitle(path) {
+  var task=(SEARCH_INDEX||[]).find(function(t){return t.path===path;});
+  return task&&task.title||reproTaskTitle(path);
+}
+/* Adds an anchor, or sets the direction of one already present. */
+function addLineageAnchor(anchor, direction) {
+  var next=normalizeLineageFilter([Object.assign({},anchor,{direction:direction||'both'})])[0];
+  if(!next)return;
+  var current=_workspaceFilters.lineage.find(function(a){return workspaceAnchorKey(a)===workspaceAnchorKey(next);});
+  if(current)current.direction=next.direction;else _workspaceFilters.lineage.push(next);
   applyWorkspaceFilters(true);
+}
+/* Include (neg false) or exclude a subtree. Excluding from a positive scope
+   keeps the rest of each including root: the siblings along the path down to
+   the excluded task, with the ancestors between left as context. */
+function workspaceScopeAdd(path, neg) {
+  var scope=_workspaceFilters.scope;
+  if(!scope.paths.length||scope.neg===neg){_workspaceFilters.scope={neg:neg,paths:workspaceScopeRoots(workspaceStrings(scope.paths.concat([path])))};return;}
+  if(!neg){_workspaceFilters.scope={neg:false,paths:[path]};return;}
+  var all=workspaceTasks().map(function(t){return t.path;}),paths=[];
+  scope.paths.forEach(function(root){
+    if(reproWithin(root,path))return;
+    if(!reproWithin(path,root)){paths.push(root);return;}
+    for(var a=path;a!==root;a=parentPath(a)){var up=parentPath(a),self=a;all.forEach(function(p){if(p&&p!==self&&parentPath(p)===up)paths.push(p);});}
+  });
+  _workspaceFilters.scope=paths.length?{neg:false,paths:workspaceScopeRoots(workspaceStrings(paths))}:{neg:true,paths:[path]};
 }
 function workspaceTasks() {
   var tasks={};
@@ -530,24 +633,58 @@ function workspaceTasks() {
   if(_reproData)(_reproData.graph.dependencies&&_reproData.graph.dependencies.tasks||[]).forEach(function(t){tasks[t.path]=Object.assign({},tasks[t.path],t);});
   return Object.values(tasks).sort(function(a,b){return a.path.localeCompare(b.path);});
 }
-function workspaceTaskMatches(path, task) {
-  if(_workspaceFilters.tasks!==null&&!_workspaceFilters.tasks.includes(path))return false;
-  var lineage=workspaceLineage();if(lineage&&path&&!lineage.tasks.has(path))return false;
-  if(!_workspaceFilters.statuses.length)return true;
+/* A step passes the step-state and dependency filters; `skip` leaves one facet
+   out, for faceted counts. Step states wait for the graph. */
+function workspaceStepMatches(name, skip, lineage) {
+  var states=_workspaceFilters.steps,index=states.length&&skip!=='steps'?workspaceStepIndex():null;
+  if(index&&!states.includes(index.state[name]))return false;
+  return !lineage||lineage.steps.has(name);
+}
+/* A task passes every facet but `skip`. With a step-state filter it must own a
+   step in a selected state that also passes the dependency filter. */
+function workspaceTaskMatches(path, task, skip) {
+  var f=_workspaceFilters;
+  if(skip!=='scope'&&f.scope.paths.length&&f.scope.paths.some(function(r){return reproWithin(path,r);})===f.scope.neg)return false;
+  var lineage=skip==='lineage'?null:workspaceLineage();
+  if(lineage&&path&&!lineage.tasks.has(path))return false;
+  var index=f.steps.length&&skip!=='steps'?workspaceStepIndex():null;
+  if(index&&!(index.byTask[path]||[]).some(function(n){return workspaceStepMatches(n,null,lineage);}))return false;
+  if(skip==='status'||!f.status.values.length)return true;
   task=task||workspaceTasks().find(function(t){return t.path===path;});
-  return !!task&&_workspaceFilters.statuses.includes(task.status);
+  return !!task&&f.status.values.includes(task.status)!==f.status.neg;
 }
 function workspaceVisibility() {
   var tasks=workspaceTasks(),matches=new Set(),visible=new Set();
   tasks.forEach(function(t){if(workspaceTaskMatches(t.path,t)){matches.add(t.path);visible.add(t.path);var p=t.path;while(p){p=parentPath(p);visible.add(p);}}});
   return {matches:matches,visible:visible};
 }
+/* Per value of `facet`, what toggling it would match under every other active
+   facet: tasks per status, tasks under each subtree, steps per state (null
+   before the graph loads). */
+function workspaceFacetCounts(facet) {
+  var counts={},index=workspaceStepIndex(),lineage=workspaceLineage();
+  function add(key){counts[key]=(counts[key]||0)+1;}
+  if(facet==='steps'&&!index)return null;
+  workspaceTasks().forEach(function(t){
+    if(!workspaceTaskMatches(t.path,t,facet))return;
+    if(facet==='status')add(t.status);
+    else if(facet==='scope')for(var p=t.path;p!==null;p=parentPath(p))add(p);
+    else (index.byTask[t.path]||[]).forEach(function(n){if(workspaceStepMatches(n,'steps',lineage))add(index.state[n]);});
+  });
+  return counts;
+}
+/* `41 of 235 tasks · 88 of 310 steps`; steps once the graph has loaded. */
+function workspaceResultCount(visibility) {
+  var html='<b>'+visibility.matches.size+'</b> of '+workspaceTasks().length+' tasks';
+  if(!_reproData)return html;
+  var steps=_reproData.graph.steps||[],lineage=workspaceLineage();
+  return html+' · <b>'+steps.filter(function(s){return visibility.matches.has(s.task)&&workspaceStepMatches(s.name,null,lineage);}).length+'</b> of '+steps.length+' steps';
+}
 function workspaceGraph(graph) {
   var archived=graph.dependencies&&graph.dependencies.archived_tasks||[];
   if(archived.length){var catalog=workspaceTasks(),known=new Set(graph.dependencies.tasks.map(function(t){return t.path;})),extra=catalog.filter(function(t){return archived.includes(t.path)&&!known.has(t.path);});graph=Object.assign({},graph,{dependencies:Object.assign({},graph.dependencies,{tasks:graph.dependencies.tasks.concat(extra)})});}
-  var lineage=workspaceLineage();
-  if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length&&!lineage)return graph;
-  var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task)&&(!lineage||lineage.steps.has(s.name));}),names=new Set(steps.map(function(s){return s.name;}));
+  if(!workspaceFilterCount())return graph;
+  var lineage=workspaceLineage(),visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task)&&workspaceStepMatches(s.name,null,lineage);}),names=new Set(steps.map(function(s){return s.name;}));
   var dependencies=Object.assign({},graph.dependencies);
   dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
   dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
@@ -566,74 +703,340 @@ function applyWorkspaceFilters(changed) {
   });
   var nav=document.getElementById('nav-tree'),empty=document.getElementById('navigation-empty');
   if(nav){if(!empty){empty=document.createElement('p');empty.id='navigation-empty';empty.className='repro-hint';nav.prepend(empty);}empty.hidden=visibility.visible.size>0;empty.textContent='No tasks match these filters.';}
-  updateWorkspaceFilterSummary();refreshRovingTabindex();
+  renderWorkspaceFilterBar(visibility);refreshRovingTabindex();
   if(changed){
-    if(_workspaceFilters.statuses.length){var ancestors=Array.from(visibility.visible).filter(function(p){return !visibility.matches.has(p);});restoreExpandedNavPaths(ancestors);ancestors.forEach(function(p){if(!_reproNav.expanded.includes(p))_reproNav.expanded.push(p);});}
+    if(workspaceFilterCount()){var ancestors=Array.from(visibility.visible).filter(function(p){return !visibility.matches.has(p);});restoreExpandedNavPaths(ancestors);ancestors.forEach(function(p){if(!_reproNav.expanded.includes(p))_reproNav.expanded.push(p);});}
     workspaceWriteHistory();
     if(currentView==='reproduction'&&_reproData)drawReproView(document.getElementById('view-reproduction'),_reproData);
     renderReproDetail(_reproSelected);
+    workspacePopRender();
   }
 }
-function updateWorkspaceFilterSummary() {
-  var host=document.getElementById('workspace-filter-summary');if(!host)return;
-  var lineage=_workspaceFilters.lineage,active=_workspaceFilters.statuses.length+(_workspaceFilters.tasks===null?0:1)+(lineage?1:0);
-  host.hidden=!active;
-  host.innerHTML=(_workspaceFilters.statuses.length?'<span>Status: '+escapeHtml(_workspaceFilters.statuses.join(', '))+'</span>':'')
-    +(_workspaceFilters.tasks!==null?'<span>'+_workspaceFilters.tasks.length+' of '+workspaceTasks().length+' tasks selected</span>':'')
-    +(lineage&&!_reproData?'<span class="filter-lineage-summary">Dependency filter: graph unavailable</span>':'')
-    +(lineage&&_reproData?'<span class="filter-lineage-summary">'+LINEAGE_DIRECTIONS[lineage.direction]+' '+lineage.anchors.map(function(a){var label=lineageAnchorLabel(a);return '<b title="'+escapeAttr(label)+'">'+escapeHtml(label)+'</b>';}).join(', ')+'</span>':'')
-    +'<button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>';
-  var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=active?'Filter · '+active:'Filter';trigger.classList.toggle('active',!!active);}
-  var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear filters to show this task in navigation.';}
+function workspaceSummarize(list, max) { return list.length<=max?list.join(', '):list.slice(0,max).join(', ')+' +'+(list.length-max); }
+function workspaceGlyphHTML(state) { return '<span class="wf-glyph" data-state="'+state+'" aria-hidden="true">'+(REPRO_GLYPHS[state]||'?')+'</span>'; }
+function workspaceStateHTML(state) { return workspaceGlyphHTML(state)+state; }
+function workspaceChipHTML(key, inner, label, lead) {
+  return '<span class="wf-chip'+(lead?' is-lineage':'')+'">'+(lead||'')+'<button type="button" class="wf-chip-edit" data-wf-edit="'+key+'" data-wf-key="edit:'+key+'" aria-haspopup="dialog" aria-label="Edit '+escapeAttr(label)+'">'+inner+'</button>'
+    +'<button type="button" class="wf-chip-x" data-wf-remove="'+key+'" data-wf-key="remove:'+key+'" aria-label="Remove '+escapeAttr(label)+'">×</button></span>';
+}
+/* One chip per active filter, + Filter, the result count, and Clear; shown
+   only while a filter is active. */
+function renderWorkspaceFilterBar(visibility) {
+  var host=document.getElementById('workspace-filter-bar');if(!host)return;
+  var f=_workspaceFilters,count=workspaceFilterCount(),focus=host.contains(document.activeElement)?document.activeElement.dataset.wfKey:null,chips='';
+  if(f.status.values.length){var op=f.status.neg?'is not':f.status.values.length>1?'is any of':'is',values=workspaceSummarize(f.status.values,3);
+    chips+=workspaceChipHTML('status','<span class="wf-k">Status</span><span class="wf-op">'+op+'</span><span class="wf-v">'+escapeHtml(values)+'</span>','Status '+op+' '+values);}
+  if(f.steps.length){var states=REPRO_STATES.map(function(s){return s.key;}).filter(function(s){return f.steps.includes(s);});
+    chips+=workspaceChipHTML('steps','<span class="wf-k">Steps</span><span class="wf-op">are</span><span class="wf-v">'+states.map(workspaceStateHTML).join(' ')+'</span>','Steps are '+states.join(', '));}
+  if(f.scope.paths.length){var titles=workspaceSummarize(f.scope.paths.map(workspaceTaskTitle),2);
+    chips+=workspaceChipHTML('scope','<span class="wf-k">'+(f.scope.neg?'Not in':'In')+'</span><span class="wf-v">'+escapeHtml(titles)+'</span>',(f.scope.neg?'Not in ':'In ')+titles);}
+  f.lineage.forEach(function(a,i){
+    var label=LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),index=a.step&&workspaceStepIndex(),glyph=a.step?workspaceGlyphHTML(index&&index.state[a.step]||'unknown'):'';
+    chips+=workspaceChipHTML('lineage:'+i,'<span class="wf-k">'+LINEAGE_DIRECTIONS[a.direction]+'</span><span class="wf-v'+(a.step?' is-step':'')+'">'+glyph+escapeHtml(lineageAnchorLabel(a))+'</span>',label,
+      '<button type="button" class="wf-chip-dir" data-wf-dir="'+i+'" data-wf-key="dir:'+i+'" title="Change direction" aria-label="'+escapeAttr(label)+'. Change direction">'+LINEAGE_ARROWS[a.direction]+'</button>');
+  });
+  host.hidden=!count;
+  host.innerHTML=chips+'<button type="button" class="wf-add" id="filter-add" data-wf-add data-wf-key="add" aria-haspopup="dialog">+ Filter</button>'
+    +'<span class="wf-count" role="status">'+(count?workspaceResultCount(visibility||workspaceVisibility()):'')
+    +((f.lineage.length||f.steps.length)&&!_reproData?' · <span class="filter-lineage-summary">graph unavailable</span>':'')+'</span>'
+    +'<button type="button" class="wf-clear" data-wf-clear data-wf-key="clear">Clear</button>';
+  if(focus){var again=host.querySelector('[data-wf-key="'+focus+'"]')||(!host.hidden&&host.querySelector('#filter-add'))||document.getElementById('filter-trigger');if(again)again.focus({preventScroll:true});}
+  var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=count?'Filter · '+count:'Filter';trigger.classList.toggle('active',!!count);}
+  var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear the filter bar to show this task in navigation.';}
   if(typeof reproSizeWorkspace==='function')reproSizeWorkspace();
 }
-var LINEAGE_DIRECTIONS={both:'Upstream and downstream of',up:'Upstream of',down:'Downstream of'};
-function openWorkspaceFilter() {
-  var dialog=document.getElementById('workspace-filter');
-  document.getElementById('workspace-task-query').value='';
-  renderWorkspaceFilter();dialog.showModal();
-  loadReproData(false).then(renderWorkspaceFilter).catch(function(){});
+function openWorkspaceFilter(anchor) { workspacePopOpen('add',anchor||document.getElementById('filter-trigger')); }
+function clearWorkspaceFilters() { _workspaceFilters=emptyWorkspaceFilters();workspacePopClose(false);applyWorkspaceFilters(true); }
+
+/* ── Filter popover: + Filter, the facet editors, and the dependency picker ──
+   One element re-anchored under the control that opened it. A refresh rewrites
+   the head and body but keeps the search box, so typing survives filtering. */
+var _wfPop=null;
+var _wfDepDirection='both';
+function workspacePopOpen(kind, anchor) {
+  if(_wfPop&&_wfPop.kind===kind&&_wfPop.anchor===anchor){workspacePopClose(true);return;}
+  workspacePopClose(false);
+  var el=document.createElement('div');el.className='wf-pop';el.id='wf-pop';el.setAttribute('role','dialog');
+  document.body.appendChild(el);
+  _wfPop={kind:kind,anchor:anchor,el:el,items:[],hl:0};
+  el.addEventListener('click',onWorkspacePopClick);el.addEventListener('change',onWorkspacePopChange);
+  el.addEventListener('input',function(e){if(e.target.classList.contains('wf-pop-search')){_wfPop.hl=0;workspacePopRender();}});el.addEventListener('keydown',onWorkspacePopKeydown);
+  workspacePopShow(kind);
+  loadReproData(false).then(function(){if(_wfPop&&_wfPop.el===el)workspacePopRender();}).catch(function(){});
 }
-function closeWorkspaceFilter() {document.getElementById('workspace-filter').close();document.getElementById('filter-trigger').focus();}
-function renderWorkspaceFilter() {
-  var host=document.getElementById('workspace-status-options');if(!host)return;
-  host.innerHTML=['not-started','in-progress','implemented','revise','approved','archived','postponed'].map(function(status){return '<label><input type="checkbox" data-filter-status="'+status+'"'+(_workspaceFilters.statuses.includes(status)?' checked':'')+'> '+status+'</label>';}).join('');
-  renderWorkspaceLineageOptions();renderWorkspaceTaskOptions();
+/* Switch the open popover to another kind in place. */
+function workspacePopShow(kind) {
+  var pop=_wfPop;if(!pop)return;
+  pop.kind=kind;pop.hl=0;
+  var search={add:'Filter by status, step state, task, or step…',scope:'Find a task…',deps:'Find a task or step…'}[kind];
+  pop.el.innerHTML='<div class="wf-pop-head"></div>'+(search?'<input type="search" class="wf-pop-search" autocomplete="off" spellcheck="false" placeholder="'+search+'" aria-label="'+search.replace('…','')+'"'+(kind==='add'?' role="combobox" aria-expanded="true" aria-controls="wf-pop-body"':'')+'>':'')
+    +'<div class="wf-pop-body" id="wf-pop-body"'+(kind==='add'?' role="listbox" aria-label="Filters"':'')+'></div><div class="wf-pop-foot"></div>';
+  workspacePopRender();
+  var first=pop.el.querySelector('.wf-pop-search')||pop.el.querySelector('input,button');if(first)first.focus({preventScroll:true});
 }
-function renderWorkspaceLineageOptions() {
-  var host=document.getElementById('workspace-lineage-options');if(!host)return;
-  var lineage=_workspaceFilters.lineage;
-  if(!lineage){host.innerHTML='<p class="repro-hint">Select a task or step, then choose <strong>Filter to dependencies</strong>.</p>';return;}
-  host.innerHTML='<div class="lineage-chips">'+lineage.anchors.map(function(a,i){var label=lineageAnchorLabel(a);
-    return '<span class="lineage-chip'+(a.step?' is-step':'')+'" title="'+escapeAttr(a.step?'Step '+a.step:a.task)+'"><span>'+escapeHtml(label)+'</span><button type="button" data-lineage-remove="'+i+'" aria-label="Remove '+escapeAttr(label)+'">×</button></span>';}).join('')+'</div>'
-    +'<div class="lineage-direction" role="radiogroup" aria-label="Direction">'+[['up','Upstream'],['down','Downstream'],['both','Both']].map(function(d){return '<label><input type="radio" name="lineage-direction" value="'+d[0]+'"'+(lineage.direction===d[0]?' checked':'')+'> '+d[1]+'</label>';}).join('')+'</div>';
+function workspacePopClose(refocus) {
+  var pop=_wfPop;if(!pop)return;
+  _wfPop=null;pop.el.remove();
+  if(refocus){var anchor=pop.anchor&&pop.anchor.isConnected&&pop.anchor.offsetParent?pop.anchor:workspacePopAnchor('');if(anchor)anchor.focus({preventScroll:true});}
 }
-function renderWorkspaceTaskOptions() {
-  var host=document.getElementById('workspace-task-options');if(!host)return;
-  var q=document.getElementById('workspace-task-query').value.trim().toLowerCase(),tasks=workspaceTasks(),byPath={},children={};
+/* The chip editing `kind`, else + Filter while the bar shows, else the header Filter button. */
+function workspacePopAnchor(kind) {
+  var bar=document.getElementById('workspace-filter-bar');
+  return (bar&&!bar.hidden&&(bar.querySelector('[data-wf-edit="'+kind+'"]')||bar.querySelector('#filter-add')))||document.getElementById('filter-trigger');
+}
+function workspacePopPosition() {
+  var pop=_wfPop;if(!pop)return;
+  if(!pop.anchor||!pop.anchor.isConnected||!pop.anchor.offsetParent)pop.anchor=workspacePopAnchor(pop.kind);
+  var r=pop.anchor.getBoundingClientRect(),el=pop.el,top=r.bottom+6;
+  el.style.top=top+'px';el.style.left=Math.max(8,Math.min(r.left,window.innerWidth-el.offsetWidth-8))+'px';
+  el.style.maxHeight=Math.max(160,window.innerHeight-top-8)+'px';
+}
+function workspacePopRender() {
+  var pop=_wfPop;if(!pop)return;
+  var el=pop.el,active=document.activeElement,key=el.contains(active)&&active.dataset.wfKey,input=el.querySelector('.wf-pop-search'),q=input?input.value.trim().toLowerCase():'';
+  var view=pop.kind==='add'?workspaceAddView(q):pop.kind==='status'?workspaceStatusView():pop.kind==='steps'?workspaceStepsView():pop.kind==='scope'?workspaceScopeView(q):pop.kind==='deps'?workspaceDepsView(q):workspaceAnchorView(Number(pop.kind.split(':')[1]));
+  if(!view){workspacePopClose(true);return;}
+  el.setAttribute('aria-label',view.label);
+  var head=el.querySelector('.wf-pop-head'),body=el.querySelector('.wf-pop-body'),foot=el.querySelector('.wf-pop-foot');
+  head.innerHTML=view.head||'';head.hidden=!view.head;body.innerHTML=view.body;foot.innerHTML=view.foot||'';foot.hidden=!view.foot;
+  if(pop.kind==='add')workspacePopHighlight();
+  if(key){var again=el.querySelector('[data-wf-key="'+key+'"]');if(again)again.focus({preventScroll:true});}
+  workspacePopPosition();
+}
+function workspaceSegHTML(attr, options, current) {
+  return '<span class="wf-seg" role="group">'+options.map(function(o){return '<button type="button" '+attr+'="'+o[0]+'" data-wf-key="'+attr+':'+o[0]+'" aria-pressed="'+(String(current)===o[0])+'">'+o[1]+'</button>';}).join('')+'</span>';
+}
+function workspaceActsHTML(kind, id, withIn) {
+  return '<span class="wf-acts">'+(withIn?'<button type="button" class="wf-act is-text" data-wf-in="'+escapeAttr(id)+'" data-wf-key="in:'+escapeAttr(id)+'" title="Show only this subtree" aria-label="Show only this subtree">in</button>':'')
+    +(kind==='task'&&!id?'':['up','down','both'].map(function(d){return '<button type="button" class="wf-act" data-wf-anchor="'+kind+'|'+escapeAttr(id)+'|'+d+'" data-wf-key="'+kind+'|'+escapeAttr(id)+'|'+d+'" title="'+LINEAGE_DIRECTIONS[d]+'" aria-label="'+LINEAGE_DIRECTIONS[d]+'">'+LINEAGE_ARROWS[d]+'</button>';}).join(''))+'</span>';
+}
+/* A checkbox row with an `only` link and its faceted count; zero counts dim. */
+function workspaceValueRowHTML(facet, value, checked, inner, count) {
+  return '<div class="wf-row'+(count===0?' is-zero':'')+'"><label class="wf-grow"><input type="checkbox" data-wf-value="'+facet+'|'+value+'" data-wf-key="value:'+value+'"'+(checked?' checked':'')+'>'+inner+'</label>'
+    +'<button type="button" class="wf-link wf-only" data-wf-only="'+facet+'|'+value+'" data-wf-key="only:'+value+'">only</button><span class="wf-cnt">'+(count===null?'…':count)+'</span></div>';
+}
+function workspaceGroupHTML(facet, title, values, selected, toggle) {
+  var all=values.every(function(v){return selected.includes(v);});
+  return '<div class="wf-sec"><span>'+title+'</span>'+(toggle?'<button type="button" class="wf-link" data-wf-group="'+facet+'|'+values.join(',')+'" data-wf-key="group:'+values.join(',')+'">'+(all?'none':'all')+'</button>':'')+'</div>';
+}
+function workspaceStatusView() {
+  var s=_workspaceFilters.status,counts=workspaceFacetCounts('status');
+  return {label:'Task status',head:'<strong>Task status</strong>'+workspaceSegHTML('data-wf-neg',[['false','is'],['true','is not']],s.neg),
+    body:WORKSPACE_STATUS_GROUPS.map(function(g){return workspaceGroupHTML('status',g[0],g[1],s.values,true)+g[1].map(function(v){return workspaceValueRowHTML('status',v,s.values.includes(v),'<span class="badge badge-'+v+'">'+v+'</span>',counts[v]||0);}).join('');}).join(''),
+    foot:'Counts apply your other filters.'};
+}
+function workspaceStepsView() {
+  var selected=_workspaceFilters.steps,counts=workspaceFacetCounts('steps');
+  if(!counts)return {label:'Step state',head:'<strong>Step state</strong>',body:'<p class="wf-empty">'+(_reproData?'':'Loading step states…')+'</p>'};
+  return {label:'Step state',head:'<strong>Step state</strong>',
+    body:WORKSPACE_STEP_GROUPS.map(function(g){return workspaceGroupHTML('steps',g[0],g[1],selected,g[0]==='Needs attention')+g[1].map(function(v){return workspaceValueRowHTML('steps',v,selected.includes(v),workspaceStateHTML(v),counts[v]||0);}).join('');}).join(''),
+    foot:'A step matches on its reported state, as its Graph card shows it.'};
+}
+/* Tasks in tree order with their depth. */
+function workspaceTaskOrder() {
+  var tasks=workspaceTasks(),byPath={},children={},out=[];
   tasks.forEach(function(t){byPath[t.path]=t;children[t.path]=[];});
-  tasks.forEach(function(t){if(t.path&&children[parentPath(t.path)])children[parentPath(t.path)].push(t.path);});
-  var matches=new Set(tasks.filter(function(t){return (t.path+' '+t.title).toLowerCase().includes(q);}).map(function(t){return t.path;})),visible=new Set(matches);
-  Array.from(matches).forEach(function(p){while(p){p=parentPath(p);visible.add(p);}});
-  function branch(path){
-    if(!visible.has(path))return '';
-    var task=byPath[path],kids=children[path],descendants=tasks.filter(function(t){return reproWithin(t.path,path);}),selected=descendants.filter(function(t){return _workspaceFilters.tasks===null||_workspaceFilters.tasks.includes(t.path);}).length;
-    var open=q?true:_filterExpanded.has(path),hasKids=kids.length>0;
-    return '<div class="filter-task-branch"><div class="filter-task-row">'
-      +(hasKids?'<button type="button" class="filter-task-fold" data-filter-fold="'+escapeAttr(path)+'" aria-expanded="'+open+'" aria-label="'+(open?'Collapse ':'Expand ')+escapeAttr(task.title||path||'Project root')+'">'+(open?'▾':'▸')+'</button>':'<span class="filter-task-leaf"></span>')
-      +'<label><input type="checkbox" data-filter-task="'+escapeAttr(path)+'"'+(selected===descendants.length?' checked':'')+(selected>0&&selected<descendants.length?' data-partial="true"':'')+'><span>'+escapeHtml(task.title||path||'Project root')+'<small>'+escapeHtml(path||'Project root')+'</small></span></label>'
-      +(hasKids?'<span class="filter-task-count">'+selected+'/'+descendants.length+'</span>':'')+'</div>'
-      +(hasKids?'<div class="filter-task-children"'+(open?'':' hidden')+'>'+kids.map(branch).join('')+'</div>':'')+'</div>';
+  tasks.forEach(function(t){var p=parentPath(t.path);if(p!==null&&children[p])children[p].push(t);});
+  function walk(t,depth){out.push({task:t,depth:depth});children[t.path].forEach(function(c){walk(c,depth+1);});}
+  tasks.filter(function(t){return parentPath(t.path)===null||!byPath[parentPath(t.path)];}).forEach(function(t){walk(t,0);});
+  return out;
+}
+function workspaceTaskText(t) { return ((t.title||'')+' '+(t.path||'project root')).toLowerCase(); }
+function workspaceScopeView(q) {
+  var scope=_workspaceFilters.scope,counts=workspaceFacetCounts('scope'),rows=workspaceTaskOrder().filter(function(r){return !q||workspaceTaskText(r.task).includes(q);});
+  return {label:'Task subtree',head:'<strong>Task subtree</strong>'+workspaceSegHTML('data-wf-scope-neg',[['false','under'],['true','not under']],scope.neg),
+    body:rows.map(function(r){var p=r.task.path,covered=scope.paths.some(function(root){return root!==p&&reproWithin(p,root);});
+      return '<div class="wf-row'+(counts[p]?'':' is-zero')+'" style="--wf-depth:'+(q?0:r.depth)+'"><label class="wf-grow"><input type="checkbox" data-wf-scope="'+escapeAttr(p)+'" data-wf-key="scope:'+escapeAttr(p)+'"'+(covered||scope.paths.includes(p)?' checked':'')+(covered?' disabled':'')+'><span class="wf-label">'+escapeHtml(r.task.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span></label>'
+        +workspaceActsHTML('task',p,false)+'<span class="wf-cnt">'+(counts[p]||0)+'</span></div>';}).join('')||'<p class="wf-empty">No tasks match.</p>',
+    foot:'Check a task to '+(scope.neg?'exclude':'include')+' its whole subtree.'};
+}
+function workspaceDepsView(q) {
+  var anchors=new Set(_workspaceFilters.lineage.map(workspaceAnchorKey)),index=workspaceStepIndex(),out='';
+  workspaceTaskOrder().forEach(function(r){
+    var t=r.task,hit=!q||workspaceTaskText(t).includes(q),steps=(index&&index.byTask[t.path]||[]).filter(function(n){return hit||n.toLowerCase().includes(q);}),depth=q?0:r.depth;
+    if(!hit&&!steps.length)return;
+    if(t.path)out+='<button type="button" class="wf-row wf-pick" style="--wf-depth:'+depth+'" data-wf-pick="task|'+escapeAttr(t.path)+'" data-wf-key="pick:task|'+escapeAttr(t.path)+'"><span class="wf-label">'+(anchors.has('task:'+t.path)?'✓ ':'')+escapeHtml(t.title||t.path)+'<small>'+escapeHtml(t.path)+'</small></span></button>';
+    steps.forEach(function(n){out+='<button type="button" class="wf-row wf-pick is-step" style="--wf-depth:'+(depth+(t.path?1:0))+'" data-wf-pick="step|'+escapeAttr(n)+'" data-wf-key="pick:step|'+escapeAttr(n)+'">'+workspaceGlyphHTML(index.state[n])+'<span class="wf-label">'+(anchors.has('step:'+n)?'✓ ':'')+escapeHtml(n)+'</span></button>';});
+  });
+  return {label:'Dependencies of a task or step',head:'<strong>Dependencies of…</strong>'+workspaceSegHTML('data-wf-depdir',[['up','⇡ Up'],['down','⇣ Down'],['both','⇅ Both']],_wfDepDirection),
+    body:out||'<p class="wf-empty">'+(index||q?'Nothing matches.':'Loading steps…')+'</p>',foot:'Pick a task (its whole subtree) or a single step.'};
+}
+function workspaceAnchorView(i) {
+  var a=_workspaceFilters.lineage[i];if(!a)return null;
+  return {label:LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),head:'<strong>'+escapeHtml(lineageAnchorLabel(a))+'</strong>',
+    body:'<div class="wf-pad"><p>Show '+(a.step?'this step':'this task’s steps')+' and what they connect to:</p>'+workspaceSegHTML('data-wf-setdir',[['up','⇡ Upstream'],['down','⇣ Downstream'],['both','⇅ Both']],a.direction)
+      +'<p class="wf-note">Several dependency chips combine as a union: a task shows if it connects to any of them.</p></div>',
+    foot:'<button type="button" class="wf-link" data-wf-another data-wf-key="another">+ Add another task or step</button>'};
+}
+/* + Filter: the facets and quick filters, or what a typed query matches. */
+function workspaceAddView(q) {
+  var pop=_wfPop,items=pop.items=[],sections=[],current=null;
+  function add(section,html,primary,secondary){if(section!==current){sections.push('<div class="wf-sec" role="presentation"><span>'+section+'</span></div>');current=section;}
+    sections.push('<div class="wf-row wf-option" role="option" id="wf-opt-'+items.length+'" data-wf-item="'+items.length+'">'+html+'</div>');items.push({primary:primary,secondary:secondary});}
+  function done(){workspacePopClose(true);applyWorkspaceFilters(true);}
+  if(!q){
+    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){workspacePopShow(f[0]);});});
+    WORKSPACE_QUICK_FILTERS.forEach(function(p){add('Quick filters','<span class="wf-grow wf-label">'+p.label+'<small>'+p.desc+'</small></span>',function(){p.apply(_workspaceFilters);done();});});
+  } else {
+    var statusCounts=workspaceFacetCounts('status'),stepCounts=workspaceFacetCounts('steps'),index=workspaceStepIndex();
+    WORKSPACE_STATUSES.filter(function(v){return v.includes(q);}).forEach(function(v){add('Task status','<span class="wf-grow">Status is <span class="badge badge-'+v+'">'+v+'</span></span><span class="wf-cnt">'+(statusCounts[v]||0)+'</span>',function(){var s=_workspaceFilters.status;_workspaceFilters.status=s.neg?{neg:false,values:[v]}:{neg:false,values:workspaceStrings(s.values.concat([v]))};done();});});
+    REPRO_STATES.filter(function(s){return s.key.includes(q);}).forEach(function(s){add('Step state','<span class="wf-grow">Steps are '+workspaceStateHTML(s.key)+'</span><span class="wf-cnt">'+(stepCounts?stepCounts[s.key]||0:'…')+'</span>',function(){_workspaceFilters.steps=workspaceStrings(_workspaceFilters.steps.concat([s.key]));done();});});
+    workspaceTasks().map(function(t){return {t:t,score:scoreSearchRecord({title:t.title||'',slug:t.path},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var p=x.t.path;
+      add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,false);done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p},'both');}:null);});
+    if(index)(_reproData.graph.steps||[]).map(function(s){return {s:s,score:scoreSearchRecord({title:s.name},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var n=x.s.name;
+      add('Steps',workspaceGlyphHTML(index.state[n])+'<span class="wf-grow wf-label is-step">'+escapeHtml(n)+'<small>'+escapeHtml(workspaceTaskTitle(x.s.task))+'</small></span>'+workspaceActsHTML('step',n,false),function(){workspacePopClose(true);addLineageAnchor({step:n},'both');});});
+    if(!items.length)sections.push('<p class="wf-empty">Nothing matches “'+escapeHtml(q)+'”.</p>');
   }
-  var roots=tasks.filter(function(t){return !t.path||!byPath[parentPath(t.path)];});
-  host.innerHTML=roots.map(function(t){return branch(t.path);}).join('')||'<p>No tasks match.</p>';
-  host.querySelectorAll('[data-partial]').forEach(function(input){input.indeterminate=true;});
+  return {label:'Add a filter',body:sections.join(''),
+    foot:'<span class="wf-kbd">↑↓</span> move <span class="wf-kbd">↵</span> apply <span class="wf-kbd">⇧↵</span> dependencies <span class="wf-kbd">esc</span> close'};
 }
-function selectAllWorkspaceTasks(selected) {
-  _workspaceFilters.tasks=selected?null:[];renderWorkspaceTaskOptions();applyWorkspaceFilters(true);
+function workspacePopHighlight() {
+  var pop=_wfPop,input=pop.el.querySelector('.wf-pop-search');
+  pop.hl=Math.max(0,Math.min(pop.hl,pop.items.length-1));
+  pop.el.querySelectorAll('[data-wf-item]').forEach(function(row){var on=Number(row.dataset.wfItem)===pop.hl;row.classList.toggle('is-hl',on);row.setAttribute('aria-selected',String(on));if(on)row.scrollIntoView({block:'nearest'});});
+  if(input){if(pop.items.length)input.setAttribute('aria-activedescendant','wf-opt-'+pop.hl);else input.removeAttribute('aria-activedescendant');}
 }
-function clearWorkspaceFilters() {
-  _workspaceFilters={statuses:[],tasks:null,lineage:null};applyWorkspaceFilters(true);renderWorkspaceFilter();
+function onWorkspacePopKeydown(e) {
+  var pop=_wfPop;if(!pop)return;
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();workspacePopClose(true);return;}
+  if(pop.kind!=='add'||!e.target.classList.contains('wf-pop-search'))return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();pop.hl+=e.key==='ArrowDown'?1:-1;workspacePopHighlight();}
+  else if(e.key==='Enter'){var item=pop.items[pop.hl];if(!item)return;e.preventDefault();(e.shiftKey&&item.secondary||item.primary)();}
+}
+function workspaceToggle(list, value, on) { return workspaceStrings(on?list.concat([value]):list.filter(function(v){return v!==value;})); }
+function workspaceSetValues(facet, values) { if(facet==='status')_workspaceFilters.status.values=values;else _workspaceFilters.steps=values; }
+function onWorkspacePopClick(e) {
+  var pop=_wfPop,el;if(!pop)return;
+  var current=function(facet){return facet==='status'?_workspaceFilters.status.values:_workspaceFilters.steps;};
+  if((el=e.target.closest('[data-wf-anchor]'))){var a=el.dataset.wfAnchor.split('|'),dir=a.pop(),kind=a.shift(),id=a.join('|');workspacePopClose(true);addLineageAnchor(kind==='step'?{step:id}:{task:id},dir);}
+  else if((el=e.target.closest('[data-wf-in]'))){workspaceScopeAdd(el.dataset.wfIn,false);workspacePopClose(true);applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-only]'))){var o=el.dataset.wfOnly.split('|');workspaceSetValues(o[0],[o[1]]);applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-group]'))){var g=el.dataset.wfGroup.split('|'),vals=g[1].split(','),list=current(g[0]),all=vals.every(function(v){return list.includes(v);});
+    workspaceSetValues(g[0],workspaceStrings(all?list.filter(function(v){return !vals.includes(v);}):list.concat(vals)));applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-neg]'))){_workspaceFilters.status.neg=el.dataset.wfNeg==='true';applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-scope-neg]'))){_workspaceFilters.scope.neg=el.dataset.wfScopeNeg==='true';applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-setdir]'))){var anchor=_workspaceFilters.lineage[Number(pop.kind.split(':')[1])];if(anchor){anchor.direction=el.dataset.wfSetdir;applyWorkspaceFilters(true);}}
+  else if((el=e.target.closest('[data-wf-depdir]'))){_wfDepDirection=el.dataset.wfDepdir;workspacePopRender();}
+  else if((el=e.target.closest('[data-wf-pick]'))){var p=el.dataset.wfPick,step=p.indexOf('step|')===0,value=p.slice(5);workspacePopClose(true);addLineageAnchor(step?{step:value}:{task:value},_wfDepDirection);}
+  else if(e.target.closest('[data-wf-another]'))workspacePopShow('deps');
+  else if((el=e.target.closest('[data-wf-item]'))){pop.hl=Number(el.dataset.wfItem);pop.items[pop.hl].primary();}
+}
+function onWorkspacePopChange(e) {
+  var input=e.target;
+  if(input.dataset.wfValue){var v=input.dataset.wfValue.split('|'),list=v[0]==='status'?_workspaceFilters.status.values:_workspaceFilters.steps;workspaceSetValues(v[0],workspaceToggle(list,v[1],input.checked));}
+  else if(input.dataset.wfScope!==undefined){var path=input.dataset.wfScope;if(input.checked)workspaceScopeAdd(path,_workspaceFilters.scope.neg);else _workspaceFilters.scope.paths=_workspaceFilters.scope.paths.filter(function(p){return p!==path;});}
+  else return;
+  applyWorkspaceFilters(true);
+}
+function onWorkspaceFilterBarClick(e) {
+  var el;
+  if((el=e.target.closest('[data-wf-remove]'))){var key=el.dataset.wfRemove;workspacePopClose(false);
+    if(key==='status')_workspaceFilters.status={neg:false,values:[]};else if(key==='steps')_workspaceFilters.steps=[];else if(key==='scope')_workspaceFilters.scope={neg:false,paths:[]};else _workspaceFilters.lineage.splice(Number(key.split(':')[1]),1);
+    applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-dir]'))){var a=_workspaceFilters.lineage[Number(el.dataset.wfDir)];if(a){a.direction=LINEAGE_NEXT[a.direction];applyWorkspaceFilters(true);}}
+  else if((el=e.target.closest('[data-wf-edit]')))workspacePopOpen(el.dataset.wfEdit,el);
+  else if((el=e.target.closest('[data-wf-add]')))workspacePopOpen('add',el);
+  else if(e.target.closest('[data-wf-clear]')){clearWorkspaceFilters();document.getElementById('filter-trigger').focus({preventScroll:true});}
+}
+
+/* ── Tree-row filter menu ──
+   Right-click, the row's ⋯, Shift+F10 or the Menu key, or a 500 ms long-press.
+   The input that opened it picks the form: touch gets a bottom sheet. */
+var _rowMenu=null;
+var _rowPress=null;
+var _rowPressDone=false;
+var _rowPointer='mouse';
+function openRowMenu(path, owner, at) {
+  closeRowMenu(false);
+  var sheet=!!at.sheet,title=workspaceTaskTitle(path),el=document.createElement('div'),backdrop=null;
+  var items=[['in','⊂','Show only this subtree'],['out','⊄','Hide this subtree']];
+  if(path)items.push(null,['up','⇡','Show what it depends on','upstream'],['down','⇣','Show what depends on it','downstream'],['both','⇅','Show both directions']);
+  items.push(null,['open','↗','Open task']);
+  el.className='row-menu'+(sheet?' is-sheet':'');el.id='row-menu';el.setAttribute('role','menu');el.setAttribute('aria-label','Filter options for '+title);
+  el.innerHTML=(sheet?'<div class="row-menu-grab" aria-hidden="true"></div>':'')+'<div class="row-menu-title" aria-hidden="true">'+escapeHtml(title)+'</div>'+(sheet?'<div class="row-menu-path" aria-hidden="true">'+escapeHtml(path||'Project root')+'</div>':'')
+    +items.map(function(it){return it?'<button type="button" role="menuitem" tabindex="-1" data-row-action="'+it[0]+'"><span class="row-menu-ic" aria-hidden="true">'+it[1]+'</span>'+it[2]+(it[3]&&!sheet?'<span class="row-menu-kb">'+it[3]+'</span>':'')+'</button>':'<hr role="separator">';}).join('')
+    +(sheet?'<button type="button" role="menuitem" tabindex="-1" class="row-menu-cancel" data-row-action="cancel">Cancel</button>':'');
+  if(sheet){backdrop=document.createElement('div');backdrop.className='row-menu-backdrop';backdrop.addEventListener('click',function(){if(!_rowPressDone)closeRowMenu(true);});document.body.appendChild(backdrop);}
+  document.body.appendChild(el);
+  _rowMenu={el:el,backdrop:backdrop,owner:owner,path:path};
+  if(owner.classList.contains('task-row-more'))owner.setAttribute('aria-expanded','true');
+  if(sheet){
+    requestAnimationFrame(function(){el.classList.add('is-open');if(backdrop)backdrop.classList.add('is-open');});
+    var startY=null;
+    el.addEventListener('pointerdown',function(e){startY=e.clientY;});
+    el.addEventListener('pointermove',function(e){if(startY!==null&&e.clientY>startY)el.style.transform='translateY('+(e.clientY-startY)+'px)';});
+    el.addEventListener('pointerup',function(e){var moved=startY===null?0:e.clientY-startY;startY=null;el.style.transform='';if(moved>70)closeRowMenu(true);});
+    el.addEventListener('pointercancel',function(){startY=null;el.style.transform='';});
+  } else {
+    var x=at.x,y=at.y;
+    if(x===undefined){var r=owner.getBoundingClientRect();x=r.right-el.offsetWidth;y=r.bottom+4;}
+    el.style.left=Math.max(8,Math.min(x,window.innerWidth-el.offsetWidth-8))+'px';el.style.top=Math.max(8,Math.min(y,window.innerHeight-el.offsetHeight-8))+'px';
+  }
+  var buttons=Array.from(el.querySelectorAll('[role=menuitem]'));buttons[0].focus({preventScroll:true});
+  el.addEventListener('keydown',function(e){
+    var i=buttons.indexOf(document.activeElement);
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();buttons[(i+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus();}
+    else if(e.key==='Home'||e.key==='End'){e.preventDefault();buttons[e.key==='Home'?0:buttons.length-1].focus();}
+    else if(e.key==='Escape'||e.key==='Tab'){e.preventDefault();closeRowMenu(true);}
+  });
+  el.addEventListener('click',function(e){
+    var b=e.target.closest('[data-row-action]');if(!b||_rowPressDone)return;
+    var action=b.dataset.rowAction;closeRowMenu(true);
+    if(action==='in'||action==='out'){workspaceScopeAdd(path,action==='out');applyWorkspaceFilters(true);}
+    else if(action==='open')setActive(path);
+    else if(action!=='cancel')addLineageAnchor({task:path},action);
+  });
+}
+function closeRowMenu(refocus) {
+  var menu=_rowMenu;if(!menu)return;
+  _rowMenu=null;
+  if(menu.el.classList.contains('is-sheet')&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){menu.el.classList.remove('is-open');if(menu.backdrop)menu.backdrop.classList.remove('is-open');setTimeout(function(){menu.el.remove();if(menu.backdrop)menu.backdrop.remove();},220);}
+  else {menu.el.remove();if(menu.backdrop)menu.backdrop.remove();}
+  if(menu.owner.classList.contains('task-row-more'))menu.owner.setAttribute('aria-expanded','false');
+  if(refocus&&menu.owner.isConnected)menu.owner.focus({preventScroll:true});
+}
+function rowMenuPath(row) { var node=row.closest('.task-node');return node?node.dataset.path:null; }
+function cancelRowPress() { if(_rowPress){clearTimeout(_rowPress.timer);_rowPress.row.classList.remove('is-pressing');_rowPress=null;} }
+function initRowMenu() {
+  var nav=document.getElementById('nav-tree');if(!nav||window.DOC_MODE)return;
+  nav.addEventListener('pointerdown',function(e){
+    cancelRowPress();
+    var row=e.target.closest('.task-row');
+    if(!row||_rowPointer==='mouse'||e.target.closest('.task-row-more'))return;
+    _rowPress={x:e.clientX,y:e.clientY,row:row,timer:setTimeout(function(){
+      _rowPress=null;row.classList.remove('is-pressing');_rowPressDone=true;
+      if(navigator.vibrate)try{navigator.vibrate(10);}catch(err){}
+      openRowMenu(rowMenuPath(row),row,{sheet:true});
+    },500)};
+    row.classList.add('is-pressing');
+  });
+  nav.addEventListener('pointermove',function(e){if(_rowPress&&Math.hypot(e.clientX-_rowPress.x,e.clientY-_rowPress.y)>10)cancelRowPress();});
+  ['pointerup','pointercancel','pointerleave'].forEach(function(type){nav.addEventListener(type,cancelRowPress);});
+  document.addEventListener('scroll',cancelRowPress,{capture:true,passive:true});
+  /* Capture: runs before the row's open-task click. */
+  nav.addEventListener('click',function(e){
+    if(_rowPressDone){_rowPressDone=false;e.preventDefault();e.stopPropagation();return;}
+    var more=e.target.closest('.task-row-more');if(!more)return;
+    e.preventDefault();e.stopPropagation();
+    if(_rowMenu&&_rowMenu.owner===more){closeRowMenu(true);return;}
+    openRowMenu(rowMenuPath(more),more,{sheet:e.detail!==0&&_rowPointer!=='mouse'});
+  },true);
+  /* Android fires contextmenu on long-press too; the press timer owns touch. */
+  nav.addEventListener('contextmenu',function(e){
+    var row=e.target.closest('.task-row');if(!row)return;
+    e.preventDefault();
+    if(_rowPress||_rowPressDone||_rowMenu||_rowPointer!=='mouse')return;
+    openRowMenu(rowMenuPath(row),row,{x:e.clientX,y:e.clientY});
+  });
+  nav.addEventListener('keydown',function(e){
+    var row=e.target.closest('.task-row');
+    if(!row||!((e.shiftKey&&e.key==='F10')||e.key==='ContextMenu'))return;
+    e.preventDefault();var r=row.getBoundingClientRect();openRowMenu(rowMenuPath(row),row,{x:r.left+40,y:r.bottom});
+  });
+  document.addEventListener('pointerdown',function(e){
+    _rowPointer=e.pointerType||'mouse';_rowPressDone=false;
+    if(_rowMenu&&!_rowMenu.backdrop&&!_rowMenu.el.contains(e.target)&&!e.target.closest('.task-row-more'))closeRowMenu(false);
+  },true);
 }
 function workspaceSearchRecords() {
   var records=(SEARCH_INDEX||[]).slice();
@@ -674,21 +1077,13 @@ function toggleNavigationPane() {
 function initWorkspaceControls() {
   try{_treeSidebarHidden=JSON.parse(localStorage.getItem('dashboard-tree-hidden'))===true;}catch(e){}
   updateNavigationToggle();
-  var dialog=document.getElementById('workspace-filter');
-  dialog.addEventListener('change',function(event){
-    var input=event.target;
-    if(input.name==='lineage-direction'){if(_workspaceFilters.lineage)_workspaceFilters.lineage.direction=input.value;}
-    else if(input.dataset.filterStatus){var statuses=new Set(_workspaceFilters.statuses);if(input.checked)statuses.add(input.dataset.filterStatus);else statuses.delete(input.dataset.filterStatus);_workspaceFilters.statuses=Array.from(statuses).sort();}
-    else if(input.hasAttribute('data-filter-task')){
-      var path=input.dataset.filterTask,tasks=workspaceTasks(),selected=new Set(_workspaceFilters.tasks===null?tasks.map(function(t){return t.path;}):_workspaceFilters.tasks);
-      tasks.forEach(function(t){if(reproWithin(t.path,path)){if(input.checked)selected.add(t.path);else selected.delete(t.path);}});
-      _workspaceFilters.tasks=selected.size===tasks.length?null:Array.from(selected).sort();renderWorkspaceTaskOptions();
-      var replacement=Array.from(dialog.querySelectorAll('[data-filter-task]')).find(function(el){return el.dataset.filterTask===path;});if(replacement)replacement.focus({preventScroll:true});
-    }
-    applyWorkspaceFilters(true);
-  });
-  dialog.addEventListener('click',function(e){var remove=e.target.closest('[data-lineage-remove]');if(remove&&_workspaceFilters.lineage){var anchors=_workspaceFilters.lineage.anchors.slice();anchors.splice(Number(remove.dataset.lineageRemove),1);_workspaceFilters.lineage=normalizeLineageFilter({anchors:anchors,direction:_workspaceFilters.lineage.direction});renderWorkspaceLineageOptions();applyWorkspaceFilters(true);var next=dialog.querySelector('[data-lineage-remove]');if(next)next.focus();return;}var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
-  loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
+  var bar=document.getElementById('workspace-filter-bar');if(bar)bar.addEventListener('click',onWorkspaceFilterBarClick);
+  document.addEventListener('pointerdown',function(e){var pop=_wfPop;if(pop&&!pop.el.contains(e.target)&&!(pop.anchor&&pop.anchor.contains(e.target)))workspacePopClose(false);},true);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&_wfPop){e.preventDefault();workspacePopClose(true);}});
+  window.addEventListener('resize',workspacePopPosition);
+  document.addEventListener('scroll',function(e){if(_wfPop&&!_wfPop.el.contains(e.target))workspacePopPosition();},{capture:true,passive:true});
+  initRowMenu();
+  loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);workspacePopRender();}).catch(function(){});
 }
 
 /* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
@@ -1235,17 +1630,16 @@ function reproLineage(graph, anchors, direction) {
   return result;
 }
 function reproHash() {
-  var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
-  var f=_workspaceFilters||{};
+  var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:workspaceFiltersForHash(_workspaceFilters)};
   /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
-  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null&&!f.lineage;
+  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!state.filters;
   var query=(activeArtifactPath?[activeArtifactPath.charAt(0)==='/'?'file='+encodeURIComponent(activeArtifactPath.slice(1)):'attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
   return '#/'+activePath+(query.length?'?'+query.join('&'):'');
 }
 function reproReadHash() {
   var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
   var raw=params.get('repro'), step=params.get('step');
-  if(!raw&&!step){_workspaceFilters={statuses:[],tasks:null,lineage:null};_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
+  if(!raw&&!step){_workspaceFilters=emptyWorkspaceFilters();_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
   try {
     var n=raw?JSON.parse(raw):{};
     _workspaceFilters=normalizeWorkspaceFilters(n.filters);
@@ -1787,7 +2181,7 @@ function drawReproView(container,data) {
     +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
     +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
-    +(!model.nodes.length?'<p class="repro-empty">'+((_workspaceFilters.tasks!==null||_workspaceFilters.statuses.length)?'No tasks match these filters. Use Clear filters to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
+    +(!model.nodes.length?'<p class="repro-empty">'+(workspaceFilterCount()?'No tasks match these filters. Clear the filter bar to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
     +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-connection-label" role="status"></div><div id="repro-edge-detail"></div></div>'
     +'<div class="repro-footer"><span id="repro-selection" title="'+escapeAttr(_reproSelected||activePath)+'">'+escapeHtml(_reproSelected||reproTaskTitle(activePath))+'</span></div>';
 
@@ -2090,7 +2484,7 @@ function onReproClick(event) {
     var action = control.dataset.rpAction, value = control.dataset.value;
     var menu=control.closest('.rp-menu');if(menu)menu.open=false;
     if(action==='task')reproSelectTask(value);
-    else if(action==='overview'){_workspaceFilters={statuses:[],tasks:null,lineage:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
+    else if(action==='overview'){_workspaceFilters=emptyWorkspaceFilters();workspacePopClose(false);applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
     else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
@@ -2995,7 +3389,7 @@ function setActive(path, artifactPath) {
      overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
      module below; guard so the router still works if it ever loads first. */
   if (typeof onNavigationChrome === 'function') onNavigationChrome();
-  updateWorkspaceFilterSummary();
+  renderWorkspaceFilterBar();
 }
 
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
