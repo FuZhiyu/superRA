@@ -166,19 +166,22 @@ def filter_run(body, extra_defs=(), prelude=''):
 def test_facets_and_together_with_negation():
     filter_run("""
 assert.deepEqual(matched({status:{neg:true,values:['archived','postponed']}}),['','clean','data','docs','model','model/fit','model/report']);
-assert.deepEqual(matched({scope:{neg:false,paths:['model']}}),['model','model/fit','model/report']);
-assert.deepEqual(matched({scope:{neg:true,paths:['model','docs']}}),['','clean','data','notes','other']);
-assert.deepEqual(matched({status:{values:['in-progress','revise']},scope:{paths:['model']}}),['model','model/fit'],'facets AND, values OR');
-var v=use({scope:{paths:['model/fit']}});
+assert.deepEqual(matched({scope:{in:['model']}}),['model','model/fit','model/report']);
+assert.deepEqual(matched({scope:{out:['model','docs']}}),['','clean','data','notes','other']);
+assert.deepEqual(matched({scope:{in:['model'],out:['model/fit']}}),['model','model/report'],'In and Not in combine');
+assert.deepEqual(matched({status:{values:['in-progress','revise']},scope:{in:['model']}}),['model','model/fit'],'facets AND, values OR');
+var v=use({scope:{in:['model/fit']}});
 assert(v.visible.has('model')&&v.visible.has('')&&!v.matches.has('model'),'ancestors show as context');
 """)
 
 
 def test_counts_apply_every_other_facet():
     filter_run("""
-use({status:{values:['revise']},scope:{paths:['model']}});
-assert.deepEqual(workspaceFacetCounts('status'),{'in-progress':1,revise:1,'not-started':1},'status counts ignore the status facet only');
-assert.deepEqual(workspaceFacetCounts('scope'),{'model/fit':1,model:1,'':1});
+use({status:{values:['revise']},scope:{in:['model'],out:['model/report']}});
+assert.deepEqual(workspaceFacetCounts('status'),{'in-progress':1,revise:1},'status counts ignore the status facet only');
+assert.deepEqual(workspaceFacetCounts('scope-in'),{'model/fit':1,model:1,'':1},'each subtree list skips only itself');
+use({status:{values:['not-started','revise']},scope:{in:['model'],out:['model/report']}});
+assert.deepEqual(workspaceFacetCounts('scope-out'),{'model/fit':1,'model/report':1,model:2,'':2});
 assert.deepEqual(workspaceFacetCounts('steps'),{stale:1});
 use({steps:['failed']});
 assert.deepEqual(workspaceFacetCounts('steps'),{fresh:1,stale:3,missing:1,failed:1,unverified:1});
@@ -211,40 +214,53 @@ assert.deepEqual(_workspaceFilters.lineage,[],'an anchor the graph no longer has
 
 def test_hash_round_trips_and_legacy_forms_load():
     filter_run("""
-var f=normalizeWorkspaceFilters({status:{neg:true,values:['postponed','bogus']},steps:['stale','nope'],scope:{neg:false,paths:['model/fit','model']},lineage:[{task:'docs',direction:'up'},{step:'fit'},{task:'docs'},{task:''}]});
-assert.deepEqual(f,{status:{neg:true,values:['postponed']},steps:['stale'],scope:{neg:false,paths:['model']},lineage:[{task:'docs',direction:'up'},{step:'fit',direction:'both'}]});
+var f=normalizeWorkspaceFilters({status:{neg:true,values:['postponed','bogus']},steps:['stale','nope'],scope:{in:['model/fit','model'],out:['model/fit/x']},lineage:[{task:'docs',direction:'up'},{step:'fit'},{task:'docs'},{task:''}]});
+assert.deepEqual(f,{status:{neg:true,values:['postponed']},steps:['stale'],scope:{in:['model'],out:['model/fit/x']},lineage:[{task:'docs',direction:'up'},{step:'fit',direction:'both'}]});
 assert.deepEqual(normalizeWorkspaceFilters(JSON.parse(JSON.stringify(workspaceFiltersForHash(f)))),f);
 assert.equal(workspaceFiltersForHash(emptyWorkspaceFilters()),undefined);
 var legacy=normalizeWorkspaceFilters({statuses:['revise'],tasks:null,lineage:{anchors:[{step:'fit'},{task:'docs'}],direction:'up'}});
 assert.deepEqual(legacy.status,{neg:false,values:['revise']});
 assert.deepEqual(legacy.lineage,[{step:'fit',direction:'up'},{task:'docs',direction:'up'}],'a shared direction applies to every anchor');
 var all=SEARCH_INDEX.map(t=>t.path);
-assert.deepEqual(normalizeWorkspaceFilters({tasks:all.filter(p=>!p.startsWith('model'))}).scope,{neg:true,paths:['model']});
-assert.deepEqual(normalizeWorkspaceFilters({tasks:['model/fit','model/report']}).scope,{neg:false,paths:['model/fit','model/report']});
-assert.deepEqual(normalizeWorkspaceFilters({tasks:all}).scope,{neg:false,paths:[]},'a full selection is no filter');
-assert.deepEqual(normalizeWorkspaceFilters({hidden:['docs','notes']}).scope,{neg:true,paths:['docs','notes']});
+assert.deepEqual(normalizeWorkspaceFilters({tasks:all.filter(p=>!p.startsWith('model'))}).scope,{in:[],out:['model']});
+assert.deepEqual(normalizeWorkspaceFilters({tasks:['model/fit','model/report']}).scope,{in:['model/fit','model/report'],out:[]});
+assert.deepEqual(normalizeWorkspaceFilters({tasks:all}).scope,{in:[],out:[]},'a full selection is no filter');
+assert.deepEqual(normalizeWorkspaceFilters({hidden:['docs','notes']}).scope,{in:[],out:['docs','notes']},'a hidden list maps to Not in');
+assert.deepEqual(workspaceFiltersForHash(normalizeWorkspaceFilters({scope:{out:['docs']}})),{scope:{in:[],out:['docs']}});
 var v=use({tasks:['model/fit','model/report']});
 assert(v.visible.has('model')&&!v.matches.has('model'),'an unselected parent of a selected child shows as context');
 """)
 
 
-def test_hiding_inside_an_included_subtree_keeps_the_rest():
+def test_hiding_a_leaf_keeps_its_single_child_parent_and_its_steps():
     filter_run("""
-_workspaceFilters=normalizeWorkspaceFilters({scope:{paths:['model']}});
-workspaceScopeAdd('model/fit',true);
-assert.deepEqual(_workspaceFilters.scope,{neg:false,paths:['model/report']});
-workspaceScopeAdd('model/report',true);
-assert.deepEqual(_workspaceFilters.scope,{neg:true,paths:['model/report']},'hiding the last included subtree switches to exclusion');
-workspaceScopeAdd('docs',true);
-assert.deepEqual(_workspaceFilters.scope,{neg:true,paths:['docs','model/report']});
-workspaceScopeAdd('data',false);
-assert.deepEqual(_workspaceFilters.scope,{neg:false,paths:['data']},'show only replaces an exclusion');
+tasks.push({path:'model/fit/tune',title:'model/fit/tune',status:'in-progress'});SEARCH_INDEX.push(tasks[tasks.length-1]);
+steps.push({name:'tune',task:'model/fit/tune'});edges.push({from:'fit',to:'tune',via:'fit.csv'});stepStatus.push({name:'tune',status:'fresh'});
+_workspaceFilters=normalizeWorkspaceFilters({scope:{in:['model/fit']}});
+assert.deepEqual(sorted(workspaceVisibility().matches),['model/fit','model/fit/tune']);
+workspaceScopeAdd('model/fit/tune','out');
+assert.deepEqual(_workspaceFilters.scope,{in:['model/fit'],out:['model/fit/tune']},'hiding adds to Not in and keeps In');
+assert.deepEqual(sorted(workspaceVisibility().matches),['model/fit'],'the single-child parent still matches');
+assert.deepEqual(workspaceGraph(graph).steps.map(s=>s.name),['fit'],'and its own step stays in Graph');
+workspaceScopeAdd('data','in');workspaceScopeAdd('model/fit/tune/x','out');
+assert.deepEqual(_workspaceFilters.scope,{in:['data','model/fit'],out:['model/fit/tune']},'show only keeps Not in; covered descendants drop');
+assert.deepEqual(sorted(workspaceVisibility().matches),['data','model/fit']);
+""")
+
+
+def test_root_is_context_under_a_dependency_filter_unless_it_owns_a_member_step():
+    filter_run("""
+var v=use({lineage:[{step:'raw',direction:'down'}]});
+assert(!v.matches.has('')&&v.visible.has(''),'the root shows as context');
+steps.push({name:'setup',task:''});edges.push({from:'setup',to:'raw',via:'setup.csv'});stepStatus.push({name:'setup',status:'fresh'});
+v=use({lineage:[{step:'tidy',direction:'up'}]});
+assert(v.matches.has(''),'a root that owns a member step matches');
 """)
 
 
 def test_filtered_graph_keeps_chains_through_a_hidden_task():
     filter_run("""
-use({scope:{neg:true,paths:['clean']},lineage:[{step:'raw',direction:'down'},{step:'gone'}]});
+use({scope:{out:['clean']},lineage:[{step:'raw',direction:'down'},{step:'gone'}]});
 var view=workspaceGraph(graph);
 assert.deepEqual(view.steps.map(s=>s.name).sort(),['fit','raw','report']);
 assert.deepEqual(_workspaceFilters.lineage,[{step:'raw',direction:'down'}],'an anchor the graph no longer has is dropped');

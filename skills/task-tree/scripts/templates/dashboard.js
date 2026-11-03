@@ -498,7 +498,7 @@ var WORKSPACE_QUICK_FILTERS=[
 var LINEAGE_DIRECTIONS={both:'Dependencies of',up:'Upstream of',down:'Downstream of'};
 var LINEAGE_ARROWS={up:'⇡',down:'⇣',both:'⇅'};
 var LINEAGE_NEXT={up:'down',down:'both',both:'up'};
-function emptyWorkspaceFilters() { return {status:{neg:false,values:[]},steps:[],scope:{neg:false,paths:[]},lineage:[]}; }
+function emptyWorkspaceFilters() { return {status:{neg:false,values:[]},steps:[],scope:{in:[],out:[]},lineage:[]}; }
 var _workspaceFilters=emptyWorkspaceFilters();
 var _workspaceLineageMemo=null;
 var _workspaceStepMemo=null;
@@ -510,7 +510,7 @@ function workspaceStrings(list, allowed) {
 function workspaceScopeRoots(paths) {
   return paths.filter(function(p){return !paths.some(function(r){return r!==p&&reproWithin(p,r);});});
 }
-/* A legacy `tasks` selection becomes the one-polarity subtree filter that
+/* A legacy `tasks` selection becomes the one-list subtree filter (`In` or `Not in`) that
    matches the same tasks, or the fewest others: an unselected parent of a
    selected child cannot be expressed and shows as context. */
 function workspaceScopeFromSelection(selected) {
@@ -522,20 +522,19 @@ function workspaceScopeFromSelection(selected) {
     return {neg:neg,paths:paths,misses:misses};
   }
   var a=form(false),b=form(true),best=b.misses<a.misses||(b.misses===a.misses&&b.paths.length<a.paths.length)?b:a;
-  return {neg:best.paths.length?best.neg:false,paths:best.paths};
+  return best.neg?{in:[],out:best.paths}:{in:best.paths,out:[]};
 }
-/* Accepts the current hash shape and both legacy forms: `statuses`, and a
-   `tasks` selection or `hidden` list. */
+/* Accepts the current hash shape and the legacy forms: `statuses`, a `tasks`
+   selection, and a `hidden` list, which maps to `Not in`. */
 function normalizeWorkspaceFilters(value) {
   value=value&&typeof value==='object'?value:{};
   var out=emptyWorkspaceFilters(),status=value.status&&typeof value.status==='object'?value.status:{values:value.statuses},scope=value.scope&&typeof value.scope==='object'?value.scope:null;
   out.status={neg:status.neg===true,values:workspaceStrings(status.values,WORKSPACE_STATUSES)};
   out.steps=workspaceStrings(value.steps,REPRO_STATES.map(function(s){return s.key;}));
-  if(scope)out.scope={neg:scope.neg===true,paths:workspaceScopeRoots(workspaceStrings(scope.paths))};
+  if(scope)out.scope={in:workspaceScopeRoots(workspaceStrings(scope.in)),out:workspaceScopeRoots(workspaceStrings(scope.out))};
   else if(Array.isArray(value.tasks))out.scope=workspaceScopeFromSelection(workspaceStrings(value.tasks));
-  else if(Array.isArray(value.hidden))out.scope={neg:true,paths:workspaceScopeRoots(workspaceStrings(value.hidden))};
+  else if(Array.isArray(value.hidden))out.scope.out=workspaceScopeRoots(workspaceStrings(value.hidden));
   if(!out.status.values.length)out.status.neg=false;
-  if(!out.scope.paths.length)out.scope.neg=false;
   out.lineage=normalizeLineageFilter(value.lineage);
   return out;
 }
@@ -553,15 +552,15 @@ function normalizeLineageFilter(value) {
 }
 function workspaceFilterCount(f) {
   f=f||_workspaceFilters;
-  return (f.status.values.length?1:0)+(f.steps.length?1:0)+(f.scope.paths.length?1:0)+f.lineage.length;
+  return (f.status.values.length?1:0)+(f.steps.length?1:0)+(f.scope.in.length?1:0)+(f.scope.out.length?1:0)+f.lineage.length;
 }
-/* Only active facets enter the hash: {status:{neg,values}, steps, scope:{neg,paths}, lineage:[{task|step, direction}]}. */
+/* Only active facets enter the hash: {status:{neg,values}, steps, scope:{in,out}, lineage:[{task|step, direction}]}. */
 function workspaceFiltersForHash(f) {
   if(!workspaceFilterCount(f))return undefined;
   var out={};
   if(f.status.values.length)out.status={neg:f.status.neg,values:f.status.values};
   if(f.steps.length)out.steps=f.steps;
-  if(f.scope.paths.length)out.scope={neg:f.scope.neg,paths:f.scope.paths};
+  if(f.scope.in.length||f.scope.out.length)out.scope={in:f.scope.in,out:f.scope.out};
   if(f.lineage.length)out.lineage=f.lineage;
   return out;
 }
@@ -612,20 +611,10 @@ function addLineageAnchor(anchor, direction) {
   if(current)current.direction=next.direction;else _workspaceFilters.lineage.push(next);
   applyWorkspaceFilters(true);
 }
-/* Include (neg false) or exclude a subtree. Excluding from a positive scope
-   keeps the rest of each including root: the siblings along the path down to
-   the excluded task, with the ancestors between left as context. */
-function workspaceScopeAdd(path, neg) {
+/* Adds a subtree root to the `in` or `out` list; the other list is kept. */
+function workspaceScopeAdd(path, list) {
   var scope=_workspaceFilters.scope;
-  if(!scope.paths.length||scope.neg===neg){_workspaceFilters.scope={neg:neg,paths:workspaceScopeRoots(workspaceStrings(scope.paths.concat([path])))};return;}
-  if(!neg){_workspaceFilters.scope={neg:false,paths:[path]};return;}
-  var all=workspaceTasks().map(function(t){return t.path;}),paths=[];
-  scope.paths.forEach(function(root){
-    if(reproWithin(root,path))return;
-    if(!reproWithin(path,root)){paths.push(root);return;}
-    for(var a=path;a!==root;a=parentPath(a)){var up=parentPath(a),self=a;all.forEach(function(p){if(p&&p!==self&&parentPath(p)===up)paths.push(p);});}
-  });
-  _workspaceFilters.scope=paths.length?{neg:false,paths:workspaceScopeRoots(workspaceStrings(paths))}:{neg:true,paths:[path]};
+  scope[list]=workspaceScopeRoots(workspaceStrings(scope[list].concat([path])));
 }
 function workspaceTasks() {
   var tasks={};
@@ -640,13 +629,16 @@ function workspaceStepMatches(name, skip, lineage) {
   if(index&&!states.includes(index.state[name]))return false;
   return !lineage||lineage.steps.has(name);
 }
-/* A task passes every facet but `skip`. With a step-state filter it must own a
-   step in a selected state that also passes the dependency filter. */
+/* A task passes every facet but `skip`: under some `In` root (or none is set)
+   and no `Not in` root; in the dependency set, where the root counts only if it
+   owns a member step; and, with a step-state filter, owning a step in a
+   selected state that also passes the dependency filter. */
 function workspaceTaskMatches(path, task, skip) {
-  var f=_workspaceFilters;
-  if(skip!=='scope'&&f.scope.paths.length&&f.scope.paths.some(function(r){return reproWithin(path,r);})===f.scope.neg)return false;
+  var f=_workspaceFilters,within=function(r){return reproWithin(path,r);};
+  if(skip!=='scope-in'&&f.scope.in.length&&!f.scope.in.some(within))return false;
+  if(skip!=='scope-out'&&f.scope.out.some(within))return false;
   var lineage=skip==='lineage'?null:workspaceLineage();
-  if(lineage&&path&&!lineage.tasks.has(path))return false;
+  if(lineage&&!lineage.tasks.has(path))return false;
   var index=f.steps.length&&skip!=='steps'?workspaceStepIndex():null;
   if(index&&!(index.byTask[path]||[]).some(function(n){return workspaceStepMatches(n,null,lineage);}))return false;
   if(skip==='status'||!f.status.values.length)return true;
@@ -659,8 +651,8 @@ function workspaceVisibility() {
   return {matches:matches,visible:visible};
 }
 /* Per value of `facet`, what toggling it would match under every other active
-   facet: tasks per status, tasks under each subtree, steps per state (null
-   before the graph loads). */
+   facet: tasks per status, tasks under each subtree (`scope-in` or
+   `scope-out`), steps per state (null before the graph loads). */
 function workspaceFacetCounts(facet) {
   var counts={},index=workspaceStepIndex(),lineage=workspaceLineage();
   function add(key){counts[key]=(counts[key]||0)+1;}
@@ -668,7 +660,7 @@ function workspaceFacetCounts(facet) {
   workspaceTasks().forEach(function(t){
     if(!workspaceTaskMatches(t.path,t,facet))return;
     if(facet==='status')add(t.status);
-    else if(facet==='scope')for(var p=t.path;p!==null;p=parentPath(p))add(p);
+    else if(facet!=='steps')for(var p=t.path;p!==null;p=parentPath(p))add(p);
     else (index.byTask[t.path]||[]).forEach(function(n){if(workspaceStepMatches(n,'steps',lineage))add(index.state[n]);});
   });
   return counts;
@@ -728,8 +720,11 @@ function renderWorkspaceFilterBar(visibility) {
     chips+=workspaceChipHTML('status','<span class="wf-k">Status</span><span class="wf-op">'+op+'</span><span class="wf-v">'+escapeHtml(values)+'</span>','Status '+op+' '+values);}
   if(f.steps.length){var states=REPRO_STATES.map(function(s){return s.key;}).filter(function(s){return f.steps.includes(s);});
     chips+=workspaceChipHTML('steps','<span class="wf-k">Steps</span><span class="wf-op">are</span><span class="wf-v">'+states.map(workspaceStateHTML).join(' ')+'</span>','Steps are '+states.join(', '));}
-  if(f.scope.paths.length){var titles=workspaceSummarize(f.scope.paths.map(workspaceTaskTitle),2);
-    chips+=workspaceChipHTML('scope','<span class="wf-k">'+(f.scope.neg?'Not in':'In')+'</span><span class="wf-v">'+escapeHtml(titles)+'</span>',(f.scope.neg?'Not in ':'In ')+titles);}
+  [['in','In'],['out','Not in']].forEach(function(list){
+    if(!f.scope[list[0]].length)return;
+    var titles=workspaceSummarize(f.scope[list[0]].map(workspaceTaskTitle),2);
+    chips+=workspaceChipHTML('scope-'+list[0],'<span class="wf-k">'+list[1]+'</span><span class="wf-v">'+escapeHtml(titles)+'</span>',list[1]+' '+titles);
+  });
   f.lineage.forEach(function(a,i){
     var label=LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),index=a.step&&workspaceStepIndex(),glyph=a.step?workspaceGlyphHTML(index&&index.state[a.step]||'unknown'):'';
     chips+=workspaceChipHTML('lineage:'+i,'<span class="wf-k">'+LINEAGE_DIRECTIONS[a.direction]+'</span><span class="wf-v'+(a.step?' is-step':'')+'">'+glyph+escapeHtml(lineageAnchorLabel(a))+'</span>',label,
@@ -753,6 +748,7 @@ function clearWorkspaceFilters() { _workspaceFilters=emptyWorkspaceFilters();wor
    the head and body but keeps the search box, so typing survives filtering. */
 var _wfPop=null;
 var _wfDepDirection='both';
+var _wfScopeList='in';
 function workspacePopOpen(kind, anchor) {
   if(_wfPop&&_wfPop.kind===kind&&_wfPop.anchor===anchor){workspacePopClose(true);return;}
   workspacePopClose(false);
@@ -782,6 +778,7 @@ function workspacePopClose(refocus) {
 /* The chip editing `kind`, else + Filter while the bar shows, else the header Filter button. */
 function workspacePopAnchor(kind) {
   var bar=document.getElementById('workspace-filter-bar');
+  if(kind==='scope')kind='scope-'+_wfScopeList;
   return (bar&&!bar.hidden&&(bar.querySelector('[data-wf-edit="'+kind+'"]')||bar.querySelector('#filter-add')))||document.getElementById('filter-trigger');
 }
 function workspacePopPosition() {
@@ -842,13 +839,14 @@ function workspaceTaskOrder() {
   return out;
 }
 function workspaceTaskText(t) { return ((t.title||'')+' '+(t.path||'project root')).toLowerCase(); }
+/* The under / not under switch picks which list the checkboxes edit. */
 function workspaceScopeView(q) {
-  var scope=_workspaceFilters.scope,counts=workspaceFacetCounts('scope'),rows=workspaceTaskOrder().filter(function(r){return !q||workspaceTaskText(r.task).includes(q);});
-  return {label:'Task subtree',head:'<strong>Task subtree</strong>'+workspaceSegHTML('data-wf-scope-neg',[['false','under'],['true','not under']],scope.neg),
-    body:rows.map(function(r){var p=r.task.path,covered=scope.paths.some(function(root){return root!==p&&reproWithin(p,root);});
-      return '<div class="wf-row'+(counts[p]?'':' is-zero')+'" style="--wf-depth:'+(q?0:r.depth)+'"><label class="wf-grow"><input type="checkbox" data-wf-scope="'+escapeAttr(p)+'" data-wf-key="scope:'+escapeAttr(p)+'"'+(covered||scope.paths.includes(p)?' checked':'')+(covered?' disabled':'')+'><span class="wf-label">'+escapeHtml(r.task.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span></label>'
+  var list=_wfScopeList,paths=_workspaceFilters.scope[list],counts=workspaceFacetCounts('scope-'+list),rows=workspaceTaskOrder().filter(function(r){return !q||workspaceTaskText(r.task).includes(q);});
+  return {label:'Task subtree',head:'<strong>Task subtree</strong>'+workspaceSegHTML('data-wf-scope-list',[['in','under'],['out','not under']],list),
+    body:rows.map(function(r){var p=r.task.path,covered=paths.some(function(root){return root!==p&&reproWithin(p,root);});
+      return '<div class="wf-row'+(counts[p]?'':' is-zero')+'" style="--wf-depth:'+(q?0:r.depth)+'"><label class="wf-grow"><input type="checkbox" data-wf-scope="'+escapeAttr(p)+'" data-wf-key="scope:'+escapeAttr(p)+'"'+(covered||paths.includes(p)?' checked':'')+(covered?' disabled':'')+'><span class="wf-label">'+escapeHtml(r.task.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span></label>'
         +workspaceActsHTML('task',p,false)+'<span class="wf-cnt">'+(counts[p]||0)+'</span></div>';}).join('')||'<p class="wf-empty">No tasks match.</p>',
-    foot:'Check a task to '+(scope.neg?'exclude':'include')+' its whole subtree.'};
+    foot:'Check a task to '+(list==='out'?'exclude':'include')+' its whole subtree.'};
 }
 function workspaceDepsView(q) {
   var anchors=new Set(_workspaceFilters.lineage.map(workspaceAnchorKey)),index=workspaceStepIndex(),out='';
@@ -875,14 +873,14 @@ function workspaceAddView(q) {
     sections.push('<div class="wf-row wf-option" role="option" id="wf-opt-'+items.length+'" data-wf-item="'+items.length+'">'+html+'</div>');items.push({primary:primary,secondary:secondary});}
   function done(){workspacePopClose(true);applyWorkspaceFilters(true);}
   if(!q){
-    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){workspacePopShow(f[0]);});});
+    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){if(f[0]==='scope')_wfScopeList='in';workspacePopShow(f[0]);});});
     WORKSPACE_QUICK_FILTERS.forEach(function(p){add('Quick filters','<span class="wf-grow wf-label">'+p.label+'<small>'+p.desc+'</small></span>',function(){p.apply(_workspaceFilters);done();});});
   } else {
     var statusCounts=workspaceFacetCounts('status'),stepCounts=workspaceFacetCounts('steps'),index=workspaceStepIndex();
     WORKSPACE_STATUSES.filter(function(v){return v.includes(q);}).forEach(function(v){add('Task status','<span class="wf-grow">Status is <span class="badge badge-'+v+'">'+v+'</span></span><span class="wf-cnt">'+(statusCounts[v]||0)+'</span>',function(){var s=_workspaceFilters.status;_workspaceFilters.status=s.neg?{neg:false,values:[v]}:{neg:false,values:workspaceStrings(s.values.concat([v]))};done();});});
     REPRO_STATES.filter(function(s){return s.key.includes(q);}).forEach(function(s){add('Step state','<span class="wf-grow">Steps are '+workspaceStateHTML(s.key)+'</span><span class="wf-cnt">'+(stepCounts?stepCounts[s.key]||0:'…')+'</span>',function(){_workspaceFilters.steps=workspaceStrings(_workspaceFilters.steps.concat([s.key]));done();});});
     workspaceTasks().map(function(t){return {t:t,score:scoreSearchRecord({title:t.title||'',slug:t.path},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var p=x.t.path;
-      add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,false);done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p},'both');}:null);});
+      add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,'in');done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p},'both');}:null);});
     if(index)(_reproData.graph.steps||[]).map(function(s){return {s:s,score:scoreSearchRecord({title:s.name},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var n=x.s.name;
       add('Steps',workspaceGlyphHTML(index.state[n])+'<span class="wf-grow wf-label is-step">'+escapeHtml(n)+'<small>'+escapeHtml(workspaceTaskTitle(x.s.task))+'</small></span>'+workspaceActsHTML('step',n,false),function(){workspacePopClose(true);addLineageAnchor({step:n},'both');});});
     if(!items.length)sections.push('<p class="wf-empty">Nothing matches “'+escapeHtml(q)+'”.</p>');
@@ -909,12 +907,12 @@ function onWorkspacePopClick(e) {
   var pop=_wfPop,el;if(!pop)return;
   var current=function(facet){return facet==='status'?_workspaceFilters.status.values:_workspaceFilters.steps;};
   if((el=e.target.closest('[data-wf-anchor]'))){var a=el.dataset.wfAnchor.split('|'),dir=a.pop(),kind=a.shift(),id=a.join('|');workspacePopClose(true);addLineageAnchor(kind==='step'?{step:id}:{task:id},dir);}
-  else if((el=e.target.closest('[data-wf-in]'))){workspaceScopeAdd(el.dataset.wfIn,false);workspacePopClose(true);applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-in]'))){workspaceScopeAdd(el.dataset.wfIn,'in');workspacePopClose(true);applyWorkspaceFilters(true);}
   else if((el=e.target.closest('[data-wf-only]'))){var o=el.dataset.wfOnly.split('|');workspaceSetValues(o[0],[o[1]]);applyWorkspaceFilters(true);}
   else if((el=e.target.closest('[data-wf-group]'))){var g=el.dataset.wfGroup.split('|'),vals=g[1].split(','),list=current(g[0]),all=vals.every(function(v){return list.includes(v);});
     workspaceSetValues(g[0],workspaceStrings(all?list.filter(function(v){return !vals.includes(v);}):list.concat(vals)));applyWorkspaceFilters(true);}
   else if((el=e.target.closest('[data-wf-neg]'))){_workspaceFilters.status.neg=el.dataset.wfNeg==='true';applyWorkspaceFilters(true);}
-  else if((el=e.target.closest('[data-wf-scope-neg]'))){_workspaceFilters.scope.neg=el.dataset.wfScopeNeg==='true';applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-scope-list]'))){_wfScopeList=el.dataset.wfScopeList;workspacePopRender();}
   else if((el=e.target.closest('[data-wf-setdir]'))){var anchor=_workspaceFilters.lineage[Number(pop.kind.split(':')[1])];if(anchor){anchor.direction=el.dataset.wfSetdir;applyWorkspaceFilters(true);}}
   else if((el=e.target.closest('[data-wf-depdir]'))){_wfDepDirection=el.dataset.wfDepdir;workspacePopRender();}
   else if((el=e.target.closest('[data-wf-pick]'))){var p=el.dataset.wfPick,step=p.indexOf('step|')===0,value=p.slice(5);workspacePopClose(true);addLineageAnchor(step?{step:value}:{task:value},_wfDepDirection);}
@@ -924,17 +922,17 @@ function onWorkspacePopClick(e) {
 function onWorkspacePopChange(e) {
   var input=e.target;
   if(input.dataset.wfValue){var v=input.dataset.wfValue.split('|'),list=v[0]==='status'?_workspaceFilters.status.values:_workspaceFilters.steps;workspaceSetValues(v[0],workspaceToggle(list,v[1],input.checked));}
-  else if(input.dataset.wfScope!==undefined){var path=input.dataset.wfScope;if(input.checked)workspaceScopeAdd(path,_workspaceFilters.scope.neg);else _workspaceFilters.scope.paths=_workspaceFilters.scope.paths.filter(function(p){return p!==path;});}
+  else if(input.dataset.wfScope!==undefined){var path=input.dataset.wfScope,scope=_workspaceFilters.scope;if(input.checked)workspaceScopeAdd(path,_wfScopeList);else scope[_wfScopeList]=scope[_wfScopeList].filter(function(p){return p!==path;});}
   else return;
   applyWorkspaceFilters(true);
 }
 function onWorkspaceFilterBarClick(e) {
   var el;
   if((el=e.target.closest('[data-wf-remove]'))){var key=el.dataset.wfRemove;workspacePopClose(false);
-    if(key==='status')_workspaceFilters.status={neg:false,values:[]};else if(key==='steps')_workspaceFilters.steps=[];else if(key==='scope')_workspaceFilters.scope={neg:false,paths:[]};else _workspaceFilters.lineage.splice(Number(key.split(':')[1]),1);
+    if(key==='status')_workspaceFilters.status={neg:false,values:[]};else if(key==='steps')_workspaceFilters.steps=[];else if(key==='scope-in'||key==='scope-out')_workspaceFilters.scope[key.slice(6)]=[];else _workspaceFilters.lineage.splice(Number(key.split(':')[1]),1);
     applyWorkspaceFilters(true);}
   else if((el=e.target.closest('[data-wf-dir]'))){var a=_workspaceFilters.lineage[Number(el.dataset.wfDir)];if(a){a.direction=LINEAGE_NEXT[a.direction];applyWorkspaceFilters(true);}}
-  else if((el=e.target.closest('[data-wf-edit]')))workspacePopOpen(el.dataset.wfEdit,el);
+  else if((el=e.target.closest('[data-wf-edit]'))){var kind=el.dataset.wfEdit;if(kind.indexOf('scope-')===0){_wfScopeList=kind.slice(6);kind='scope';}workspacePopOpen(kind,el);}
   else if((el=e.target.closest('[data-wf-add]')))workspacePopOpen('add',el);
   else if(e.target.closest('[data-wf-clear]')){clearWorkspaceFilters();document.getElementById('filter-trigger').focus({preventScroll:true});}
 }
@@ -982,7 +980,7 @@ function openRowMenu(path, owner, at) {
   el.addEventListener('click',function(e){
     var b=e.target.closest('[data-row-action]');if(!b||_rowPressDone)return;
     var action=b.dataset.rowAction;closeRowMenu(true);
-    if(action==='in'||action==='out'){workspaceScopeAdd(path,action==='out');applyWorkspaceFilters(true);}
+    if(action==='in'||action==='out'){workspaceScopeAdd(path,action);applyWorkspaceFilters(true);}
     else if(action==='open')setActive(path);
     else if(action!=='cancel')addLineageAnchor({task:path},action);
   });

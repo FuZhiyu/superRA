@@ -7107,7 +7107,7 @@ def _run_repro_render_node(harness_body):
     # drawReproView writes into a container and rebinds handlers; the harness
     # supplies just enough DOM and module state for the pure render path.
     shim = (
-        "var _workspaceFilters={status:{neg:false,values:[]},steps:[],scope:{neg:false,paths:[]},lineage:[]};\n"
+        "var _workspaceFilters={status:{neg:false,values:[]},steps:[],scope:{in:[],out:[]},lineage:[]};\n"
         "var _reproSelected='', _reproData=null, pathTitles={};\n"
         "var window={}; var _reproNav={selected:'',expanded:[]};\n"
         "var _reproNotice='', _reproLayoutCache=null, _reproViewNext='open', _reproPreserve='';\n"

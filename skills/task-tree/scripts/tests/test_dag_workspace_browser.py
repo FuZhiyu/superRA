@@ -199,6 +199,15 @@ def varied_states(route):
     route.fulfill(response=response, json=data)
 
 
+def show_graph(page, expanded):
+    page.locator('#btn-reproduction').click()
+    page.evaluate(f"reproNavigate({{expanded:{json.dumps(expanded)}}},false)")
+    page.wait_for_function('!!document.querySelector(".repro-node[data-step]")')
+    steps = graph_steps(page)
+    page.locator('#btn-workspace').click()
+    return steps
+
+
 def open_add(page):
     bar_add = page.locator('#filter-add')
     (bar_add if bar_add.is_visible() else page.locator('#filter-trigger')).click()
@@ -217,6 +226,7 @@ def test_filter_bar_facets_filter_tree_and_graph(browser, workspace):
     page.keyboard.type('revis')
     page.keyboard.press('Enter')
     assert chips(page) == ['Status is revise'] and matched(page) == ['analysis-1']
+    assert show_graph(page, ['analysis-0', 'analysis-1']) == [f'step-1-{j}' for j in range(4)], 'Graph keeps only matching tasks'
     page.locator('[data-wf-edit=status]').click()
     row = page.locator('#wf-pop .wf-row:has([data-wf-value="status|implemented"])')
     assert row.locator('.wf-cnt').inner_text() == '1', 'counts ignore the facet being edited'
@@ -231,9 +241,14 @@ def test_filter_bar_facets_filter_tree_and_graph(browser, workspace):
     page.locator('[data-wf-remove=status]').click()
     assert page.locator('#workspace-filter-bar').is_hidden()
 
-    # Step state: the editor checks a value; a typed state adds another. Inherited staleness matches stale.
+    # Step state: the group toggle, then one value; a typed state adds another. Inherited staleness matches stale.
     open_add(page)
     page.locator('#wf-pop [data-wf-item]:has-text("Step state")').click()
+    attention = page.locator('[data-wf-group="steps|stale,missing,failed"]')
+    attention.click()
+    assert chips(page) == ['Steps are stale, missing, failed'] and attention.inner_text() == 'none'
+    attention.click()
+    assert page.locator('#workspace-filter-bar').is_hidden() and attention.inner_text() == 'all'
     page.locator('input[data-wf-value="steps|stale"]').check()
     assert chips(page) == ['Steps are stale'] and matched(page) == ['analysis-1']
     assert page.locator('#workspace-filter-bar .wf-count').inner_text() == '1 of 8 tasks · 2 of 19 steps'
@@ -249,17 +264,30 @@ def test_filter_bar_facets_filter_tree_and_graph(browser, workspace):
     page.locator('#btn-workspace').click()
     page.locator('.wf-clear').click()
 
-    # Task subtree: positive selection, then the not-under switch.
+    # Task subtree: a typed task adds an In chip; the not-under switch edits a separate Not in list.
     open_add(page)
-    page.locator('#wf-pop [data-wf-item]:has-text("Task subtree")').click()
-    page.locator('input[data-wf-scope="analysis-0"]').check()
-    assert page.locator('input[data-wf-scope="analysis-0/phase-a"]').is_disabled()
+    page.keyboard.type('Analysis 0')
+    page.keyboard.press('Enter')
     assert chips(page) == ['In Analysis 0 with a readable research question']
     assert matched(page) == ['analysis-0', 'analysis-0/phase-a', 'analysis-0/phase-a/leaf', 'analysis-0/phase-b']
-    page.locator('[data-wf-scope-neg=true]').click()
-    assert chips(page) == ['Not in Analysis 0 with a readable research question']
-    assert matched(page) == ['analysis-1', 'analysis-2', 'analysis-3']
+    page.locator('[data-wf-edit=scope-in]').click()
+    assert page.locator('input[data-wf-scope="analysis-0/phase-a"]').is_disabled()
+    page.locator('[data-wf-scope-list=out]').click()
+    page.locator('input[data-wf-scope="analysis-0/phase-a"]').check()
+    assert chips(page) == ['In Analysis 0 with a readable research question', 'Not in analysis-0/phase-a']
+    assert matched(page) == ['analysis-0', 'analysis-0/phase-b']
     page.keyboard.press('Escape')
+    assert show_graph(page, ['analysis-0', 'analysis-0/phase-a', 'analysis-0/phase-b']) == ['analysis-0-phase-b'] + [f'step-0-{j}' for j in range(4)]
+    page.locator('[data-wf-remove=scope-in]').click()
+    assert chips(page) == ['Not in analysis-0/phase-a'] and matched(page) == ['analysis-0', 'analysis-0/phase-b', 'analysis-1', 'analysis-2', 'analysis-3']
+    page.locator('[data-wf-edit=scope-out]').click()
+    assert page.locator('[data-wf-scope-list=out]').get_attribute('aria-pressed') == 'true', 'a Not in chip opens on its own list'
+    page.keyboard.press('Escape')
+    page.locator('.wf-clear').click()
+    open_add(page)
+    page.keyboard.type('Analysis 3')
+    page.locator('#wf-pop [data-wf-in="analysis-3"]').click()
+    assert chips(page) == ['In Analysis 3 with a readable research question'] and matched(page) == ['analysis-3']
     page.locator('.wf-clear').click()
 
     # Dependencies: the picker anchors a step without typing; the chip's arrow cycles its direction.
@@ -270,6 +298,12 @@ def test_filter_bar_facets_filter_tree_and_graph(browser, workspace):
     assert chips(page) == ['Upstream of step-1-3'] and matched(page) == ['analysis-1']
     page.locator('.wf-chip-dir').click()
     assert chips(page) == ['Downstream of step-1-3'] and matched(page) == ['analysis-1', 'analysis-3']
+    assert 'filter-context' in page.locator('#nav-tree .task-node[data-path=""]').get_attribute('class'), 'the root is context'
+    page.locator('[data-wf-edit="lineage:0"]').click()
+    page.locator('[data-wf-setdir=up]').click()
+    assert chips(page) == ['Upstream of step-1-3'] and matched(page) == ['analysis-1']
+    page.locator('[data-wf-setdir=down]').click()
+    page.keyboard.press('Escape')
     open_add(page)
     page.keyboard.type('Analysis 2')
     page.keyboard.press('Shift+Enter')
@@ -323,6 +357,16 @@ def test_tree_row_menu_by_mouse_and_keyboard(browser, workspace):
     assert 'is-sheet' not in menu.get_attribute('class') and more.get_attribute('aria-expanded') == 'true'
     menu.locator('[data-row-action=out]').click()
     assert chips(page) == ['Not in Analysis 1 with a readable research question'] and 'analysis-1' not in matched(page)
+    page.locator('.wf-clear').click()
+
+    # Hiding inside an In subtree keeps the In chip and the hidden leaf's parent.
+    page.locator('#nav-tree .task-node[data-path="analysis-0"] > .task-row').click(button='right')
+    menu.locator('[data-row-action=in]').click()
+    page.evaluate("restoreExpandedNavPaths(['analysis-0', 'analysis-0/phase-a'])")
+    page.locator('#nav-tree .task-node[data-path="analysis-0/phase-a/leaf"] > .task-row').click(button='right')
+    menu.locator('[data-row-action=out]').click()
+    assert chips(page) == ['In Analysis 0 with a readable research question', 'Not in analysis-0/phase-a/leaf']
+    assert matched(page) == ['analysis-0', 'analysis-0/phase-a', 'analysis-0/phase-b']
     page.locator('.wf-clear').click()
 
     row.focus()
@@ -382,15 +426,15 @@ def test_tree_row_menu_on_touch(browser, workspace):
     context.close()
 
 
-def test_four_chips_never_overflow_the_page(browser, workspace):
+def test_five_chips_never_overflow_the_page(browser, workspace):
     nav = {'layout': 'tree', 'filters': {'status': {'neg': True, 'values': ['archived', 'postponed']}, 'steps': ['failed', 'missing', 'stale'],
-           'scope': {'neg': False, 'paths': ['analysis-0', 'analysis-1']}, 'lineage': [{'task': 'analysis-1', 'direction': 'up'}]}}
+           'scope': {'in': ['analysis-0', 'analysis-1'], 'out': ['analysis-0/phase-a']}, 'lineage': [{'task': 'analysis-1', 'direction': 'up'}]}}
     for width in (390, 768, 1440):
         for theme in ('light', 'dark'):
             page = browser.new_page(viewport={'width': width, 'height': 800})
             page.add_init_script(f'localStorage.setItem("dashboard-theme", "{theme}")')
             page.goto(workspace['url'] + '#/analysis-1?repro=' + quote(json.dumps(nav)))
-            page.wait_for_function('!!_reproData && document.querySelectorAll(".wf-chip").length === 4')
+            page.wait_for_function('!!_reproData && document.querySelectorAll(".wf-chip").length === 5')
             overflow = page.evaluate('document.documentElement.scrollWidth - document.documentElement.clientWidth')
             assert overflow <= 0, f'{width}px {theme}: {overflow}px horizontal overflow'
             page.close()
