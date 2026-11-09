@@ -11,6 +11,10 @@
 - **A filter bar replaces the dashboard's Filter dialog.** Each active filter is a chip under the header, shared by Tree and Graph: task status (`is` or `is not`), step state, `In` and `Not in` subtrees, and dependency anchors. A step matches the state its Graph card shows, so a step stale only through its producer matches `stale`. The two subtree lists combine, so "under A but not A/b" is one filter. **+ Filter** searches facets, values, tasks, and steps in one box, and each value in an editor shows its count under the other active filters. Every Tree row opens a filter menu by right-click, its `⋯` button, Shift+F10, or long-press on touch, where it opens as a bottom sheet. Filter URLs saved under the dialog still load.
 - **New task-level cycles are refused.** A loop at a task boundary, over `depends_on` and file edges together, makes the graph very hard to trace even though builds run. `task dep add`, `move`, `create`, and `update` now refuse an edit that creates one or pulls another task into one, and a new `guard-task-cycles` hook denies the same edit made directly to a `task.md`. An existing cycle reads as a `task check` warning and blocks nothing, builds included. A `depends_on` against the file flow is one of these loops, so its former warning is gone.
 
+### Removed
+
+- **The `guard-foreign-checkout` hook is gone.** It asked before an agent edited a `task.md` or wrote git history in another checkout, but missed code edits and most shell writes, and confining a session to its directory is the agent runtime's job. Codex: if you trusted the superRA bundle through `/hooks`, you may need to trust it again.
+
 ### Fixed
 
 - **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.

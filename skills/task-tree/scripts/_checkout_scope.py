@@ -1,16 +1,13 @@
 """Which checkout a path belongs to: the session's own, or a foreign one.
 
-One membership rule, shared by the `guard-foreign-checkout` PreToolUse gate
-(`hooks/checkout_isolation_gate.py`) and the PostToolUse edit detector
-(`_edit_detect.py`), so a path the gate would prompt about is also a path the
-hook declines to touch.
+The PostToolUse edit detector (`_edit_detect.py`) uses it to keep reconciles
+out of checkouts the session was not pointed at.
 
 A path is the session's own when it sits under the session anchor, or in a
 checkout sharing the anchor's git common dir — every worktree of one repository
 shares that dir, and superRA dispatches implementers into sibling worktrees.
-Everything else is foreign. Both callers take that anchor from
-:func:`session_anchor`, so a `cd` into a foreign checkout cannot move it for one
-surface while leaving it for the other.
+Everything else is foreign. The anchor comes from :func:`session_anchor`, so a
+`cd` into a foreign checkout cannot move it.
 
 Stdlib only.
 """

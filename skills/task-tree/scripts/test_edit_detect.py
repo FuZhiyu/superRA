@@ -191,7 +191,7 @@ class TestBashMadeEdits:
 
     def test_a_foreign_checkout_is_left_alone(self, tmp_path):
         """Naming a path in another repository's checkout must not rewrite its
-        task files: the hook writes nowhere `guard-foreign-checkout` would prompt."""
+        task files."""
         session = _checkout(tmp_path / "session")
         foreign = _checkout(tmp_path / "foreign")
         command = f"ls {foreign}/superRA"
