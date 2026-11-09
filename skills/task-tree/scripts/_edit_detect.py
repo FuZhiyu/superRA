@@ -110,9 +110,8 @@ def plan_roots(
 
     A root in a foreign checkout is dropped: detection leads to a reconcile, and
     a session must not rewrite task files in a checkout it was not pointed at.
-    Membership is the `guard-foreign-checkout` gate's own test
-    (`_checkout_scope.is_foreign`), so every worktree of the session's own
-    repository stays in reach.
+    Membership is `_checkout_scope.is_foreign`, so every worktree of the
+    session's own repository stays in reach.
     """
     starts: list[Path] = [cwd]
     starts.extend(p.parent for p in tool_paths)

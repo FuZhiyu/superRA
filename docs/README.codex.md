@@ -52,8 +52,8 @@ rm -f ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.
 Run `/hooks` in Codex after installing the plugin. When plugin hooks
 are enabled, Codex should list superRA hooks from `hooks/hooks-codex.json`.
 The Codex hook list should include `autoload-superra`, `agent-model-guard`,
-`guard-task-approval`, `guard-task-cycles`, `guard-foreign-checkout`,
-`ensure-communicate`, `merge-guard`, task-tree `PostToolUse` hooks, and `codex-plan-stop`.
+`guard-task-approval`, `guard-task-cycles`, `ensure-communicate`,
+`merge-guard`, task-tree `PostToolUse` hooks, and `codex-plan-stop`.
 
 ## Hook Coverage
 
@@ -61,6 +61,5 @@ What each hook does, and which run on Codex, is on the [hooks page](site/05-hook
 
 - **Skill gates** (`ensure-companion`) are not installed: Codex does not expose skill loads as a `PreToolUse` surface.
 - **`agent-model-guard`** cannot enforce on Codex CLI 0.147.0, which starts `spawn_agent` without emitting `PreToolUse`; manifest tests still cover the hook contract.
-- **Shell interception is incomplete**, so the `Bash` side of `guard-foreign-checkout`, `merge-guard`, and the task-tree hook is best-effort.
-- **`guard-foreign-checkout`** falls through to allow on a runtime that does not honor `ask`.
+- **Shell interception is incomplete**, so the `Bash` side of `merge-guard` and the task-tree hook is best-effort.
 - **`codex-plan-stop`** replaces Claude Code's `ExitPlanMode` hook with a continuation prompt at the end of a plan-mode turn.

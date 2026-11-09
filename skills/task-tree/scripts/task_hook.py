@@ -1091,8 +1091,7 @@ def _detected_paths(
         command = tool_input.get("command", "") if tool_name == "Bash" else ""
         session_key = _repro_session_key(data)
         # The session anchor, not the payload cwd: a `cd` into another checkout
-        # must not make that checkout the session's own. Same resolution the
-        # `guard-foreign-checkout` gate uses.
+        # must not make that checkout the session's own.
         anchor = _checkout_scope.session_anchor(data)
         if anchor is None:
             return []
