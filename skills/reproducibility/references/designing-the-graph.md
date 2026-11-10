@@ -37,7 +37,7 @@ Open the producer and list what it opens: its real reads are `deps`, its real wr
   - **Declare upstream code only when the step reads or executes it;** provenance alone is not a dependency.
 - **Outs**
   - **Declare per-file outs when two scripts write into one directory.**
-  - **Keep volatile bytes out of outs,** so an identical rerun stops the cascade: exclude run logs and write stamps, sort before writing, keep timestamps out of tracked files.
+  - **Keep volatile bytes out of outs,** so an identical rerun stops the cascade: exclude run logs and write stamps, sort before writing, keep timestamps out of tracked files. A format whose writer stamps dates or IDs into the file: add a `normalize` cleaner in `superRA/config.yaml` (PDFs are cleaned by default).
   - **Use a [sidecar](../../task-tree/references/task-file-contract.md#step-keys) only for one measurably slow intermediate,** never for an exhibit.
 - **Paths**
   - **Reserve config variables for shared roots that need machine or branch resolution.** Declare other paths, untracked external inputs included, repo-relative in the task that owns the run.

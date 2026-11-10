@@ -29,8 +29,6 @@ Classify the step from the graph:
 
 Accept an expensive result already produced from the same committed code, such as by an interactive run, instead of rerunning it.
 
-**Clean a direct run's outputs first:** `superra repro normalize <targets>`. A step it returns to `fresh` needs no acceptance.
-
 **Inspect before accepting.** Review the selected producers' current definitions, inputs, and outputs; on an existing baseline, read what changed with `explain`. Cite any evidence file in the reason:
 
 ```bash
