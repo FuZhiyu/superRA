@@ -243,6 +243,24 @@ def test_normalize_by_path_matches_globs_on_the_declared_path(fig_project, tmp_p
     assert fig_project.run("normalize", str(outside / "n.txt")) == 0
     assert fig_project.states("03-ext")["ext"] == "fresh"
 
+    subprocess.run(f"date +%N > {outside}/n.txt", shell=True, check=True)
+    assert fig_project.run("normalize", str(outside)) == 0  # a directory holding the out
+    assert fig_project.states("03-ext")["ext"] == "fresh"
+
+
+def test_normalize_reports_a_running_build_without_a_traceback(fig_project, monkeypatch, capsys):
+    import repro_run
+    from contextlib import contextmanager
+
+    @contextmanager
+    def held(paths):
+        raise repro_run.ReproStateError("another build holds the runner lock")
+        yield
+    monkeypatch.setattr(repro_run, "mutation_lock", held)
+    fig_project.write("output/stamp.txt", "1\n")
+    assert fig_project.run("normalize", str(fig_project.root / "output" / "stamp.txt")) == 1
+    assert "Error: another build holds the runner lock" in capsys.readouterr().err
+
 
 def test_normalize_refuses_an_invalid_config(fig_project, capsys):
     configure(fig_project, '"*.txt": builtin:txt')

@@ -835,7 +835,7 @@ def _normalize(args, graph, paths: RunnerPaths) -> int:
         if not path.exists():
             unknown.append(item)
             continue
-        files += out_files(_declared_logical(graph, project_root, path), path)
+        files += [(_declared_logical(graph, project_root, f.resolve()), f) for _, f in out_files(str(path), path)]
     if unknown:
         print(f"Error: no step, task, or file matches {', '.join(unknown)}", file=sys.stderr)
         return 1
@@ -848,7 +848,7 @@ def _normalize(args, graph, paths: RunnerPaths) -> int:
     try:
         with mutation_lock(paths):
             outcome = clean(list(dict.fromkeys(files)), graph.config.normalize, project_root)
-    except CleanerFailed as exc:
+    except (CleanerFailed, ReproStateError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     if args.as_json:
