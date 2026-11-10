@@ -5,6 +5,9 @@
 #     "pikepdf==10.13.0.post1",
 #     "lxml==6.0.2",
 # ]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
 # ///
 """Strip volatile metadata from PDFs in place, so a regenerated figure keeps its bytes.
 
