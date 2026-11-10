@@ -16,16 +16,19 @@ from test_repro_runner import CONFIG, Project
 needs_uv = pytest.mark.skipif(shutil.which("uv") is None, reason="the PDF cleaner runs through uv")
 
 # A valid one-page PDF whose creation date and trailer ID change on every run,
-# as a plotting library's would.
+# as a plotting library's would; a second argument becomes its XMP packet.
 MKPDF = """\
 import sys, time
 stamp = str(time.time_ns()).encode()
 content = b"0 0 m 100 100 l S"
-objs = [b"<< /Type /Catalog /Pages 2 0 R >>",
+xmp = sys.argv[2].encode() if len(sys.argv) > 2 else None
+objs = [b"<< /Type /Catalog /Pages 2 0 R%s >>" % (b" /Metadata 6 0 R" if xmp else b""),
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Contents 4 0 R >>",
         b"<< /Length %d >>\\nstream\\n%s\\nendstream" % (len(content), content),
         b"<< /Title (Fig) /CreationDate (D:%s) /Producer (mkpdf) >>" % stamp[:14]]
+if xmp:
+    objs.append(b"<< /Type /Metadata /Subtype /XML /Length %d >>\\nstream\\n%s\\nendstream" % (len(xmp), xmp))
 out, offsets = b"%PDF-1.4\\n", []
 for i, obj in enumerate(objs, 1):
     offsets.append(len(out))
@@ -272,13 +275,9 @@ def test_normalize_refuses_an_invalid_config(fig_project, capsys):
 @needs_uv
 def test_a_malformed_xmp_packet_skips_one_file_not_the_batch(tmp_path):
     good, bad = tmp_path / "good.pdf", tmp_path / "bad.pdf"
-    for path in (good, bad):
-        subprocess.run([sys.executable, "-c", MKPDF, str(path)], check=True)
+    subprocess.run([sys.executable, "-c", MKPDF, str(good)], check=True)
+    subprocess.run([sys.executable, "-c", MKPDF, str(bad), "<not xml"], check=True)
     script = _repro_normalize.BUILTINS["builtin:pdf"]
-    # Give bad.pdf a /Metadata stream that is not XML, through the cleaner's own pikepdf.
-    subprocess.run(["uv", "run", "-q", "--no-project", "--with", "pikepdf==10.13.0.post1", "python", "-c",
-                    "import pikepdf, sys; pdf = pikepdf.open(sys.argv[1], allow_overwriting_input=True); "
-                    "pdf.Root.Metadata = pdf.make_stream(b'<not xml'); pdf.save(sys.argv[1], fix_metadata_version=False)", str(bad)], check=True)
     result = subprocess.run(["uv", "run", "-q", "--script", str(script), "--json", str(bad), str(good)],
                             check=True, capture_output=True, text=True)
     records = {r["path"]: r for r in json.loads(result.stdout)}
