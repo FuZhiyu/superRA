@@ -335,14 +335,15 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
              contract), so the href IS the repo path — resolve it against the repo
              root, not the doc node's dir. A link to a sibling export the build
              emits beside the site (DOC_LOCAL_LINKS) is a build artifact, not a
-             repo file, so it stays a plain relative href. */
+             repo file, so it stays a plain relative href. An attachment's link
+             is relative to its own folder, as outside doc mode. */
           var docClean = href.replace(/[?#].*$/, '');
           if (DOC_LOCAL_LINKS.indexOf(docClean) !== -1) {
             a.setAttribute('target', '_blank');
             return;
           }
           if (REPO_FILE_BASE) {
-            a.setAttribute('href', repoFileHref(href));
+            a.setAttribute('href', repoFileHref(artifactPath ? repoLinkPrefix + href : href));
             a.setAttribute('target', '_blank');
           }
           /* No REPO_FILE_BASE (e.g. a local doc-mode preview): leave the

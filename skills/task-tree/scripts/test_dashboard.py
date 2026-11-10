@@ -3712,8 +3712,8 @@ class TestLocalOpen:
         """A body file link keeps its vscode:// href (modifier/middle click, and it
         carries the line anchor) and gains the route address for a plain click.
         The address rides `contentDirRel`, the same base the vscode:// href uses,
-        so the two cannot drift; a rendered attachment never reaches this branch
-        (the `artifactPath` branch above returns), so here it equals `taskDirRel`."""
+        so the two cannot drift: the task directory for a body link, the
+        attachment's own folder for an attachment link outside `attachments/`."""
         assert (
             "a.setAttribute('data-open-path', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));"
             in BASE_HTML
