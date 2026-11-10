@@ -21,6 +21,8 @@
 
 - **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.
 - **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, JSON, data files, and the lock keep the path they recorded, and paths into other projects are left alone. The move lists the project files and the steps it changed.
+- **Dashboard file links with `..` open again.** On the dashboard's own machine, clicking a task-body link such as `../../output/fig.png` returned "Access denied" even when the file sat inside the project.
+- **Links in an attachment page reach project files.** A link in a rendered attachment that points outside the task's `attachments/`, such as `../../../output/fig.png`, did nothing; it now opens like the same link in a task body.
 
 ## [0.5.1] - 2026-11-01
 

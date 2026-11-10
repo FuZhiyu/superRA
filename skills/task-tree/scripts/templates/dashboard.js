@@ -325,22 +325,25 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
               a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));
             }
             if (!window.STANDALONE) a.setAttribute('data-peek', taskRelOpenPath(taskPath, artifactTarget));
+            return;
           }
-          return;
+          /* Outside attachments/: a project file link, resolved from the
+             attachment's own folder (contentDirRel carries it). */
         }
         if (window.DOC_MODE) {
           /* Doc pages cite repo files by repo-root-relative path (the authoring
              contract), so the href IS the repo path — resolve it against the repo
              root, not the doc node's dir. A link to a sibling export the build
              emits beside the site (DOC_LOCAL_LINKS) is a build artifact, not a
-             repo file, so it stays a plain relative href. */
+             repo file, so it stays a plain relative href. An attachment's link
+             is relative to its own folder, as outside doc mode. */
           var docClean = href.replace(/[?#].*$/, '');
           if (DOC_LOCAL_LINKS.indexOf(docClean) !== -1) {
             a.setAttribute('target', '_blank');
             return;
           }
           if (REPO_FILE_BASE) {
-            a.setAttribute('href', repoFileHref(href));
+            a.setAttribute('href', repoFileHref(artifactPath ? repoLinkPrefix + href : href));
             a.setAttribute('target', '_blank');
           }
           /* No REPO_FILE_BASE (e.g. a local doc-mode preview): leave the
@@ -375,9 +378,10 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
              an OS-level open cannot). Same project-root-relative composition the
              /files/ route is handed — but decoded: /files/ rides a URL path that
              the server decodes, while /api/open takes the path in a JSON body,
-             which nothing decodes. */
+             which nothing decodes. The server refuses a written-out `..`, so
+             collapse it here as the peek path below does. */
           if (window.LOCAL_OPEN) {
-            a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));
+            a.setAttribute('data-open-path', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));
           }
           if (!window.STANDALONE) {
             a.setAttribute('data-peek', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));
