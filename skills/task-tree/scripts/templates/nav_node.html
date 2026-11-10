@@ -1,7 +1,7 @@
 {#- Jinja2 macro: navigation-only task node for the master-detail sidebar.
 
     Renders the .task-row chrome (toggle caret, slug, title, status badge,
-    progress, comment badge) and the recursive children container, but NO
+    progress, comment badge, the filter menu's ⋯ button) and the recursive children container, but NO
     task body / no `## ` sections — the sole row-rendering path. Keeps the per-node
     attributes the rest of the system keys off: id="task-<path-id>", data-path,
     data-status, and sse-swap="task:<path>" so SSE row swaps keep working.
@@ -46,6 +46,7 @@
     {% endfor %}
     <span class="task-progress">({{ approved_count | length }}/{{ task.children | length }})</span>
     {% endif %}
+    <button class="task-row-more" type="button" tabindex="-1" aria-haspopup="menu" aria-expanded="false" aria-label="Filter options">&#8943;</button>
   </div>
 
   {#- Children container -#}

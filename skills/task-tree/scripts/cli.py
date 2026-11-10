@@ -2,6 +2,9 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["pyyaml"]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
 # ///
 """Console entry point for the task-tree command surface.
 

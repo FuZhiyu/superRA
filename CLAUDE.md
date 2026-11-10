@@ -16,10 +16,16 @@ Run the task-tree CLI from live source; each entry script carries a PEP 723 depe
 ```bash
 uv run --script skills/task-tree/scripts/cli.py task frontier
 uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard
-uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts
+uv run --script tests/run_tests.py skills/task-tree/scripts
 ```
 
 - **uv-free fallback:** `python3 skills/task-tree/scripts/cli.py …` — the core is stdlib-only.
+- **Dependency locks:** every shipped script with inline dependencies, and `tests/run_tests.py`, has a sidecar `<script>.lock` and a fixed `exclude-newer` under `[tool.uv]` in its block; the fixed date stops a user-level `exclude-newer` from rewriting the lock. After changing a dependency block, or to take newer versions (move `exclude-newer` forward and add `--upgrade`), relock and commit the script and its lock together:
+  ```bash
+  UV_NO_CONFIG=1 uv lock --script <script>
+  uv run --script tests/run_tests.py tests/test_script_dependency_locks.py
+  ```
+- **Ad hoc installs name exact versions.** A `--with <package>` in skill text, tests, or this file is `--with <package>==X.Y.Z`; the test above enforces it. Its dependencies stay unpinned unless named too, so a command that agents run often belongs in a locked script.
 - **`./superRA/superra` wrapper:** prefers this checkout's `skills/task-tree`, then an installed plugin, then a GitHub clone. The resolution chain lives in `skills/task-tree/scripts/wrapper_resolver.py`.
 
 ## Releasing
@@ -110,4 +116,5 @@ One source of truth per concern; other mentions point to it. Skill-level groupin
 - **Add a reference only with a clear load condition** from its `SKILL.md`; keep domain and utility skills standalone.
 - **A new domain vertical** is `skills/<vertical>/SKILL.md` with its gates and stage-scoped references for the stages it touches; workflow, role, and orchestration skills carry over unchanged.
 - **Keep inventories in sync** when adding, renaming, or removing a skill: `skills/CATEGORIES.md`, `README.md`, and, for domain skills, the manifest Domain table.
+- **Lock every package a skill or hook installs.** A new or changed script dependency ships with its relocked sidecar lock, and an ad hoc `--with` names exact versions (§Developing Locally). A package with no wheel is named in the script's `no-binary-package`, with its build backend pinned in `build-constraint-dependencies`.
 - **Bound any new hook message or CLI default output** per §Bounded Agent-Facing Output.

@@ -487,15 +487,138 @@ function postHtmlFrameTheme(frame) {
   }
 }
 
-/* Shared navigation state: layout changes do not change what is selected or filtered. */
-var _workspaceFilters={statuses:[],tasks:null};
+/* Shared navigation state: layout changes do not change what is selected or filtered.
+   Facets AND together, values within a facet OR, and dependency anchors union,
+   each walking its own direction. */
+var WORKSPACE_STATUSES=['not-started','in-progress','implemented','revise','approved','archived','postponed'];
+var WORKSPACE_STATUS_GROUPS=[['Open',['not-started','in-progress','revise']],['In review',['implemented']],['Done',['approved']],['Shelved',['postponed','archived']]];
+var WORKSPACE_STEP_GROUPS=[['Needs attention',['stale','missing','failed']],['Up to date',['fresh']],['Other',['unverified','unknown']]];
+var WORKSPACE_QUICK_FILTERS=[
+  {label:'Active work',desc:'not-started, in-progress, revise',apply:function(f){f.status={neg:false,values:['in-progress','not-started','revise']};}},
+  {label:'Awaiting review',desc:'implemented',apply:function(f){f.status={neg:false,values:['implemented']};}},
+  {label:'Needs a rebuild',desc:'steps stale, missing, or failed',apply:function(f){f.steps=['failed','missing','stale'];}},
+  {label:'Hide shelved',desc:'status is not postponed or archived',apply:function(f){f.status={neg:true,values:['archived','postponed']};}}
+];
+var LINEAGE_DIRECTIONS={both:'Dependencies of',up:'Upstream of',down:'Downstream of'};
+var LINEAGE_ARROWS={up:'⇡',down:'⇣',both:'⇅'};
+var LINEAGE_NEXT={up:'down',down:'both',both:'up'};
+function emptyWorkspaceFilters() { return {status:{neg:false,values:[]},steps:[],scope:{in:[],out:[]},lineage:[]}; }
+var _workspaceFilters=emptyWorkspaceFilters();
+var _workspaceLineageMemo=null;
+var _workspaceStepMemo=null;
 var _treeSidebarHidden=false;
-var _filterExpanded=new Set(['']);
+function workspaceStrings(list, allowed) {
+  return Array.isArray(list)?Array.from(new Set(list.filter(function(v){return typeof v==='string'&&(!allowed||allowed.includes(v));}))).sort():[];
+}
+/* The fewest subtree roots that cover `paths`. */
+function workspaceScopeRoots(paths) {
+  return paths.filter(function(p){return !paths.some(function(r){return r!==p&&reproWithin(p,r);});});
+}
+/* A legacy `tasks` selection becomes the one-list subtree filter (`In` or `Not in`) that
+   matches the same tasks, or the fewest others: an unselected parent of a
+   selected child cannot be expressed and shows as context. */
+function workspaceScopeFromSelection(selected) {
+  var all=workspaceTasks().map(function(t){return t.path;}),chosen=new Set(selected);
+  function form(neg) {
+    var whole=new Set(all.filter(function(p){return all.every(function(q){return !reproWithin(q,p)||chosen.has(q)!==neg;});}));
+    var paths=all.filter(function(p){if(!whole.has(p))return false;for(var a=parentPath(p);a!==null;a=parentPath(a))if(whole.has(a))return false;return true;});
+    var misses=all.filter(function(p){return (!paths.length||paths.some(function(r){return reproWithin(p,r);})!==neg)!==chosen.has(p);}).length;
+    return {neg:neg,paths:paths,misses:misses};
+  }
+  var a=form(false),b=form(true),best=b.misses<a.misses||(b.misses===a.misses&&b.paths.length<a.paths.length)?b:a;
+  return best.neg?{in:[],out:best.paths}:{in:best.paths,out:[]};
+}
+/* Accepts the current hash shape and the legacy forms: `statuses`, a `tasks`
+   selection, and a `hidden` list, which maps to `Not in`. */
 function normalizeWorkspaceFilters(value) {
-  value=value||{};
-  var selected=Array.isArray(value.tasks)?Array.from(new Set(value.tasks.filter(function(p){return typeof p==='string';}))).sort():null;
-  if(selected===null&&Array.isArray(value.hidden)&&value.hidden.length)selected=workspaceTasks().filter(function(t){return !value.hidden.some(function(p){return typeof p==='string'&&reproWithin(t.path,p);});}).map(function(t){return t.path;});
-  return {statuses:Array.isArray(value.statuses)?Array.from(new Set(value.statuses.filter(function(s){return ['not-started','in-progress','implemented','revise','approved','archived','postponed'].includes(s);}))).sort():[],tasks:selected};
+  value=value&&typeof value==='object'?value:{};
+  var out=emptyWorkspaceFilters(),status=value.status&&typeof value.status==='object'?value.status:{values:value.statuses},scope=value.scope&&typeof value.scope==='object'?value.scope:null;
+  out.status={neg:status.neg===true,values:workspaceStrings(status.values,WORKSPACE_STATUSES)};
+  out.steps=workspaceStrings(value.steps,REPRO_STATES.map(function(s){return s.key;}));
+  if(scope)out.scope={in:workspaceScopeRoots(workspaceStrings(scope.in)),out:workspaceScopeRoots(workspaceStrings(scope.out))};
+  else if(Array.isArray(value.tasks))out.scope=workspaceScopeFromSelection(workspaceStrings(value.tasks));
+  else if(Array.isArray(value.hidden))out.scope.out=workspaceScopeRoots(workspaceStrings(value.hidden));
+  if(!out.status.values.length)out.status.neg=false;
+  out.lineage=normalizeLineageFilter(value.lineage);
+  return out;
+}
+function workspaceAnchorKey(a) { return a.step?'step:'+a.step:'task:'+a.task; }
+/* Dependency anchors, each {task} or {step} with its direction. A legacy
+   {anchors, direction} object gives every anchor the shared direction. */
+function normalizeLineageFilter(value) {
+  var legacy=!!value&&!Array.isArray(value)&&Array.isArray(value.anchors),shared=legacy&&['up','down'].includes(value.direction)?value.direction:'both';
+  var seen=new Set();
+  return (Array.isArray(value)?value:legacy?value.anchors:[]).map(function(a){
+    if(!a)return null;
+    var direction=legacy?shared:['up','down'].includes(a.direction)?a.direction:'both';
+    return typeof a.step==='string'&&a.step?{step:a.step,direction:direction}:typeof a.task==='string'&&a.task?{task:a.task,direction:direction}:null;
+  }).filter(function(a){if(!a||seen.has(workspaceAnchorKey(a)))return false;seen.add(workspaceAnchorKey(a));return true;});
+}
+function workspaceFilterCount(f) {
+  f=f||_workspaceFilters;
+  return (f.status.values.length?1:0)+(f.steps.length?1:0)+(f.scope.in.length?1:0)+(f.scope.out.length?1:0)+f.lineage.length;
+}
+/* Only active facets enter the hash: {status:{neg,values}, steps, scope:{in,out}, lineage:[{task|step, direction}]}. */
+function workspaceFiltersForHash(f) {
+  if(!workspaceFilterCount(f))return undefined;
+  var out={};
+  if(f.status.values.length)out.status={neg:f.status.neg,values:f.status.values};
+  if(f.steps.length)out.steps=f.steps;
+  if(f.scope.in.length||f.scope.out.length)out.scope={in:f.scope.in,out:f.scope.out};
+  if(f.lineage.length)out.lineage=f.lineage;
+  return out;
+}
+/* The dependency filter's set on the full graph: the union of every anchor's
+   walk in its own direction. Null when no anchor is set or the graph has not
+   loaded; anchors the graph no longer has are dropped. */
+function workspaceLineage() {
+  var anchors=_workspaceFilters.lineage;
+  if(!anchors.length||!_reproData)return null;
+  var key=JSON.stringify(anchors),memo=_workspaceLineageMemo;
+  if(!memo||memo.data!==_reproData||memo.key!==key){
+    var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
+    var kept=anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
+    if(kept.length!==anchors.length)_workspaceFilters.lineage=kept;
+    if(!kept.length)return null;
+    var set={steps:new Set(),tasks:new Set()};
+    ['up','down','both'].forEach(function(direction){
+      var group=kept.filter(function(a){return a.direction===direction;});
+      if(!group.length)return;
+      var found=reproLineage(graph,group,direction);
+      found.steps.forEach(function(n){set.steps.add(n);});found.tasks.forEach(function(p){set.tasks.add(p);});
+    });
+    memo=_workspaceLineageMemo={data:_reproData,key:JSON.stringify(kept),set:set};
+  }
+  return memo.set;
+}
+/* Each step's reported state (the one its Graph card shows) and each task's
+   steps, or null before the graph loads. */
+function workspaceStepIndex() {
+  if(!_reproData)return null;
+  if(!_workspaceStepMemo||_workspaceStepMemo.data!==_reproData){
+    var statuses=reproStatusIndex(_reproData),state={},byTask={};
+    (_reproData.graph.steps||[]).forEach(function(s){state[s.name]=reproChannels(statuses[s.name]).state;(byTask[s.task]||(byTask[s.task]=[])).push(s.name);});
+    _workspaceStepMemo={data:_reproData,state:state,byTask:byTask};
+  }
+  return _workspaceStepMemo;
+}
+function lineageAnchorLabel(anchor) { return anchor.step?anchor.step:workspaceTaskTitle(anchor.task); }
+function workspaceTaskTitle(path) {
+  var task=(SEARCH_INDEX||[]).find(function(t){return t.path===path;});
+  return task&&task.title||reproTaskTitle(path);
+}
+/* Adds an anchor, or sets the direction of one already present. */
+function addLineageAnchor(anchor, direction) {
+  var next=normalizeLineageFilter([Object.assign({},anchor,{direction:direction||'both'})])[0];
+  if(!next)return;
+  var current=_workspaceFilters.lineage.find(function(a){return workspaceAnchorKey(a)===workspaceAnchorKey(next);});
+  if(current)current.direction=next.direction;else _workspaceFilters.lineage.push(next);
+  applyWorkspaceFilters(true);
+}
+/* Adds a subtree root to the `in` or `out` list; the other list is kept. */
+function workspaceScopeAdd(path, list) {
+  var scope=_workspaceFilters.scope;
+  scope[list]=workspaceScopeRoots(workspaceStrings(scope[list].concat([path])));
 }
 function workspaceTasks() {
   var tasks={};
@@ -503,22 +626,61 @@ function workspaceTasks() {
   if(_reproData)(_reproData.graph.dependencies&&_reproData.graph.dependencies.tasks||[]).forEach(function(t){tasks[t.path]=Object.assign({},tasks[t.path],t);});
   return Object.values(tasks).sort(function(a,b){return a.path.localeCompare(b.path);});
 }
-function workspaceTaskMatches(path, task) {
-  if(_workspaceFilters.tasks!==null&&!_workspaceFilters.tasks.includes(path))return false;
-  if(!_workspaceFilters.statuses.length)return true;
+/* A step passes the step-state and dependency filters; `skip` leaves one facet
+   out, for faceted counts. Step states wait for the graph. */
+function workspaceStepMatches(name, skip, lineage) {
+  var states=_workspaceFilters.steps,index=states.length&&skip!=='steps'?workspaceStepIndex():null;
+  if(index&&!states.includes(index.state[name]))return false;
+  return !lineage||lineage.steps.has(name);
+}
+/* A task passes every facet but `skip`: under some `In` root (or none is set)
+   and no `Not in` root; in the dependency set, where the root counts only if it
+   owns a member step; and, with a step-state filter, owning a step in a
+   selected state that also passes the dependency filter. */
+function workspaceTaskMatches(path, task, skip) {
+  var f=_workspaceFilters,within=function(r){return reproWithin(path,r);};
+  if(skip!=='scope-in'&&f.scope.in.length&&!f.scope.in.some(within))return false;
+  if(skip!=='scope-out'&&f.scope.out.some(within))return false;
+  var lineage=skip==='lineage'?null:workspaceLineage();
+  if(lineage&&!lineage.tasks.has(path))return false;
+  var index=f.steps.length&&skip!=='steps'?workspaceStepIndex():null;
+  if(index&&!(index.byTask[path]||[]).some(function(n){return workspaceStepMatches(n,null,lineage);}))return false;
+  if(skip==='status'||!f.status.values.length)return true;
   task=task||workspaceTasks().find(function(t){return t.path===path;});
-  return !!task&&_workspaceFilters.statuses.includes(task.status);
+  return !!task&&f.status.values.includes(task.status)!==f.status.neg;
 }
 function workspaceVisibility() {
   var tasks=workspaceTasks(),matches=new Set(),visible=new Set();
   tasks.forEach(function(t){if(workspaceTaskMatches(t.path,t)){matches.add(t.path);visible.add(t.path);var p=t.path;while(p){p=parentPath(p);visible.add(p);}}});
   return {matches:matches,visible:visible};
 }
+/* Per value of `facet`, what toggling it would match under every other active
+   facet: tasks per status, tasks under each subtree (`scope-in` or
+   `scope-out`), steps per state (null before the graph loads). */
+function workspaceFacetCounts(facet) {
+  var counts={},index=workspaceStepIndex(),lineage=workspaceLineage();
+  function add(key){counts[key]=(counts[key]||0)+1;}
+  if(facet==='steps'&&!index)return null;
+  workspaceTasks().forEach(function(t){
+    if(!workspaceTaskMatches(t.path,t,facet))return;
+    if(facet==='status')add(t.status);
+    else if(facet!=='steps')for(var p=t.path;p!==null;p=parentPath(p))add(p);
+    else (index.byTask[t.path]||[]).forEach(function(n){if(workspaceStepMatches(n,'steps',lineage))add(index.state[n]);});
+  });
+  return counts;
+}
+/* `41 of 235 tasks · 88 of 310 steps`; steps once the graph has loaded. */
+function workspaceResultCount(visibility) {
+  var html='<b>'+visibility.matches.size+'</b> of '+workspaceTasks().length+' tasks';
+  if(!_reproData)return html;
+  var steps=_reproData.graph.steps||[],lineage=workspaceLineage();
+  return html+' · <b>'+steps.filter(function(s){return visibility.matches.has(s.task)&&workspaceStepMatches(s.name,null,lineage);}).length+'</b> of '+steps.length+' steps';
+}
 function workspaceGraph(graph) {
   var archived=graph.dependencies&&graph.dependencies.archived_tasks||[];
   if(archived.length){var catalog=workspaceTasks(),known=new Set(graph.dependencies.tasks.map(function(t){return t.path;})),extra=catalog.filter(function(t){return archived.includes(t.path)&&!known.has(t.path);});graph=Object.assign({},graph,{dependencies:Object.assign({},graph.dependencies,{tasks:graph.dependencies.tasks.concat(extra)})});}
-  if(_workspaceFilters.tasks===null&&!_workspaceFilters.statuses.length)return graph;
-  var visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task);}),names=new Set(steps.map(function(s){return s.name;}));
+  if(!workspaceFilterCount())return graph;
+  var lineage=workspaceLineage(),visibility=workspaceVisibility(),steps=(graph.steps||[]).filter(function(s){return visibility.matches.has(s.task)&&workspaceStepMatches(s.name,null,lineage);}),names=new Set(steps.map(function(s){return s.name;}));
   var dependencies=Object.assign({},graph.dependencies);
   dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
   dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
@@ -537,63 +699,346 @@ function applyWorkspaceFilters(changed) {
   });
   var nav=document.getElementById('nav-tree'),empty=document.getElementById('navigation-empty');
   if(nav){if(!empty){empty=document.createElement('p');empty.id='navigation-empty';empty.className='repro-hint';nav.prepend(empty);}empty.hidden=visibility.visible.size>0;empty.textContent='No tasks match these filters.';}
-  updateWorkspaceFilterSummary();refreshRovingTabindex();
+  renderWorkspaceFilterBar(visibility);refreshRovingTabindex();
   if(changed){
-    if(_workspaceFilters.statuses.length){var ancestors=Array.from(visibility.visible).filter(function(p){return !visibility.matches.has(p);});restoreExpandedNavPaths(ancestors);ancestors.forEach(function(p){if(!_reproNav.expanded.includes(p))_reproNav.expanded.push(p);});}
+    if(workspaceFilterCount()){var ancestors=Array.from(visibility.visible).filter(function(p){return !visibility.matches.has(p);});restoreExpandedNavPaths(ancestors);ancestors.forEach(function(p){if(!_reproNav.expanded.includes(p))_reproNav.expanded.push(p);});}
     workspaceWriteHistory();
     if(currentView==='reproduction'&&_reproData)drawReproView(document.getElementById('view-reproduction'),_reproData);
     renderReproDetail(_reproSelected);
+    workspacePopRender();
   }
 }
-function updateWorkspaceFilterSummary() {
-  var host=document.getElementById('workspace-filter-summary');if(!host)return;
-  var active=_workspaceFilters.statuses.length+(_workspaceFilters.tasks===null?0:1);
-  host.hidden=!active;
-  host.innerHTML=(_workspaceFilters.statuses.length?'<span>Status: '+escapeHtml(_workspaceFilters.statuses.join(', '))+'</span>':'')
-    +(_workspaceFilters.tasks!==null?'<span>'+_workspaceFilters.tasks.length+' of '+workspaceTasks().length+' tasks selected</span>':'')
-    +'<button class="hc-btn" onclick="clearWorkspaceFilters()">Clear filters</button>';
-  var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=active?'Filter · '+active:'Filter';trigger.classList.toggle('active',!!active);}
-  var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear filters to show this task in navigation.';}
+function workspaceSummarize(list, max) { return list.length<=max?list.join(', '):list.slice(0,max).join(', ')+' +'+(list.length-max); }
+function workspaceGlyphHTML(state) { return '<span class="wf-glyph" data-state="'+state+'" aria-hidden="true">'+(REPRO_GLYPHS[state]||'?')+'</span>'; }
+function workspaceStateHTML(state) { return workspaceGlyphHTML(state)+state; }
+function workspaceChipHTML(key, inner, label, lead) {
+  return '<span class="wf-chip'+(lead?' is-lineage':'')+'">'+(lead||'')+'<button type="button" class="wf-chip-edit" data-wf-edit="'+key+'" data-wf-key="edit:'+key+'" aria-haspopup="dialog" aria-label="Edit '+escapeAttr(label)+'">'+inner+'</button>'
+    +'<button type="button" class="wf-chip-x" data-wf-remove="'+key+'" data-wf-key="remove:'+key+'" aria-label="Remove '+escapeAttr(label)+'">×</button></span>';
+}
+/* One chip per active filter, + Filter, the result count, and Clear; shown
+   only while a filter is active. */
+function renderWorkspaceFilterBar(visibility) {
+  var host=document.getElementById('workspace-filter-bar');if(!host)return;
+  var f=_workspaceFilters,count=workspaceFilterCount(),focus=host.contains(document.activeElement)?document.activeElement.dataset.wfKey:null,chips='';
+  if(f.status.values.length){var op=f.status.neg?'is not':f.status.values.length>1?'is any of':'is',values=workspaceSummarize(f.status.values,3);
+    chips+=workspaceChipHTML('status','<span class="wf-k">Status</span><span class="wf-op">'+op+'</span><span class="wf-v">'+escapeHtml(values)+'</span>','Status '+op+' '+values);}
+  if(f.steps.length){var states=REPRO_STATES.map(function(s){return s.key;}).filter(function(s){return f.steps.includes(s);});
+    chips+=workspaceChipHTML('steps','<span class="wf-k">Steps</span><span class="wf-op">are</span><span class="wf-v">'+states.map(workspaceStateHTML).join(' ')+'</span>','Steps are '+states.join(', '));}
+  [['in','In'],['out','Not in']].forEach(function(list){
+    if(!f.scope[list[0]].length)return;
+    var titles=workspaceSummarize(f.scope[list[0]].map(workspaceTaskTitle),2);
+    chips+=workspaceChipHTML('scope-'+list[0],'<span class="wf-k">'+list[1]+'</span><span class="wf-v">'+escapeHtml(titles)+'</span>',list[1]+' '+titles);
+  });
+  f.lineage.forEach(function(a,i){
+    var label=LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),index=a.step&&workspaceStepIndex(),glyph=a.step?workspaceGlyphHTML(index&&index.state[a.step]||'unknown'):'';
+    chips+=workspaceChipHTML('lineage:'+i,'<span class="wf-k">'+LINEAGE_DIRECTIONS[a.direction]+'</span><span class="wf-v'+(a.step?' is-step':'')+'">'+glyph+escapeHtml(lineageAnchorLabel(a))+'</span>',label,
+      '<button type="button" class="wf-chip-dir" data-wf-dir="'+i+'" data-wf-key="dir:'+i+'" title="Change direction" aria-label="'+escapeAttr(label)+'. Change direction">'+LINEAGE_ARROWS[a.direction]+'</button>');
+  });
+  host.hidden=!count;
+  host.innerHTML=chips+'<button type="button" class="wf-add" id="filter-add" data-wf-add data-wf-key="add" aria-haspopup="dialog">+ Filter</button>'
+    +'<span class="wf-count" role="status">'+(count?workspaceResultCount(visibility||workspaceVisibility()):'')
+    +((f.lineage.length||f.steps.length)&&!_reproData?' · graph unavailable':'')+'</span>'
+    +'<button type="button" class="wf-clear" data-wf-clear data-wf-key="clear">Clear</button>';
+  if(focus){var again=host.querySelector('[data-wf-key="'+focus+'"]')||(!host.hidden&&host.querySelector('#filter-add'))||document.getElementById('filter-trigger');if(again)again.focus({preventScroll:true});}
+  var trigger=document.getElementById('filter-trigger');if(trigger){trigger.textContent=count?'Filter · '+count:'Filter';trigger.classList.toggle('active',!!count);}
+  var notice=document.getElementById('selection-filter-notice');if(notice){notice.hidden=workspaceTaskMatches(activePath);notice.textContent='Hidden by filters. Clear the filter bar to show this task in navigation.';}
   if(typeof reproSizeWorkspace==='function')reproSizeWorkspace();
 }
-function openWorkspaceFilter() {
-  var dialog=document.getElementById('workspace-filter');
-  document.getElementById('workspace-task-query').value='';
-  renderWorkspaceFilter();dialog.showModal();
-  loadReproData(false).then(renderWorkspaceFilter).catch(function(){});
+function openWorkspaceFilter(anchor) { workspacePopOpen('add',anchor||document.getElementById('filter-trigger')); }
+function clearWorkspaceFilters() { _workspaceFilters=emptyWorkspaceFilters();workspacePopClose(false);applyWorkspaceFilters(true); }
+
+/* ── Filter popover: + Filter, the facet editors, and the dependency picker ──
+   One element re-anchored under the control that opened it. A refresh rewrites
+   the head and body but keeps the search box, so typing survives filtering. */
+var _wfPop=null;
+var _wfDepDirection='both';
+var _wfScopeList='in';
+function workspacePopOpen(kind, anchor) {
+  if(_wfPop&&_wfPop.kind===kind&&_wfPop.anchor===anchor){workspacePopClose(true);return;}
+  workspacePopClose(false);
+  var el=document.createElement('div');el.className='wf-pop';el.id='wf-pop';el.setAttribute('role','dialog');
+  document.body.appendChild(el);
+  _wfPop={kind:kind,anchor:anchor,el:el,items:[],hl:0};
+  el.addEventListener('click',onWorkspacePopClick);el.addEventListener('change',onWorkspacePopChange);
+  el.addEventListener('input',function(e){if(e.target.classList.contains('wf-pop-search')){_wfPop.hl=0;workspacePopRender();}});el.addEventListener('keydown',onWorkspacePopKeydown);
+  workspacePopShow(kind);
+  loadReproData(false).then(function(){if(_wfPop&&_wfPop.el===el)workspacePopRender();}).catch(function(){});
 }
-function closeWorkspaceFilter() {document.getElementById('workspace-filter').close();document.getElementById('filter-trigger').focus();}
-function renderWorkspaceFilter() {
-  var host=document.getElementById('workspace-status-options');if(!host)return;
-  host.innerHTML=['not-started','in-progress','implemented','revise','approved','archived','postponed'].map(function(status){return '<label><input type="checkbox" data-filter-status="'+status+'"'+(_workspaceFilters.statuses.includes(status)?' checked':'')+'> '+status+'</label>';}).join('');
-  renderWorkspaceTaskOptions();
+/* Switch the open popover to another kind in place. */
+function workspacePopShow(kind) {
+  var pop=_wfPop;if(!pop)return;
+  pop.kind=kind;pop.hl=0;
+  var search={add:'Filter by status, step state, task, or step…',scope:'Find a task…',deps:'Find a task or step…'}[kind];
+  pop.el.innerHTML='<div class="wf-pop-head"></div>'+(search?'<input type="search" class="wf-pop-search" autocomplete="off" spellcheck="false" placeholder="'+search+'" aria-label="'+search.replace('…','')+'"'+(kind==='add'?' role="combobox" aria-expanded="true" aria-controls="wf-pop-body"':'')+'>':'')
+    +'<div class="wf-pop-body" id="wf-pop-body"'+(kind==='add'?' role="listbox" aria-label="Filters"':'')+'></div><div class="wf-pop-foot"></div>';
+  workspacePopRender();
+  var first=pop.el.querySelector('.wf-pop-search')||pop.el.querySelector('input,button');if(first)first.focus({preventScroll:true});
 }
-function renderWorkspaceTaskOptions() {
-  var host=document.getElementById('workspace-task-options');if(!host)return;
-  var q=document.getElementById('workspace-task-query').value.trim().toLowerCase(),tasks=workspaceTasks(),byPath={},children={};
+function workspacePopClose(refocus) {
+  var pop=_wfPop;if(!pop)return;
+  _wfPop=null;pop.el.remove();
+  if(refocus){var anchor=pop.anchor&&pop.anchor.isConnected&&pop.anchor.offsetParent?pop.anchor:workspacePopAnchor('');if(anchor)anchor.focus({preventScroll:true});}
+}
+/* The chip editing `kind`, else + Filter while the bar shows, else the header Filter button. */
+function workspacePopAnchor(kind) {
+  var bar=document.getElementById('workspace-filter-bar');
+  if(kind==='scope')kind='scope-'+_wfScopeList;
+  return (bar&&!bar.hidden&&(bar.querySelector('[data-wf-edit="'+kind+'"]')||bar.querySelector('#filter-add')))||document.getElementById('filter-trigger');
+}
+function workspacePopPosition() {
+  var pop=_wfPop;if(!pop)return;
+  if(!pop.anchor||!pop.anchor.isConnected||!pop.anchor.offsetParent)pop.anchor=workspacePopAnchor(pop.kind);
+  var r=pop.anchor.getBoundingClientRect(),el=pop.el,top=r.bottom+6;
+  el.style.top=top+'px';el.style.left=Math.max(8,Math.min(r.left,window.innerWidth-el.offsetWidth-8))+'px';
+  el.style.maxHeight=Math.max(160,window.innerHeight-top-8)+'px';
+}
+function workspacePopRender() {
+  var pop=_wfPop;if(!pop)return;
+  var el=pop.el,active=document.activeElement,key=el.contains(active)&&active.dataset.wfKey,input=el.querySelector('.wf-pop-search'),q=input?input.value.trim().toLowerCase():'';
+  var view=pop.kind==='add'?workspaceAddView(q):pop.kind==='status'?workspaceStatusView():pop.kind==='steps'?workspaceStepsView():pop.kind==='scope'?workspaceScopeView(q):pop.kind==='deps'?workspaceDepsView(q):workspaceAnchorView(Number(pop.kind.split(':')[1]));
+  if(!view){workspacePopClose(true);return;}
+  el.setAttribute('aria-label',view.label);
+  var head=el.querySelector('.wf-pop-head'),body=el.querySelector('.wf-pop-body'),foot=el.querySelector('.wf-pop-foot');
+  head.innerHTML=view.head||'';head.hidden=!view.head;body.innerHTML=view.body;foot.innerHTML=view.foot||'';foot.hidden=!view.foot;
+  if(pop.kind==='add')workspacePopHighlight();
+  if(key){var again=el.querySelector('[data-wf-key="'+key+'"]');if(again)again.focus({preventScroll:true});}
+  workspacePopPosition();
+}
+function workspaceSegHTML(attr, options, current) {
+  return '<span class="wf-seg" role="group">'+options.map(function(o){return '<button type="button" '+attr+'="'+o[0]+'" data-wf-key="'+attr+':'+o[0]+'" aria-pressed="'+(String(current)===o[0])+'">'+o[1]+'</button>';}).join('')+'</span>';
+}
+function workspaceActsHTML(kind, id, withIn) {
+  return '<span class="wf-acts">'+(withIn?'<button type="button" class="wf-act is-text" data-wf-in="'+escapeAttr(id)+'" data-wf-key="in:'+escapeAttr(id)+'" title="Show only this subtree" aria-label="Show only this subtree">in</button>':'')
+    +(kind==='task'&&!id?'':['up','down','both'].map(function(d){return '<button type="button" class="wf-act" data-wf-anchor="'+kind+'|'+escapeAttr(id)+'|'+d+'" data-wf-key="'+kind+'|'+escapeAttr(id)+'|'+d+'" title="'+LINEAGE_DIRECTIONS[d]+'" aria-label="'+LINEAGE_DIRECTIONS[d]+'">'+LINEAGE_ARROWS[d]+'</button>';}).join(''))+'</span>';
+}
+/* A checkbox row with an `only` link and its faceted count; zero counts dim. */
+function workspaceValueRowHTML(facet, value, checked, inner, count) {
+  return '<div class="wf-row'+(count===0?' is-zero':'')+'"><label class="wf-grow"><input type="checkbox" data-wf-value="'+facet+'|'+value+'" data-wf-key="value:'+value+'"'+(checked?' checked':'')+'>'+inner+'</label>'
+    +'<button type="button" class="wf-link wf-only" data-wf-only="'+facet+'|'+value+'" data-wf-key="only:'+value+'">only</button><span class="wf-cnt">'+(count===null?'…':count)+'</span></div>';
+}
+function workspaceGroupHTML(facet, title, values, selected, toggle) {
+  var all=values.every(function(v){return selected.includes(v);});
+  return '<div class="wf-sec"><span>'+title+'</span>'+(toggle?'<button type="button" class="wf-link" data-wf-group="'+facet+'|'+values.join(',')+'" data-wf-key="group:'+values.join(',')+'">'+(all?'none':'all')+'</button>':'')+'</div>';
+}
+function workspaceStatusView() {
+  var s=_workspaceFilters.status,counts=workspaceFacetCounts('status');
+  return {label:'Task status',head:'<strong>Task status</strong>'+workspaceSegHTML('data-wf-neg',[['false','is'],['true','is not']],s.neg),
+    body:WORKSPACE_STATUS_GROUPS.map(function(g){return workspaceGroupHTML('status',g[0],g[1],s.values,true)+g[1].map(function(v){return workspaceValueRowHTML('status',v,s.values.includes(v),'<span class="badge badge-'+v+'">'+v+'</span>',counts[v]||0);}).join('');}).join(''),
+    foot:'Counts apply your other filters.'};
+}
+function workspaceStepsView() {
+  var selected=_workspaceFilters.steps,counts=workspaceFacetCounts('steps');
+  if(!counts)return {label:'Step state',head:'<strong>Step state</strong>',body:'<p class="wf-empty">'+(_reproData?'':'Loading step states…')+'</p>'};
+  return {label:'Step state',head:'<strong>Step state</strong>',
+    body:WORKSPACE_STEP_GROUPS.map(function(g){return workspaceGroupHTML('steps',g[0],g[1],selected,g[0]==='Needs attention')+g[1].map(function(v){return workspaceValueRowHTML('steps',v,selected.includes(v),workspaceStateHTML(v),counts[v]||0);}).join('');}).join(''),
+    foot:'A step matches on its reported state, as its Graph card shows it.'};
+}
+/* Tasks in tree order with their depth. */
+function workspaceTaskOrder() {
+  var tasks=workspaceTasks(),byPath={},children={},out=[];
   tasks.forEach(function(t){byPath[t.path]=t;children[t.path]=[];});
-  tasks.forEach(function(t){if(t.path&&children[parentPath(t.path)])children[parentPath(t.path)].push(t.path);});
-  var matches=new Set(tasks.filter(function(t){return (t.path+' '+t.title).toLowerCase().includes(q);}).map(function(t){return t.path;})),visible=new Set(matches);
-  Array.from(matches).forEach(function(p){while(p){p=parentPath(p);visible.add(p);}});
-  function branch(path){
-    if(!visible.has(path))return '';
-    var task=byPath[path],kids=children[path],descendants=tasks.filter(function(t){return reproWithin(t.path,path);}),selected=descendants.filter(function(t){return _workspaceFilters.tasks===null||_workspaceFilters.tasks.includes(t.path);}).length;
-    var open=q?true:_filterExpanded.has(path),hasKids=kids.length>0;
-    return '<div class="filter-task-branch"><div class="filter-task-row">'
-      +(hasKids?'<button type="button" class="filter-task-fold" data-filter-fold="'+escapeAttr(path)+'" aria-expanded="'+open+'" aria-label="'+(open?'Collapse ':'Expand ')+escapeAttr(task.title||path||'Project root')+'">'+(open?'▾':'▸')+'</button>':'<span class="filter-task-leaf"></span>')
-      +'<label><input type="checkbox" data-filter-task="'+escapeAttr(path)+'"'+(selected===descendants.length?' checked':'')+(selected>0&&selected<descendants.length?' data-partial="true"':'')+'><span>'+escapeHtml(task.title||path||'Project root')+'<small>'+escapeHtml(path||'Project root')+'</small></span></label>'
-      +(hasKids?'<span class="filter-task-count">'+selected+'/'+descendants.length+'</span>':'')+'</div>'
-      +(hasKids?'<div class="filter-task-children"'+(open?'':' hidden')+'>'+kids.map(branch).join('')+'</div>':'')+'</div>';
+  tasks.forEach(function(t){var p=parentPath(t.path);if(p!==null&&children[p])children[p].push(t);});
+  function walk(t,depth){out.push({task:t,depth:depth});children[t.path].forEach(function(c){walk(c,depth+1);});}
+  tasks.filter(function(t){return parentPath(t.path)===null||!byPath[parentPath(t.path)];}).forEach(function(t){walk(t,0);});
+  return out;
+}
+function workspaceTaskText(t) { return ((t.title||'')+' '+(t.path||'project root')).toLowerCase(); }
+/* The under / not under switch picks which list the checkboxes edit. */
+function workspaceScopeView(q) {
+  var list=_wfScopeList,paths=_workspaceFilters.scope[list],counts=workspaceFacetCounts('scope-'+list),rows=workspaceTaskOrder().filter(function(r){return !q||workspaceTaskText(r.task).includes(q);});
+  return {label:'Task subtree',head:'<strong>Task subtree</strong>'+workspaceSegHTML('data-wf-scope-list',[['in','under'],['out','not under']],list),
+    body:rows.map(function(r){var p=r.task.path,covered=paths.some(function(root){return root!==p&&reproWithin(p,root);});
+      return '<div class="wf-row'+(counts[p]?'':' is-zero')+'" style="--wf-depth:'+(q?0:r.depth)+'"><label class="wf-grow"><input type="checkbox" data-wf-scope="'+escapeAttr(p)+'" data-wf-key="scope:'+escapeAttr(p)+'"'+(covered||paths.includes(p)?' checked':'')+(covered?' disabled':'')+'><span class="wf-label">'+escapeHtml(r.task.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span></label>'
+        +workspaceActsHTML('task',p,false)+'<span class="wf-cnt">'+(counts[p]||0)+'</span></div>';}).join('')||'<p class="wf-empty">No tasks match.</p>',
+    foot:'Check a task to '+(list==='out'?'exclude':'include')+' its whole subtree.'};
+}
+function workspaceDepsView(q) {
+  var anchors=new Set(_workspaceFilters.lineage.map(workspaceAnchorKey)),index=workspaceStepIndex(),out='';
+  workspaceTaskOrder().forEach(function(r){
+    var t=r.task,hit=!q||workspaceTaskText(t).includes(q),steps=(index&&index.byTask[t.path]||[]).filter(function(n){return hit||n.toLowerCase().includes(q);}),depth=q?0:r.depth;
+    if(!hit&&!steps.length)return;
+    if(t.path)out+='<button type="button" class="wf-row wf-pick" style="--wf-depth:'+depth+'" data-wf-pick="task|'+escapeAttr(t.path)+'" data-wf-key="pick:task|'+escapeAttr(t.path)+'"><span class="wf-label">'+(anchors.has('task:'+t.path)?'✓ ':'')+escapeHtml(t.title||t.path)+'<small>'+escapeHtml(t.path)+'</small></span></button>';
+    steps.forEach(function(n){out+='<button type="button" class="wf-row wf-pick is-step" style="--wf-depth:'+(depth+(t.path?1:0))+'" data-wf-pick="step|'+escapeAttr(n)+'" data-wf-key="pick:step|'+escapeAttr(n)+'">'+workspaceGlyphHTML(index.state[n])+'<span class="wf-label">'+(anchors.has('step:'+n)?'✓ ':'')+escapeHtml(n)+'</span></button>';});
+  });
+  return {label:'Dependencies of a task or step',head:'<strong>Dependencies of…</strong>'+workspaceSegHTML('data-wf-depdir',[['up','⇡ Up'],['down','⇣ Down'],['both','⇅ Both']],_wfDepDirection),
+    body:out||'<p class="wf-empty">'+(index||q?'Nothing matches.':'Loading steps…')+'</p>',foot:'Pick a task (its whole subtree) or a single step.'};
+}
+function workspaceAnchorView(i) {
+  var a=_workspaceFilters.lineage[i];if(!a)return null;
+  return {label:LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),head:'<strong>'+escapeHtml(lineageAnchorLabel(a))+'</strong>',
+    body:'<div class="wf-pad"><p>Show '+(a.step?'this step':'this task’s steps')+' and what they connect to:</p>'+workspaceSegHTML('data-wf-setdir',[['up','⇡ Upstream'],['down','⇣ Downstream'],['both','⇅ Both']],a.direction)
+      +'<p class="wf-note">Several dependency chips combine as a union: a task shows if it connects to any of them.</p></div>',
+    foot:'<button type="button" class="wf-link" data-wf-another data-wf-key="another">+ Add another task or step</button>'};
+}
+/* + Filter: the facets and quick filters, or what a typed query matches. */
+function workspaceAddView(q) {
+  var pop=_wfPop,items=pop.items=[],sections=[],current=null;
+  function add(section,html,primary,secondary){if(section!==current){sections.push('<div class="wf-sec" role="presentation"><span>'+section+'</span></div>');current=section;}
+    sections.push('<div class="wf-row wf-option" role="option" id="wf-opt-'+items.length+'" data-wf-item="'+items.length+'">'+html+'</div>');items.push({primary:primary,secondary:secondary});}
+  function done(){workspacePopClose(true);applyWorkspaceFilters(true);}
+  if(!q){
+    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){if(f[0]==='scope')_wfScopeList='in';workspacePopShow(f[0]);});});
+    WORKSPACE_QUICK_FILTERS.forEach(function(p){add('Quick filters','<span class="wf-grow wf-label">'+p.label+'<small>'+p.desc+'</small></span>',function(){p.apply(_workspaceFilters);done();});});
+  } else {
+    var statusCounts=workspaceFacetCounts('status'),stepCounts=workspaceFacetCounts('steps'),index=workspaceStepIndex();
+    WORKSPACE_STATUSES.filter(function(v){return v.includes(q);}).forEach(function(v){add('Task status','<span class="wf-grow">Status is <span class="badge badge-'+v+'">'+v+'</span></span><span class="wf-cnt">'+(statusCounts[v]||0)+'</span>',function(){var s=_workspaceFilters.status;_workspaceFilters.status=s.neg?{neg:false,values:[v]}:{neg:false,values:workspaceStrings(s.values.concat([v]))};done();});});
+    REPRO_STATES.filter(function(s){return s.key.includes(q);}).forEach(function(s){add('Step state','<span class="wf-grow">Steps are '+workspaceStateHTML(s.key)+'</span><span class="wf-cnt">'+(stepCounts?stepCounts[s.key]||0:'…')+'</span>',function(){_workspaceFilters.steps=workspaceStrings(_workspaceFilters.steps.concat([s.key]));done();});});
+    workspaceTasks().map(function(t){return {t:t,score:scoreSearchRecord({title:t.title||'',slug:t.path},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var p=x.t.path;
+      add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,'in');done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p},'both');}:null);});
+    if(index)(_reproData.graph.steps||[]).map(function(s){return {s:s,score:scoreSearchRecord({title:s.name},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var n=x.s.name;
+      add('Steps',workspaceGlyphHTML(index.state[n])+'<span class="wf-grow wf-label is-step">'+escapeHtml(n)+'<small>'+escapeHtml(workspaceTaskTitle(x.s.task))+'</small></span>'+workspaceActsHTML('step',n,false),function(){workspacePopClose(true);addLineageAnchor({step:n},'both');});});
+    if(!items.length)sections.push('<p class="wf-empty">Nothing matches “'+escapeHtml(q)+'”.</p>');
   }
-  var roots=tasks.filter(function(t){return !t.path||!byPath[parentPath(t.path)];});
-  host.innerHTML=roots.map(function(t){return branch(t.path);}).join('')||'<p>No tasks match.</p>';
-  host.querySelectorAll('[data-partial]').forEach(function(input){input.indeterminate=true;});
+  return {label:'Add a filter',body:sections.join(''),
+    foot:'<span class="wf-kbd">↑↓</span> move <span class="wf-kbd">↵</span> apply <span class="wf-kbd">⇧↵</span> dependencies <span class="wf-kbd">esc</span> close'};
 }
-function selectAllWorkspaceTasks(selected) {
-  _workspaceFilters.tasks=selected?null:[];renderWorkspaceTaskOptions();applyWorkspaceFilters(true);
+function workspacePopHighlight() {
+  var pop=_wfPop,input=pop.el.querySelector('.wf-pop-search');
+  pop.hl=Math.max(0,Math.min(pop.hl,pop.items.length-1));
+  pop.el.querySelectorAll('[data-wf-item]').forEach(function(row){var on=Number(row.dataset.wfItem)===pop.hl;row.classList.toggle('is-hl',on);row.setAttribute('aria-selected',String(on));if(on)row.scrollIntoView({block:'nearest'});});
+  if(input){if(pop.items.length)input.setAttribute('aria-activedescendant','wf-opt-'+pop.hl);else input.removeAttribute('aria-activedescendant');}
 }
-function clearWorkspaceFilters() {
-  _workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(true);renderWorkspaceFilter();
+function onWorkspacePopKeydown(e) {
+  var pop=_wfPop;if(!pop)return;
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();workspacePopClose(true);return;}
+  if(pop.kind!=='add'||!e.target.classList.contains('wf-pop-search'))return;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();pop.hl+=e.key==='ArrowDown'?1:-1;workspacePopHighlight();}
+  else if(e.key==='Enter'){var item=pop.items[pop.hl];if(!item)return;e.preventDefault();(e.shiftKey&&item.secondary||item.primary)();}
+}
+function workspaceToggle(list, value, on) { return workspaceStrings(on?list.concat([value]):list.filter(function(v){return v!==value;})); }
+function workspaceValues(facet) { return facet==='status'?_workspaceFilters.status.values:_workspaceFilters.steps; }
+function workspaceSetValues(facet, values) { if(facet==='status')_workspaceFilters.status.values=values;else _workspaceFilters.steps=values; }
+function onWorkspacePopClick(e) {
+  var pop=_wfPop,el;if(!pop)return;
+  if((el=e.target.closest('[data-wf-anchor]'))){var a=el.dataset.wfAnchor.split('|'),dir=a.pop(),kind=a.shift(),id=a.join('|');workspacePopClose(true);addLineageAnchor(kind==='step'?{step:id}:{task:id},dir);}
+  else if((el=e.target.closest('[data-wf-in]'))){workspaceScopeAdd(el.dataset.wfIn,'in');workspacePopClose(true);applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-only]'))){var o=el.dataset.wfOnly.split('|');workspaceSetValues(o[0],[o[1]]);applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-group]'))){var g=el.dataset.wfGroup.split('|'),vals=g[1].split(','),list=workspaceValues(g[0]),all=vals.every(function(v){return list.includes(v);});
+    workspaceSetValues(g[0],workspaceStrings(all?list.filter(function(v){return !vals.includes(v);}):list.concat(vals)));applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-neg]'))){_workspaceFilters.status.neg=el.dataset.wfNeg==='true';applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-scope-list]'))){_wfScopeList=el.dataset.wfScopeList;workspacePopRender();}
+  else if((el=e.target.closest('[data-wf-setdir]'))){var anchor=_workspaceFilters.lineage[Number(pop.kind.split(':')[1])];if(anchor){anchor.direction=el.dataset.wfSetdir;applyWorkspaceFilters(true);}}
+  else if((el=e.target.closest('[data-wf-depdir]'))){_wfDepDirection=el.dataset.wfDepdir;workspacePopRender();}
+  else if((el=e.target.closest('[data-wf-pick]'))){var p=el.dataset.wfPick,step=p.indexOf('step|')===0,value=p.slice(5);workspacePopClose(true);addLineageAnchor(step?{step:value}:{task:value},_wfDepDirection);}
+  else if(e.target.closest('[data-wf-another]'))workspacePopShow('deps');
+  else if((el=e.target.closest('[data-wf-item]'))){pop.hl=Number(el.dataset.wfItem);pop.items[pop.hl].primary();}
+}
+function onWorkspacePopChange(e) {
+  var input=e.target;
+  if(input.dataset.wfValue){var v=input.dataset.wfValue.split('|'),list=workspaceValues(v[0]);workspaceSetValues(v[0],workspaceToggle(list,v[1],input.checked));}
+  else if(input.dataset.wfScope!==undefined){var path=input.dataset.wfScope,scope=_workspaceFilters.scope;if(input.checked)workspaceScopeAdd(path,_wfScopeList);else scope[_wfScopeList]=scope[_wfScopeList].filter(function(p){return p!==path;});}
+  else return;
+  applyWorkspaceFilters(true);
+}
+function onWorkspaceFilterBarClick(e) {
+  var el;
+  if((el=e.target.closest('[data-wf-remove]'))){var key=el.dataset.wfRemove;workspacePopClose(false);
+    if(key==='status')_workspaceFilters.status={neg:false,values:[]};else if(key==='steps')_workspaceFilters.steps=[];else if(key==='scope-in'||key==='scope-out')_workspaceFilters.scope[key.slice(6)]=[];else _workspaceFilters.lineage.splice(Number(key.split(':')[1]),1);
+    applyWorkspaceFilters(true);}
+  else if((el=e.target.closest('[data-wf-dir]'))){var a=_workspaceFilters.lineage[Number(el.dataset.wfDir)];if(a){a.direction=LINEAGE_NEXT[a.direction];applyWorkspaceFilters(true);}}
+  else if((el=e.target.closest('[data-wf-edit]'))){var kind=el.dataset.wfEdit;if(kind.indexOf('scope-')===0){_wfScopeList=kind.slice(6);kind='scope';}workspacePopOpen(kind,el);}
+  else if((el=e.target.closest('[data-wf-add]')))workspacePopOpen('add',el);
+  else if(e.target.closest('[data-wf-clear]')){clearWorkspaceFilters();document.getElementById('filter-trigger').focus({preventScroll:true});}
+}
+
+/* ── Tree-row filter menu ──
+   Right-click, the row's ⋯, Shift+F10 or the Menu key, or a 500 ms long-press.
+   The input that opened it picks the form: touch gets a bottom sheet. */
+var _rowMenu=null;
+var _rowPress=null;
+var _rowPressDone=false;
+var _rowPointer='mouse';
+function openRowMenu(path, owner, at) {
+  closeRowMenu(false);
+  var sheet=!!at.sheet,title=workspaceTaskTitle(path),el=document.createElement('div'),backdrop=null;
+  var items=[['in','⊂','Show only this subtree'],['out','⊄','Hide this subtree']];
+  if(path)items.push(null,['up','⇡','Show what it depends on','upstream'],['down','⇣','Show what depends on it','downstream'],['both','⇅','Show both directions']);
+  items.push(null,['open','↗','Open task']);
+  el.className='row-menu'+(sheet?' is-sheet':'');el.id='row-menu';el.setAttribute('role','menu');el.setAttribute('aria-label','Filter options for '+title);
+  el.innerHTML=(sheet?'<div class="row-menu-grab" aria-hidden="true"></div>':'')+'<div class="row-menu-title" aria-hidden="true">'+escapeHtml(title)+'</div>'+(sheet?'<div class="row-menu-path" aria-hidden="true">'+escapeHtml(path||'Project root')+'</div>':'')
+    +items.map(function(it){return it?'<button type="button" role="menuitem" tabindex="-1" data-row-action="'+it[0]+'"><span class="row-menu-ic" aria-hidden="true">'+it[1]+'</span>'+it[2]+(it[3]&&!sheet?'<span class="row-menu-kb">'+it[3]+'</span>':'')+'</button>':'<hr role="separator">';}).join('')
+    +(sheet?'<button type="button" role="menuitem" tabindex="-1" class="row-menu-cancel" data-row-action="cancel">Cancel</button>':'');
+  if(sheet){backdrop=document.createElement('div');backdrop.className='row-menu-backdrop';backdrop.addEventListener('click',function(){if(!_rowPressDone)closeRowMenu(true);});document.body.appendChild(backdrop);}
+  document.body.appendChild(el);
+  _rowMenu={el:el,backdrop:backdrop,owner:owner,path:path};
+  if(owner.classList.contains('task-row-more'))owner.setAttribute('aria-expanded','true');
+  if(sheet){
+    requestAnimationFrame(function(){el.classList.add('is-open');if(backdrop)backdrop.classList.add('is-open');});
+    var startY=null;
+    el.addEventListener('pointerdown',function(e){startY=e.clientY;});
+    el.addEventListener('pointermove',function(e){if(startY!==null&&e.clientY>startY)el.style.transform='translateY('+(e.clientY-startY)+'px)';});
+    el.addEventListener('pointerup',function(e){var moved=startY===null?0:e.clientY-startY;startY=null;el.style.transform='';if(moved>70)closeRowMenu(true);});
+    el.addEventListener('pointercancel',function(){startY=null;el.style.transform='';});
+  } else {
+    var x=at.x,y=at.y;
+    if(x===undefined){var r=owner.getBoundingClientRect();x=r.right-el.offsetWidth;y=r.bottom+4;}
+    el.style.left=Math.max(8,Math.min(x,window.innerWidth-el.offsetWidth-8))+'px';el.style.top=Math.max(8,Math.min(y,window.innerHeight-el.offsetHeight-8))+'px';
+  }
+  var buttons=Array.from(el.querySelectorAll('[role=menuitem]'));buttons[0].focus({preventScroll:true});
+  el.addEventListener('keydown',function(e){
+    var i=buttons.indexOf(document.activeElement);
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();buttons[(i+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus();}
+    else if(e.key==='Home'||e.key==='End'){e.preventDefault();buttons[e.key==='Home'?0:buttons.length-1].focus();}
+    else if(e.key==='Escape'||e.key==='Tab'){e.preventDefault();closeRowMenu(true);}
+  });
+  el.addEventListener('click',function(e){
+    var b=e.target.closest('[data-row-action]');if(!b||_rowPressDone)return;
+    var action=b.dataset.rowAction;closeRowMenu(true);
+    if(action==='in'||action==='out'){workspaceScopeAdd(path,action);applyWorkspaceFilters(true);}
+    else if(action==='open')setActive(path);
+    else if(action!=='cancel')addLineageAnchor({task:path},action);
+  });
+}
+function closeRowMenu(refocus) {
+  var menu=_rowMenu;if(!menu)return;
+  _rowMenu=null;
+  if(menu.el.classList.contains('is-sheet')&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){menu.el.classList.remove('is-open');if(menu.backdrop)menu.backdrop.classList.remove('is-open');setTimeout(function(){menu.el.remove();if(menu.backdrop)menu.backdrop.remove();},220);}
+  else {menu.el.remove();if(menu.backdrop)menu.backdrop.remove();}
+  if(menu.owner.classList.contains('task-row-more'))menu.owner.setAttribute('aria-expanded','false');
+  if(refocus&&menu.owner.isConnected)menu.owner.focus({preventScroll:true});
+}
+function rowMenuPath(row) { var node=row.closest('.task-node');return node?node.dataset.path:null; }
+function cancelRowPress() { if(_rowPress){clearTimeout(_rowPress.timer);_rowPress.row.classList.remove('is-pressing');_rowPress=null;} }
+function initRowMenu() {
+  var nav=document.getElementById('nav-tree');if(!nav||window.DOC_MODE)return;
+  nav.addEventListener('pointerdown',function(e){
+    cancelRowPress();
+    var row=e.target.closest('.task-row');
+    if(!row||_rowPointer==='mouse'||e.target.closest('.task-row-more'))return;
+    _rowPress={x:e.clientX,y:e.clientY,row:row,timer:setTimeout(function(){
+      _rowPress=null;row.classList.remove('is-pressing');_rowPressDone=true;
+      if(navigator.vibrate)try{navigator.vibrate(10);}catch(err){}
+      openRowMenu(rowMenuPath(row),row,{sheet:true});
+    },500)};
+    row.classList.add('is-pressing');
+  });
+  nav.addEventListener('pointermove',function(e){if(_rowPress&&Math.hypot(e.clientX-_rowPress.x,e.clientY-_rowPress.y)>10)cancelRowPress();});
+  ['pointerup','pointercancel','pointerleave'].forEach(function(type){nav.addEventListener(type,cancelRowPress);});
+  document.addEventListener('scroll',cancelRowPress,{capture:true,passive:true});
+  /* Capture: runs before the row's open-task click. */
+  nav.addEventListener('click',function(e){
+    if(_rowPressDone){_rowPressDone=false;e.preventDefault();e.stopPropagation();return;}
+    var more=e.target.closest('.task-row-more');if(!more)return;
+    e.preventDefault();e.stopPropagation();
+    if(_rowMenu&&_rowMenu.owner===more){closeRowMenu(true);return;}
+    openRowMenu(rowMenuPath(more),more,{sheet:e.detail!==0&&_rowPointer!=='mouse'});
+  },true);
+  /* Android fires contextmenu on long-press too; the press timer owns touch. */
+  nav.addEventListener('contextmenu',function(e){
+    var row=e.target.closest('.task-row');if(!row)return;
+    e.preventDefault();
+    if(_rowPress||_rowPressDone||_rowMenu||_rowPointer!=='mouse')return;
+    openRowMenu(rowMenuPath(row),row,{x:e.clientX,y:e.clientY});
+  });
+  nav.addEventListener('keydown',function(e){
+    var row=e.target.closest('.task-row');
+    if(!row||!((e.shiftKey&&e.key==='F10')||e.key==='ContextMenu'))return;
+    e.preventDefault();var r=row.getBoundingClientRect();openRowMenu(rowMenuPath(row),row,{x:r.left+40,y:r.bottom});
+  });
+  document.addEventListener('pointerdown',function(e){
+    _rowPointer=e.pointerType||'mouse';_rowPressDone=false;
+    if(_rowMenu&&!_rowMenu.backdrop&&!_rowMenu.el.contains(e.target)&&!e.target.closest('.task-row-more'))closeRowMenu(false);
+  },true);
 }
 function workspaceSearchRecords() {
   var records=(SEARCH_INDEX||[]).slice();
@@ -634,20 +1079,13 @@ function toggleNavigationPane() {
 function initWorkspaceControls() {
   try{_treeSidebarHidden=JSON.parse(localStorage.getItem('dashboard-tree-hidden'))===true;}catch(e){}
   updateNavigationToggle();
-  var dialog=document.getElementById('workspace-filter');
-  dialog.addEventListener('change',function(event){
-    var input=event.target;
-    if(input.dataset.filterStatus){var statuses=new Set(_workspaceFilters.statuses);if(input.checked)statuses.add(input.dataset.filterStatus);else statuses.delete(input.dataset.filterStatus);_workspaceFilters.statuses=Array.from(statuses).sort();}
-    else if(input.hasAttribute('data-filter-task')){
-      var path=input.dataset.filterTask,tasks=workspaceTasks(),selected=new Set(_workspaceFilters.tasks===null?tasks.map(function(t){return t.path;}):_workspaceFilters.tasks);
-      tasks.forEach(function(t){if(reproWithin(t.path,path)){if(input.checked)selected.add(t.path);else selected.delete(t.path);}});
-      _workspaceFilters.tasks=selected.size===tasks.length?null:Array.from(selected).sort();renderWorkspaceTaskOptions();
-      var replacement=Array.from(dialog.querySelectorAll('[data-filter-task]')).find(function(el){return el.dataset.filterTask===path;});if(replacement)replacement.focus({preventScroll:true});
-    }
-    applyWorkspaceFilters(true);
-  });
-  dialog.addEventListener('click',function(e){var fold=e.target.closest('[data-filter-fold]');if(fold){var path=fold.dataset.filterFold;if(_filterExpanded.has(path))_filterExpanded.delete(path);else _filterExpanded.add(path);renderWorkspaceTaskOptions();var next=Array.from(dialog.querySelectorAll('[data-filter-fold]')).find(function(el){return el.dataset.filterFold===path;});if(next)next.focus();return;}if(e.target===dialog){var r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeWorkspaceFilter();}});
-  loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);}).catch(function(){});
+  var bar=document.getElementById('workspace-filter-bar');if(bar)bar.addEventListener('click',onWorkspaceFilterBarClick);
+  document.addEventListener('pointerdown',function(e){var pop=_wfPop;if(pop&&!pop.el.contains(e.target)&&!(pop.anchor&&pop.anchor.contains(e.target)))workspacePopClose(false);},true);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&_wfPop){e.preventDefault();workspacePopClose(true);}});
+  window.addEventListener('resize',workspacePopPosition);
+  document.addEventListener('scroll',function(e){if(_wfPop&&!_wfPop.el.contains(e.target))workspacePopPosition();},{capture:true,passive:true});
+  initRowMenu();
+  loadReproData(false).then(function(){syncTreeRollups();updateSidebar(activePath);applyWorkspaceFilters(false);renderReproDetail(_reproSelected);workspacePopRender();}).catch(function(){});
 }
 
 /* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
@@ -669,7 +1107,7 @@ function showView(view) {
     if(!restoring&&previousView==='workspace'&&activePath)reproRevealOwner(_reproSelected?activePath:parentPath(activePath));
     renderReproView(false);
   } else {
-    _lastSidebarUpdate=updateSidebar(activePath);
+    _lastSidebarUpdate=updateSidebar(activePath).then(function(){applyWorkspaceFilters(false);});
     renderReproDetail(_reproSelected);
   }
   if(!restoring)workspaceWriteHistory();
@@ -1146,18 +1584,64 @@ function reproProject(graph) {
   });
   return { steps: graph.steps || [], edges: edges, incoming: incoming, outgoing: outgoing, byName: byName };
 }
+/* Upstream and downstream of each anchor ({step} or {task}) on the full graph.
+   A step anchor follows step file edges only. A task anchor starts from its
+   subtree and also follows `depends_on`: an edge declared on a task covers its
+   subtree, and a task it reaches joins with its subtree. `edges` keys every
+   followed edge as reproLineageKey does. */
+function reproLineageKey(e) { return (e.kind === 'logical' ? 'l' : 'f') + '\n' + e.from + '\n' + e.to; }
+function reproLineage(graph, anchors, direction) {
+  var steps = graph.steps || [], owner = {}, next = { up: {}, down: {} }, logical = graph.dependencies && graph.dependencies.logical || [];
+  steps.forEach(function(s) { owner[s.name] = s.task; next.up[s.name] = []; next.down[s.name] = []; });
+  (graph.step_edges || []).forEach(function(e) {
+    if (owner[e.from] !== undefined && owner[e.to] !== undefined) { next.down[e.from].push(e); next.up[e.to].push(e); }
+  });
+  var paths = new Set(reproTasks(graph));
+  steps.forEach(function(s) { paths.add(s.task); });
+  function walk(anchor, up) {
+    var found = { steps: new Set(), tasks: new Set() }, queue = [], followed = new Set(), joined = new Set(), byTask = typeof anchor.task === 'string';
+    function addStep(name) { if (found.steps.has(name)) return; found.steps.add(name); found.tasks.add(owner[name]); queue.push(name); }
+    function follow(path) {
+      if (followed.has(path)) return;
+      followed.add(path);
+      logical.forEach(function(e) { if (reproWithin(path, up ? e.to : e.from)) { edges.add(reproLineageKey(e)); join(up ? e.from : e.to); } });
+    }
+    function join(root) {
+      if (joined.has(root)) return;
+      joined.add(root);
+      paths.forEach(function(p) { if (reproWithin(p, root)) { found.tasks.add(p); follow(p); } });
+      steps.forEach(function(s) { if (reproWithin(s.task, root)) addStep(s.name); });
+    }
+    if (byTask) join(anchor.task); else if (owner[anchor.step] !== undefined) addStep(anchor.step);
+    while (queue.length) {
+      var name = queue.shift();
+      if (byTask) follow(owner[name]);
+      next[up ? 'up' : 'down'][name].forEach(function(e) { edges.add(reproLineageKey(e)); addStep(up ? e.from : e.to); });
+    }
+    return found;
+  }
+  var edges = new Set(), result = { steps: new Set(), tasks: new Set(), edges: edges, up: { steps: new Set(), tasks: new Set() }, down: { steps: new Set(), tasks: new Set() } };
+  (anchors || []).forEach(function(anchor) {
+    ['up', 'down'].forEach(function(side) {
+      if (direction && direction !== 'both' && direction !== side) return;
+      var found = walk(anchor, side === 'up');
+      found.steps.forEach(function(n) { result[side].steps.add(n); result.steps.add(n); });
+      found.tasks.forEach(function(p) { result[side].tasks.add(p); result.tasks.add(p); });
+    });
+  });
+  return result;
+}
 function reproHash() {
-  var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:_workspaceFilters};
-  var f=_workspaceFilters||{};
+  var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:workspaceFiltersForHash(_workspaceFilters)};
   /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
-  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!(f.statuses||[]).length&&f.tasks==null;
+  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!state.filters;
   var query=(activeArtifactPath?[activeArtifactPath.charAt(0)==='/'?'file='+encodeURIComponent(activeArtifactPath.slice(1)):'attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
   return '#/'+activePath+(query.length?'?'+query.join('&'):'');
 }
 function reproReadHash() {
   var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
   var raw=params.get('repro'), step=params.get('step');
-  if(!raw&&!step){_workspaceFilters={statuses:[],tasks:null};_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
+  if(!raw&&!step){_workspaceFilters=emptyWorkspaceFilters();_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
   try {
     var n=raw?JSON.parse(raw):{};
     _workspaceFilters=normalizeWorkspaceFilters(n.filters);
@@ -1652,11 +2136,11 @@ function reproBindEdges(container){
 function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);}
 function reproGraphHTML(lay,statuses) {
   var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
-  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+(e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;})?' is-lit':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
+  html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
   html+=lay.bands.filter(function(b){return b.label;}).map(function(b){return '<div class="rp-component-label" role="heading" aria-level="3" data-component-parent="'+escapeAttr(b.parent||'')+'" data-component-kind="'+(b.isolated?'isolated':'connected')+'" style="left:'+b.x+'px;top:'+b.y+'px;width:'+b.width+'px">'+escapeHtml(b.label)+'</div>';}).join('');
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
     if(n.type==='step') {var entry=statuses[n.id],ch=reproChannels(entry),st=ch.state,base=ch.label+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
-      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(n.id===_reproSelected?' is-selected':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
+      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
         +reproChipHTML(target,'▶','rp-build-chip-step',n.id,'left:'+(p.x+p.width-26)+'px;top:'+(p.y+4)+'px');}
     var total=0,explain=false;n.steps.forEach(function(s){var e=statuses[s.name];if(e&&e.duration!=null)total+=e.duration;if(reproExplainable(reproStateOf(e)))explain=true;});
     var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;}),rollup=reproRollup(n.steps,statuses);
@@ -1691,19 +2175,21 @@ function drawReproView(container,data) {
   var findings=data.graph.findings||[];
   var notice=!workspaceTaskMatches(activePath)?'Selected task is hidden by filters.':!model.taskReps[activePath]&&activePath?'This task is not in the active project graph.':'';
   var errors=findings.filter(function(f){return f.severity==='error';}).length;
+  _reproDrawn={steps:project.steps,statuses:statuses,status:data.status};var scope=reproScopeHTML(_reproDrawn);
   var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
   container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)
-    +'<div class="repro-summary"><span>'+project.steps.length+' steps'+(window.STANDALONE?' · snapshot':'')+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+reproLegendHTML(project.steps,statuses,data.status)+'</div></details>'
+    +'<div class="repro-summary"><span id="repro-step-count">'+scope.count+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+scope.legend+'</div></details>'
     +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
     +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
     +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
-    +(!model.nodes.length?'<p class="repro-empty">'+((_workspaceFilters.tasks!==null||_workspaceFilters.statuses.length)?'No tasks match these filters. Use Clear filters to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
+    +(!model.nodes.length?'<p class="repro-empty">'+(workspaceFilterCount()?'No tasks match these filters. Clear the filter bar to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')
     +'<div class="repro-viewport-controls" aria-label="Graph viewport"><button class="hc-btn" data-rp-action="zoom-out" aria-label="Zoom out">−</button><span id="repro-zoom"></span><button class="hc-btn" data-rp-action="zoom-in" aria-label="Zoom in">+</button>'+reproButton('Fit','fit')+'</div><span class="repro-gesture-hint">Scroll to pan · pinch to zoom</span><div id="repro-connection-label" role="status"></div><div id="repro-edge-detail"></div></div>'
     +'<div class="repro-footer"><span id="repro-selection" title="'+escapeAttr(_reproSelected||activePath)+'">'+escapeHtml(_reproSelected||reproTaskTitle(activePath))+'</span></div>';
 
 
   if(same){var fresh=container.querySelector('.repro-canvas');oldCanvas.querySelector('.repro-plot').innerHTML=reproGraphHTML(lay,statuses);fresh.replaceWith(oldCanvas);}
+  reproApplySelection();
   container.onclick=onReproClick;
   reproBindEdges(container);
   container.onkeydown=function(e){if(e.key==='Escape'){reproCloseFloats(true);container.querySelectorAll('.rp-menu[open]').forEach(function(menu){menu.open=false;menu.querySelector('summary').focus();});reproCloseGraphDetail();}if((e.key==='Enter'||e.key===' ')&&e.target.matches('.rp-wire')){e.preventDefault();onReproClick(e);}};
@@ -1713,7 +2199,7 @@ function drawReproView(container,data) {
   if(place==='fit')reproFit();else if(place==='open')reproOpen();else reproTransform();
   if(focusId){var target=document.getElementById(focusId);if(target)target.focus({preventScroll:true});}
 }
-var _reproPreserve='';
+var _reproPreserve='', _reproDrawn=null;
 function reproEvidenceHTML(evidence){
   return '<ul>'+evidence.map(function(e){return '<li>'+escapeHtml(e.kind==='logical'?'Logical prerequisite · '+e.declaration:(e.producer||e.from)+' → '+(e.consumer||e.to)+' via '+e.via)+'</li>';}).join('')+'</ul>';
 }
@@ -1751,7 +2237,7 @@ function reproTaskDependencies(graph,path) {
 }
 async function reproOpenDeclaration() {
   var selected=_reproSelected;
-  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeRollups();
+  _reproSelected='';_reproNav.selected='';renderReproDetail('');syncTreeRollups();reproApplySelection();
   if(location.hash!==reproHash())history.pushState({wt:ACTIVE_WT},'',reproHash());
   if(currentView==='reproduction'){
     reproSetReader(true);_reproReaderFull=true;
@@ -1782,6 +2268,7 @@ function reproSelectTask(path){
     var indicator=n.querySelector('.rp-selected-inside'),summary=n.querySelector('.rp-task-summary');
     if(indicator)indicator.hidden=true;if(summary)summary.hidden=false;
   });
+  reproApplySelection();
 }
 
 var _reproReaderPreference=null, _reproReaderSizes={side:420,bottom:300}, _reproReaderPlacement='side', _reproReaderCompact=false;
@@ -1999,7 +2486,7 @@ function onReproClick(event) {
     var action = control.dataset.rpAction, value = control.dataset.value;
     var menu=control.closest('.rp-menu');if(menu)menu.open=false;
     if(action==='task')reproSelectTask(value);
-    else if(action==='overview'){_workspaceFilters={statuses:[],tasks:null};applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
+    else if(action==='overview'){_workspaceFilters=emptyWorkspaceFilters();workspacePopClose(false);applyWorkspaceFilters(false);reproNavigate({expanded:[]},true);}
     else if(action==='show-selected'){if(_reproSelected){_reproReaderFull=false;showView('reproduction');reproSizeWorkspace();if(_reproReaderCompact)reproSetReader(false);revealReproStep(_reproSelected);}else reproFocus(activePath);}
     else if(action==='full-reader'){if(_reproReaderCompact){reproSetReader(false);return;}_reproReaderFull=!_reproReaderFull;document.getElementById('workspace').classList.toggle('dag-full-reader',_reproReaderFull);reproSizeWorkspace();var focus=document.querySelector('#dag-reader-controls [data-rp-action=full-reader]');if(focus)focus.focus({preventScroll:true});}
     else if(action==='close-reader')reproSetReader(false);
@@ -2024,6 +2511,7 @@ function onReproClick(event) {
     else if(action==='finding')reproShowFinding(value);
     else if(action==='open'||action==='related')revealReproStep(value);
     else if(action==='select')selectReproStep(value);
+    else if(action==='lineage-step')addLineageAnchor({step:value});
     else if (action === 'fit') reproFit();
     else if (action === 'zoom-in' || action === 'zoom-out') {
       var canvas = document.querySelector('#view-reproduction .repro-canvas');
@@ -2052,6 +2540,33 @@ function reproShowFinding(path) {
   var row=Array.from(menu.querySelectorAll('li[data-finding-task]')).find(function(li){return li.dataset.findingTask===path;});
   if(row){row.scrollIntoView({block:'nearest'});row.focus({preventScroll:true});}
 }
+/* Restyle the drawn graph for the selection without a layout: the selected
+   step and its direct wires light, cards and wires outside the selected task's
+   or step's dependency set fade, and the summary count and Status key cover
+   the visible steps inside it. */
+function reproApplySelection() {
+  var container=document.getElementById('view-reproduction'),drawn=_reproDrawn;
+  if(!container||!drawn||!_reproData)return;
+  var anchor=_reproSelected?{step:_reproSelected}:activePath?{task:activePath}:null;
+  var set=anchor&&reproLineage(_reproData.graph,[anchor],'both'),lit=new Set(),plot=container.querySelector('.repro-plot');
+  if(set)set.tasks.forEach(function(p){lit.add(p);while(p){p=parentPath(p);lit.add(p);}});
+  if(plot)plot.classList.toggle('has-lineage',!!set);
+  container.querySelectorAll('.repro-node').forEach(function(n){n.classList.toggle('is-selected',n.dataset.step===_reproSelected);n.classList.toggle('in-lineage',!!set&&set.steps.has(n.dataset.step));});
+  container.querySelectorAll('.rp-task').forEach(function(n){n.classList.toggle('in-lineage',!!set&&lit.has(n.dataset.task));});
+  var edges=_reproLayoutCache&&_reproLayoutCache.layout.edges||[];
+  container.querySelectorAll('.repro-edges .rp-wire').forEach(function(w){var e=edges[Number(w.dataset.value)]||{evidence:[]};
+    w.classList.toggle('is-lit',!!_reproSelected&&e.evidence.some(function(r){return (r.from||r.producer)===_reproSelected||(r.to||r.consumer)===_reproSelected;}));
+    w.classList.toggle('in-lineage',!!set&&e.evidence.some(function(r){return set.edges.has(reproLineageKey(r));}));});
+  var scope=reproScopeHTML(drawn,anchor,set),count=document.getElementById('repro-step-count'),legend=container.querySelector('.rp-legend-menu .rp-menu-body');
+  if(count)count.innerHTML=scope.count;if(legend)legend.innerHTML=scope.legend;
+}
+/* The summary count and Status key body over the visible steps in *set*, or over every visible step without one. */
+function reproScopeHTML(drawn,anchor,set) {
+  var members=set?drawn.steps.filter(function(s){return set.steps.has(s.name);}):drawn.steps,tail=window.STANDALONE?' · snapshot':'',label=set&&(anchor.step||reproTaskTitle(anchor.task));
+  return {legend:reproLegendHTML(members,drawn.statuses,drawn.status),
+    count:set?'Dependencies of <b class="repro-scope-name" title="'+escapeAttr(label)+'">'+escapeHtml(label)+'</b>: '+members.length+' of '+drawn.steps.length+' steps'+(members.length?' · <span class="repro-scope-rollup">'+reproRollup(members,drawn.statuses).compact+'</span>':'')+tail
+      :escapeHtml(drawn.steps.length+' steps'+tail)};
+}
 function selectReproStep(name) {
   var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
   _reproSelected = name;
@@ -2061,19 +2576,13 @@ function selectReproStep(name) {
   if (location.hash !== reproHash()) history.pushState({ wt: ACTIVE_WT }, '', reproHash());
   var container = document.getElementById('view-reproduction');
   if (!container) return;
-  container.querySelectorAll('.repro-node').forEach(function(n) {
-    n.classList.toggle('is-selected', n.dataset.step === name);
-  });
   container.querySelectorAll('.rp-task').forEach(function(node){
     node.classList.remove('is-selected');
     var contains=!node.classList.contains('rp-expanded')&&reproWithin(step.task,node.dataset.task);
     var indicator=node.querySelector('.rp-selected-inside'),summary=node.querySelector('.rp-task-summary');
     if(indicator)indicator.hidden=!contains;if(summary)summary.hidden=contains;
   });
-  container.querySelectorAll('.repro-edges path').forEach(function(p) {
-    var edge=_reproLayoutCache&&_reproLayoutCache.layout.edges[Number(p.dataset.value)];
-    p.classList.toggle('is-lit', !!edge&&edge.evidence.some(function(r){return (r.from||r.producer)===name||(r.to||r.consumer)===name;}));
-  });
+  reproApplySelection();
   renderReproDetail(name);
   syncTreeRollups();
   var reader=document.getElementById('task-preview');if(reader)reader.scrollTop=0;
@@ -2328,7 +2837,7 @@ function renderReproDetail(name) {
   host.innerHTML='<article class="repro-detail"><div class="repro-detail-context">'+reproButton('← Back to task','task',step.task)+'<span>'+(step.kind==='check'?'Check step':'Build step')+'</span></div>'
     +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+escapeHtml(title)+'</h2><code class="repro-detail-name">'+escapeHtml(name)+'</code></header>'
     +'<div class="repro-status-line"><span class="repro-step-state '+ch.cls+'"><span class="repro-glyph">'+ch.glyph+'</span> '+escapeHtml(ch.label)+'</span><span>'+escapeHtml(entry?entry.reason:'Runner state unavailable')+'</span></div>'+own
-    +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+'</div>'
+    +'<div class="repro-detail-actions">'+reproButton('View declaration','declaration')+(currentView==='workspace'?reproButton('Show in graph','show-selected',step.task):'')+reproButton('Filter to dependencies','lineage-step',name)+'</div>'
     +'<section class="repro-detail-section"><div class="repro-section-head"><h3>Command</h3>'+reproButton('Copy command','copy-command')+'</div><p class="repro-hint">Run from the project directory.</p><pre class="repro-command"><code class="hljs language-bash">'+code+'</code></pre><span class="repro-copy-status" role="status"></span>'
     +(declared!==command?reproDisclosure('declared','Declared command','<pre class="repro-command"><code>'+escapeHtml(declared)+'</code></pre>',opened.has('declared')):'')+'</section>'
     +'<section class="repro-detail-section"><h3>Outputs <span>'+outs.length+'</span></h3>'+reproOnlineSummary(outs)+reproFileList(outs.slice(0,3),step.task)+(outs.length>3?reproDisclosure('outputs','Show '+(outs.length-3)+' more outputs',reproFileList(outs.slice(3),step.task),opened.has('outputs')):'')+'</section>'
@@ -2882,7 +3391,7 @@ function setActive(path, artifactPath) {
      overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
      module below; guard so the router still works if it ever loads first. */
   if (typeof onNavigationChrome === 'function') onNavigationChrome();
-  updateWorkspaceFilterSummary();
+  renderWorkspaceFilterBar();
 }
 
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
@@ -3133,6 +3642,7 @@ async function loadActiveNode(path) {
          downloaded file has no server to re-export from. */
       + (window.STANDALONE ? '' :
          '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file">Share</button>')
+      + ((path && !window.DOC_MODE) ? '<button class="share-btn lineage-btn" type="button" title="Show only this task\'s upstream and downstream dependencies">Filter to dependencies</button>' : '')
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
@@ -3155,8 +3665,10 @@ async function loadActiveNode(path) {
 
     /* Wire the Share button via a closure over `path` — an inline onclick can't
        carry the path safely (a quoted path breaks the double-quoted attribute). */
-    var shareBtn = region.querySelector('.share-btn');
+    var shareBtn = region.querySelector('.share-btn:not(.lineage-btn)');
     if (shareBtn) shareBtn.onclick = function() { shareSubtree(path); };
+    var lineageBtn = region.querySelector('.lineage-btn');
+    if (lineageBtn) lineageBtn.onclick = function() { addLineageAnchor({ task: path }); };
 
     /* a11y: on a user-initiated navigation, move focus to the new heading so
        keyboard/SR users land on the freshly-loaded content. Consume the flag so
