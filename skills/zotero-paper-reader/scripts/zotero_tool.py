@@ -4,6 +4,9 @@
 # dependencies = [
 #     "pyzotero==1.13.0",
 # ]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
 # ///
 """Unified pyzotero command surface for the zotero-paper-reader skill.
 

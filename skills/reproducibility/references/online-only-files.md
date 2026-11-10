@@ -28,7 +28,7 @@ An online-only file not yet hashed here reads `changed` when its size differs fr
 - **File Provider, from a script:** a coordinated read requests the whole file.
 
   ```bash
-  uv run --no-project --with pyobjc-framework-Cocoa python - <file>... <<'EOF'
+  uv run --no-project --with pyobjc-framework-Cocoa==12.2.2 --with pyobjc-core==12.2.2 python - <file>... <<'EOF'
   import os, sys
   import Foundation
   for p in sys.argv[1:]:

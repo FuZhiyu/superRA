@@ -70,7 +70,7 @@ mkdir -p "${ATTACH_DIR}"
 **PDF figures:** convert to PNG first, then save:
 
 ```bash
-uv run --no-project --with pdf2image python -c "
+uv run --no-project --with pdf2image==1.17.0 --with pillow==12.3.0 python -c "
 from pdf2image import convert_from_path
 images = convert_from_path('path/to/figure.pdf')
 images[0].save('${ATTACH_DIR}/description.png')

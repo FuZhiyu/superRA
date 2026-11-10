@@ -2,6 +2,9 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = ["fastapi", "uvicorn[standard]", "jinja2", "watchfiles", "pyyaml"]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
 # ///
 """Live-updating task dashboard server with backward-compatible static generation.
 

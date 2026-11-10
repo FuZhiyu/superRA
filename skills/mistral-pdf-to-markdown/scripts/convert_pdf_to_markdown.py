@@ -7,6 +7,9 @@
 #     "python-dotenv",
 #     "pyyaml",
 # ]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
 # ///
 """
 Convert PDF to Markdown using Mistral OCR API.

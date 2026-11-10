@@ -1,7 +1,6 @@
 """Rendered reproduction states: the reported and own-state channels, online-only files, and the Build menu.
 
-uv run --with pytest --with playwright --with pyyaml --with fastapi --with jinja2 \
-  --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest \
+uv run --script tests/run_tests.py \
   skills/task-tree/scripts/tests/test_repro_states_browser.py
 
 Online-only files are simulated by patching `_repro_state.file_flags` to report

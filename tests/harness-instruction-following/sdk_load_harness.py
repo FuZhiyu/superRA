@@ -40,7 +40,7 @@ This module is the *only* place ``claude_agent_sdk`` is imported, and the import
 is deferred into :func:`run_skill_load_session`. The default CI path imports
 :mod:`sdk_load_evidence` (and its unit test) instead, which never touches this
 module, so the SDK dependency stays off the CI-safe path. Supply it on the live
-path via ``uv run --with claude-agent-sdk``.
+path via ``uv run --no-project --with claude-agent-sdk==0.2.165``.
 
 Gating mirrors the existing smokes:
 
@@ -55,7 +55,7 @@ harness, not raw SDK calls.
 
 Run standalone for a smoke check:
 
-    RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \\
+    RUN_LIVE_HARNESS=1 uv run --no-project --with claude-agent-sdk==0.2.165 \\
       python tests/harness-instruction-following/sdk_load_harness.py
 """
 
