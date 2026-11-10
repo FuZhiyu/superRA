@@ -127,12 +127,15 @@ class Outcome:
         self.skipped.setdefault(reason, []).append(logical)
 
 
-def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_root: Path, spawn=_spawn) -> Outcome:
+def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_root: Path, spawn=_spawn,
+          outcome: Outcome | None = None) -> Outcome:
     """Apply the matching cleaner to each file in place; raise CleanerFailed on a failing project command.
 
-    *spawn* starts each cleaner process as a context manager, so a build can stop it.
+    *spawn* starts each cleaner process as a context manager, so a build can stop it. A caller-owned
+    *outcome* still lists the files rewritten before a failure or an interrupt.
     """
-    rule_list, outcome, env = rules(configured), Outcome(), step_env()
+    rule_list, env = rules(configured), step_env()
+    outcome = Outcome() if outcome is None else outcome
     by_cleaner: dict[str, list[tuple[str, Path]]] = {}
     for logical, path in files:
         cleaner = cleaner_for(logical, rule_list)
@@ -142,21 +145,23 @@ def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_roo
             by_cleaner.setdefault(cleaner, []).append((logical, path))
     for cleaner, group in by_cleaner.items():
         before = {logical: _digest(path) for logical, path in group}
-        if cleaner in BUILTINS:
-            _run_builtin(cleaner, group, outcome, env, spawn)
-        else:
+        try:
+            if cleaner in BUILTINS:
+                _run_builtin(cleaner, group, outcome, env, spawn)
+            else:
+                for logical, path in group:
+                    command = (cleaner.replace("{path}", shlex.quote(str(path))) if "{path}" in cleaner
+                               else f"{cleaner} {shlex.quote(str(path))}")
+                    returncode, stdout, stderr = _run(spawn, command, shell=True, cwd=project_root, env=env)
+                    if returncode:
+                        tail = (stderr or stdout).strip().splitlines()[-1:] or [""]
+                        raise CleanerFailed(f"cleaner {cleaner!r} exited {returncode} on {logical}: {tail[0]}")
+        finally:
+            skipped = {p for paths in outcome.skipped.values() for p in paths}
             for logical, path in group:
-                command = (cleaner.replace("{path}", shlex.quote(str(path))) if "{path}" in cleaner
-                           else f"{cleaner} {shlex.quote(str(path))}")
-                returncode, stdout, stderr = _run(spawn, command, shell=True, cwd=project_root, env=env)
-                if returncode:
-                    tail = (stderr or stdout).strip().splitlines()[-1:] or [""]
-                    raise CleanerFailed(f"cleaner {cleaner!r} exited {returncode} on {logical}: {tail[0]}")
-        skipped = {p for paths in outcome.skipped.values() for p in paths}
-        for logical, path in group:
-            if logical in skipped:
-                continue
-            (outcome.changed if _digest(path) != before[logical] else outcome.unchanged).append(logical)
+                if logical in skipped:
+                    continue
+                (outcome.changed if _digest(path) != before[logical] else outcome.unchanged).append(logical)
     return outcome
 
 

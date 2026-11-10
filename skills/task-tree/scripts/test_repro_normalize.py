@@ -393,3 +393,33 @@ def test_an_interrupted_build_stops_a_running_cleaner(fig_project):
     time.sleep(3.5)
     assert fig_project.read("output/stamp.txt") != "cleaned\n"
     assert fig_project.states("01-fig")["make-fig"] == "failed"
+
+
+@pytest.mark.parametrize("script, target", [
+    ('echo 999 > "$1"; exit 1\n', "output/n.txt"),  # the failing cleaner wrote first
+    ('case "$1" in *a.txt) echo 999 > "$1";; *) exit 1;; esac\n', "output/parts"),  # a later file failed
+])
+def test_a_failed_normalize_still_rewrites_the_sidecars_it_changed(tmp_path, script, target):
+    proj = Project(tmp_path / "failing")
+    configure(proj, '"*.pdf": off', '"*.txt": "sh Code/clean.sh"')
+    proj.write("Code/clean.sh", "true\n")
+    proj.write("superRA/01-num/task.md", task("Num", """\
+  - name: num
+    cmd: mkdir -p output/parts && echo 123 > output/n.txt && echo 1 > output/parts/a.txt && echo 2 > output/parts/b.txt
+    outs:
+      - path: "${OUT}/n.txt"
+        sidecar: "${OUT}/n.sha256"
+      - path: "${OUT}/parts"
+        sidecar: "${OUT}/parts.sha256"
+  - name: copy
+    cmd: cat output/n.txt output/parts/a.txt > output/copy.txt
+    deps:
+      - "${OUT}/n.txt"
+      - "${OUT}/parts"
+    outs:
+      - "${OUT}/copy.txt\""""))
+    assert proj.run("build", ".") == 0
+    proj.write("Code/clean.sh", script)  # the configuration itself is unchanged
+
+    assert proj.run("normalize", str(proj.root / target)) == 1
+    assert proj.states(".") == {"num": "stale", "copy": "stale"}

@@ -873,10 +873,13 @@ def _normalize(args, graph, paths: RunnerPaths) -> int:
     steps = {s.name: s for s in graph.steps}
     for name in select_steps(graph, targets)[0] if targets else []:
         files += step_out_files(project_root, steps[name])
+    outcome = Outcome()
     try:
         with mutation_lock(paths):
-            outcome = clean(list(dict.fromkeys(files)), graph.config.normalize, project_root)
-            _refresh_sidecars(graph, paths, outcome.changed)
+            try:
+                clean(list(dict.fromkeys(files)), graph.config.normalize, project_root, outcome=outcome)
+            finally:  # a failing cleaner may already have rewritten files
+                _refresh_sidecars(graph, paths, outcome.changed)
     except (CleanerFailed, ReproStateError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
