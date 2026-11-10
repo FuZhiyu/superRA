@@ -3712,12 +3712,29 @@ class TestLocalOpen:
         """A body file link keeps its vscode:// href (modifier/middle click, and it
         carries the line anchor) and gains the route address for a plain click.
         The address rides `contentDirRel`, the same base the vscode:// href uses,
-        so the two cannot drift; a rendered attachment never reaches this branch
-        (the `artifactPath` branch above returns), so here it equals `taskDirRel`."""
+        so the two cannot drift: the task directory for a body link, the
+        attachment's own folder for an attachment link outside `attachments/`."""
         assert (
-            "a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));"
+            "a.setAttribute('data-open-path', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));"
             in BASE_HTML
         )
+
+    @pytest.mark.skipif(_NODE is None, reason="node not available")
+    def test_open_path_collapses_dotdot_inside_the_project(self):
+        """`/api/open` refuses a written-out `..`, so a body link such as
+        `../../output/fig.png` that stays inside the project reaches it collapsed;
+        one that climbs above the root stays as written for the server to refuse."""
+        script = _extract_js_defs(["normalizeProjectPath"]) + """
+console.log(JSON.stringify([
+  normalizeProjectPath('superRA/a/b/../../output/fig.png'),
+  normalizeProjectPath('superRA/a/./b/../c.md'),
+  normalizeProjectPath('superRA/../../etc/hosts'),
+]));"""
+        proc = subprocess.run([_NODE, "-e", script], capture_output=True, text=True, timeout=20)
+        assert proc.returncode == 0, proc.stderr
+        assert json.loads(proc.stdout) == [
+            "superRA/output/fig.png", "superRA/a/c.md", "superRA/../../etc/hosts",
+        ]
 
     def test_attachment_links_carry_open_path(self):
         """A link between attachments in a rendered companion also opens on the

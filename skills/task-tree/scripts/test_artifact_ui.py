@@ -664,6 +664,52 @@ class TestAttachmentSurfaceBrowser:
             (root / "01-reader" / "attachments" / "readme.txt").resolve()
         )
 
+    def test_dotdot_file_links_open_inside_the_project(self, tmp_path, monkeypatch):
+        """A `..` link that stays inside the project opens through /api/open:
+        from a task body (with a heading anchor), and from an attachment page
+        when the target lies outside attachments/."""
+        from playwright.sync_api import sync_playwright
+
+        root = _attachment_tree(tmp_path)
+        (tmp_path / "data").mkdir()
+        (tmp_path / "data" / "raw.csv").write_text("id\n1\n", encoding="utf-8")
+        task_md = root / "01-reader" / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace(
+                "is interactive.", "is interactive; [raw](../../data/raw.csv#usage)."
+            ),
+            encoding="utf-8",
+        )
+        (root / "01-reader" / "attachments" / "links.md").write_text(
+            "# Links\n\n[raw](../../../data/raw.csv)\n", encoding="utf-8"
+        )
+        spawned: list[list[str]] = []
+        monkeypatch.setattr(plan_dashboard, "_spawn", spawned.append)
+        port, server, loop, thread = _start_server(root)
+        target = str((tmp_path / "data" / "raw.csv").resolve())
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                page = browser.new_page(viewport={"width": 1200, "height": 800})
+                for hash_, selector in (
+                    ("#/01-reader", "#active-node a[data-open-path='data/raw.csv']"),
+                    ("#/01-reader?attachment=attachments%2Flinks.md",
+                     "#active-node .artifact-markdown-preview a[data-open-path='data/raw.csv']"),
+                ):
+                    page.goto(f"http://127.0.0.1:{port}/{hash_}", wait_until="domcontentloaded")
+                    page.wait_for_selector(selector)
+                    before = len(spawned)
+                    page.click(selector)
+                    for _ in range(100):
+                        if len(spawned) > before:
+                            break
+                        time.sleep(0.05)
+                    assert spawned and spawned[-1][-1] == target, hash_
+                browser.close()
+        finally:
+            _stop_server(server, thread)
+        assert len(spawned) == 2
+
     def test_standalone_attachment_tree_and_download(self, tmp_path):
         from playwright.sync_api import sync_playwright
 
