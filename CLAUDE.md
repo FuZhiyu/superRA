@@ -116,4 +116,5 @@ One source of truth per concern; other mentions point to it. Skill-level groupin
 - **Add a reference only with a clear load condition** from its `SKILL.md`; keep domain and utility skills standalone.
 - **A new domain vertical** is `skills/<vertical>/SKILL.md` with its gates and stage-scoped references for the stages it touches; workflow, role, and orchestration skills carry over unchanged.
 - **Keep inventories in sync** when adding, renaming, or removing a skill: `skills/CATEGORIES.md`, `README.md`, and, for domain skills, the manifest Domain table.
+- **Lock every package a skill or hook installs.** A new or changed script dependency ships with its relocked sidecar lock, and an ad hoc `--with` names exact versions (§Developing Locally). A package with no wheel is named in the script's `no-binary-package`, with its build backend pinned in `build-constraint-dependencies`.
 - **Bound any new hook message or CLI default output** per §Bounded Agent-Facing Output.
