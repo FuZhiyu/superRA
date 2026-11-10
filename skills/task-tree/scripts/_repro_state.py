@@ -595,8 +595,9 @@ def spec_hashes(step: Step) -> tuple[str, str]:
 
 
 def spec_hash(step: Step) -> str:
-    """Both halves as one node state, declared half first."""
-    return "{}:{}".format(*spec_hashes(step))
+    """Both halves as one node state, declared half first, then the output cleaners when they differ from the defaults."""
+    cleaners = [_payload_hash({"cleaners": step.cleaners})] if step.cleaners else []
+    return ":".join([*spec_hashes(step), *cleaners])
 
 
 def _payload_hash(payload: dict) -> str:
@@ -1184,11 +1185,10 @@ def _compare(
     result.changes = changes
     first = changes[0]
     if first.kind == "spec":
-        head = (
-            "the resolved command changed"
-            if first.change == "resolved"
-            else "the step definition changed"
-        )
+        head = {
+            "resolved": "the resolved command changed",
+            "cleaners": "the output cleaners changed",
+        }.get(first.change, "the step definition changed")
     else:
         head = f"{first.kind} {first.node} {first.change}"
     result.reason = _plural(head, len(changes) - 1)
@@ -1230,24 +1230,25 @@ def _changed_nodes(
     spec_id = spec_node_id(step.name)
     recorded_spec = entry.depends_on.get(spec_id)
     declared, resolved = spec_hashes(step)
-    if recorded_spec != f"{declared}:{resolved}":
+    current_spec = spec_hash(step)
+    if recorded_spec != current_spec:
         # Same declared half, different resolved half: a `${VAR}` moved, not the
         # section. A lock written before the split has no declared half to match.
-        resolved_only = (
-            recorded_spec is not None and recorded_spec.split(":", 1)[0] == declared
-        )
+        recorded_halves = (recorded_spec or "").split(":")
         changes.append(
             Change(
                 node=spec_id,
                 kind="spec",
-                change="resolved" if resolved_only else "changed",
+                change="cleaners" if recorded_halves[:2] == [declared, resolved]
+                else "resolved" if recorded_spec is not None and recorded_halves[0] == declared
+                else "changed",
             )
         )
 
     for node in deps:
         recorded = entry.depends_on.get(node[0])
         if recorded is None:
-            if recorded_spec == f"{declared}:{resolved}":
+            if recorded_spec == current_spec:
                 # A runner identity correction can change the key without a
                 # declaration edit. Require the engine to record the new key.
                 changes.append(Change(node=node[0], kind="dependency", change="added"))

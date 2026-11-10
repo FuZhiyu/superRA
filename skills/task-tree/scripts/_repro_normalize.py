@@ -23,13 +23,15 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from _repro_state import path_online_only
+from _repro_state import absolute, path_online_only
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 BUILTINS = {"builtin:pdf": SCRIPTS_DIR / "normalize_pdf.py"}
@@ -61,6 +63,45 @@ def cleaner_for(logical: str, rule_list: list[tuple[str, str]]) -> str | None:
     return None
 
 
+def step_cleaners(outs, configured: dict[str, str], project_root: Path) -> dict[str, object]:
+    """What the configured cleaners do to a step's declared outs beyond the defaults; part of its spec hash.
+
+    A file out records its cleaner when the configuration changes it. A directory out records,
+    in order, every configured entry that could match a file under it, unless all of them are defaults.
+    """
+    if not configured:
+        return {}
+    configured_rules, default_rules, result = rules(configured), rules({}), {}
+    for out in outs:
+        logical = out.path.logical
+        if absolute(project_root, out.path.resolved).is_dir():
+            entries = [[g, a] for g, a in configured.items() if _may_match_under(g, logical)]
+            if any(DEFAULT_RULES.get(g) != a for g, a in entries):
+                result[f"{logical}/"] = entries
+        elif (cleaner := cleaner_for(logical, configured_rules)) != cleaner_for(logical, default_rules):
+            result[logical] = cleaner or OFF
+    return result
+
+
+def _may_match_under(pattern: str, directory: str) -> bool:
+    if "/" not in pattern:
+        return True
+    prefix = re.split(r"[*?[]", pattern, maxsplit=1)[0]
+    return prefix.startswith(f"{directory}/") or f"{directory}/".startswith(prefix)
+
+
+@contextmanager
+def _spawn(args, **kwargs):
+    with subprocess.Popen(args, **kwargs) as process:  # noqa: S603 - a configured cleaner
+        yield process
+
+
+def _run(spawn, args, **kwargs) -> tuple[int, str, str]:
+    with spawn(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **kwargs) as process:
+        stdout, stderr = process.communicate()
+    return process.returncode, stdout, stderr
+
+
 def config_errors(configured: dict[str, str]) -> list[str]:
     return [f"normalize entry {glob!r}: unknown cleaner {action!r}; expected one of {sorted(BUILTINS)}"
             for glob, action in configured.items() if action.startswith("builtin:") and action not in BUILTINS]
@@ -86,8 +127,11 @@ class Outcome:
         self.skipped.setdefault(reason, []).append(logical)
 
 
-def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_root: Path) -> Outcome:
-    """Apply the matching cleaner to each file in place; raise CleanerFailed on a failing project command."""
+def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_root: Path, spawn=_spawn) -> Outcome:
+    """Apply the matching cleaner to each file in place; raise CleanerFailed on a failing project command.
+
+    *spawn* starts each cleaner process as a context manager, so a build can stop it.
+    """
     rule_list, outcome, env = rules(configured), Outcome(), step_env()
     by_cleaner: dict[str, list[tuple[str, Path]]] = {}
     for logical, path in files:
@@ -99,16 +143,15 @@ def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_roo
     for cleaner, group in by_cleaner.items():
         before = {logical: _digest(path) for logical, path in group}
         if cleaner in BUILTINS:
-            _run_builtin(cleaner, group, outcome, env)
+            _run_builtin(cleaner, group, outcome, env, spawn)
         else:
             for logical, path in group:
                 command = (cleaner.replace("{path}", shlex.quote(str(path))) if "{path}" in cleaner
                            else f"{cleaner} {shlex.quote(str(path))}")
-                result = subprocess.run(command, shell=True, cwd=project_root, env=env,  # noqa: S602 - a configured cleaner
-                                        capture_output=True, text=True, check=False)
-                if result.returncode:
-                    tail = (result.stderr or result.stdout).strip().splitlines()[-1:] or [""]
-                    raise CleanerFailed(f"cleaner {cleaner!r} exited {result.returncode} on {logical}: {tail[0]}")
+                returncode, stdout, stderr = _run(spawn, command, shell=True, cwd=project_root, env=env)
+                if returncode:
+                    tail = (stderr or stdout).strip().splitlines()[-1:] or [""]
+                    raise CleanerFailed(f"cleaner {cleaner!r} exited {returncode} on {logical}: {tail[0]}")
         skipped = {p for paths in outcome.skipped.values() for p in paths}
         for logical, path in group:
             if logical in skipped:
@@ -125,19 +168,18 @@ def _digest(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _run_builtin(cleaner: str, group: list[tuple[str, Path]], outcome: Outcome, env: dict[str, str]) -> None:
+def _run_builtin(cleaner: str, group: list[tuple[str, Path]], outcome: Outcome, env: dict[str, str], spawn) -> None:
     uv = shutil.which("uv")
     if uv is None:
         for logical, _ in group:
             outcome.skip("uv not found; install uv to clean them", logical)
         return
-    result = subprocess.run([uv, "run", "--quiet", "--script", str(BUILTINS[cleaner]), "--json",
-                             *(str(path) for _, path in group)],
-                            env=env, capture_output=True, text=True, check=False)
+    returncode, stdout, stderr = _run(spawn, [uv, "run", "--quiet", "--script", str(BUILTINS[cleaner]), "--json",
+                                              *(str(path) for _, path in group)], env=env)
     try:
-        records = json.loads(result.stdout)
+        records = json.loads(stdout)
     except ValueError:
-        tail = (result.stderr or result.stdout).strip().splitlines()[-1:] or [f"exit {result.returncode}"]
+        tail = (stderr or stdout).strip().splitlines()[-1:] or [f"exit {returncode}"]
         for logical, _ in group:
             outcome.skip(f"{cleaner} failed: {tail[0]}", logical)
         return
