@@ -375,9 +375,10 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
              an OS-level open cannot). Same project-root-relative composition the
              /files/ route is handed — but decoded: /files/ rides a URL path that
              the server decodes, while /api/open takes the path in a JSON body,
-             which nothing decodes. */
+             which nothing decodes. The server refuses a written-out `..`, so
+             collapse it here as the peek path below does. */
           if (window.LOCAL_OPEN) {
-            a.setAttribute('data-open-path', rootRel + contentDirRel + decodePathHref(relHref));
+            a.setAttribute('data-open-path', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));
           }
           if (!window.STANDALONE) {
             a.setAttribute('data-peek', normalizeProjectPath(rootRel + contentDirRel + decodePathHref(relHref.replace(/[?#].*$/, ''))));
