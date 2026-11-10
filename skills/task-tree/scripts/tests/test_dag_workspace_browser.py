@@ -1,7 +1,6 @@
 """Rendered DAG navigation and canvas input, using an isolated research fixture.
 
-uv run --with pytest --with playwright --with pyyaml --with fastapi --with jinja2 \
-  --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest \
+uv run --script tests/run_tests.py \
   skills/task-tree/scripts/tests/test_dag_workspace_browser.py
 """
 import json

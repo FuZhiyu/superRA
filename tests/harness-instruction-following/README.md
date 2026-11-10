@@ -60,7 +60,7 @@ This matrix maps **every** load-contract entry LC001–LC024 from [load_contract
 
 **Generic-agent model guard live smokes** are opt-in because they spend authenticated model turns:
 
-- `RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk python tests/hooks/claude-agent-model-live.py` captures a denied model-less `Agent` call, a concrete-model retry, and the resulting `SubagentStart`.
+- `RUN_LIVE_HARNESS=1 uv run --no-project --with claude-agent-sdk==0.2.165 python tests/hooks/claude-agent-model-live.py` captures a denied model-less `Agent` call, a concrete-model retry, and the resulting `SubagentStart`.
 - `RUN_LIVE_HARNESS=1 bash tests/hooks/codex-agent-model-live.sh` captures the same raw-call sequence when Codex exposes `spawn_agent` through `PreToolUse(Agent)`. Codex CLI 0.147.0 instead exits 3 after observing `SubagentStart` with zero `PreToolUse` payloads; that specialized path cannot enforce the gate on this runtime.
 
 **Manual live smokes** drive a real Claude or Codex agent through the bundled fixture and assert structural transcript evidence with the shared parser. See below.
@@ -70,7 +70,7 @@ This matrix maps **every** load-contract entry LC001–LC024 from [load_contract
 Claude's `claude -p` stream does not give skill-load-by-name evidence the shared parser can tie to the manifest, and filesystem `PreToolUse` hooks do not fire under `claude -p` (issue #40506). So on-demand skill loading is verified through the Python `claude-agent-sdk`: the harness **dispatches a general-purpose agent whose prompt names the role skill** (`superRA:implement-task` / `superRA:review-task`) so the manifest-driven loads actually fire, and a `PreToolUse(matcher="Skill")` in-process hook records each on-demand skill by name and event index (including loads inside the dispatched subagent). There is no `InstructionsLoaded` hook; always-loaded skills are covered by the role-skill load-instruction contract.
 
 - [sdk_load_evidence.py](sdk_load_evidence.py) — CI-safe evidence model + assertions. `SkillLoadEvidence` + `check_skills_loaded_before_first_edit` cover on-demand (`Skill`-tool) loads; `check_always_loaded_load_instruction` asserts both role skills instruct loading every always-loaded skill. Never imports `claude-agent-sdk`; never makes a model call.
-- [sdk_load_harness.py](sdk_load_harness.py) — the live runner. The **only** module that imports `claude-agent-sdk`, and the import is deferred into `run_skill_load_session`, so the default `pytest` path never touches it. Dispatches the real role agent, gated on `RUN_LIVE_HARNESS=1`, default `CLAUDE_MODEL=haiku`. Supply the SDK on the live path with `uv run --with claude-agent-sdk`.
+- [sdk_load_harness.py](sdk_load_harness.py) — the live runner. The **only** module that imports `claude-agent-sdk`, and the import is deferred into `run_skill_load_session`, so the default `pytest` path never touches it. Dispatches the real role agent, gated on `RUN_LIVE_HARNESS=1`, default `CLAUDE_MODEL=haiku`. Supply the SDK on the live path with `uv run --no-project --with claude-agent-sdk==0.2.165`.
 - [test_sdk_load_evidence.py](test_sdk_load_evidence.py) — CI-safe unit tests for event capture, ordering, and the frontmatter contract.
 
 The per-stage and per-domain live smokes call `run_skill_load_session` and assert on the returned evidence — they consume the harness, not raw SDK calls.
@@ -88,7 +88,7 @@ RUN_LIVE_HARNESS=1 bash tests/harness-instruction-following/always-loaded-codex-
 Smoke-check the live path standalone:
 
 ```bash
-RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+RUN_LIVE_HARNESS=1 uv run --no-project --with claude-agent-sdk==0.2.165 \
   python tests/harness-instruction-following/sdk_load_harness.py
 ```
 
@@ -106,7 +106,7 @@ Codex exposes no stage skill/reference load event. The committed artifacts retai
 [test_stage_loads_live.py](test_stage_loads_live.py) drives the stage evaluator on synthetic inputs — green per stage (skill and read channels, including the multi-skill `maturation` stage requiring both guaranteed skills with `academic-writing` left conditional), red (guaranteed stage skill never loaded; reference never read; load after the first edit; a maturation run missing one guaranteed skill), the negative case (no stage skill loaded → green; a stage skill — including a maturation skill — loaded on `implementation` → red over-load; `reproducibility`, also a Domain row, loaded there → green), and the read-path suffix matcher. The committed Codex artifacts retain schema and stage identity only. No model call, no SDK/codex-cli import. Run the live Claude per-stage load check (default `sonnet`, pass@k; only the orchestrator runs it — no network on the implementer path):
 
 ```bash
-RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+RUN_LIVE_HARNESS=1 uv run --no-project --with claude-agent-sdk==0.2.165 \
   python tests/harness-instruction-following/stage_loads_live.py
 ```
 
@@ -125,7 +125,7 @@ Codex exposes no domain skill-load event. The committed artifacts retain only th
 [test_domain_loads_live.py](test_domain_loads_live.py) drives the domain evaluator on synthetic inputs — green per domain (including the `superRA:`-qualified live shape), red (domain skill never loaded; loaded after the first edit), and the multi-domain cases (all matching skills loaded → green; only one of several loaded → red; none loaded → red). The committed Codex artifacts retain schema and ordered matched-domain identities only. No model call, no SDK/codex-cli import. Run the live Claude per-domain load check (default `sonnet`, pass@k; only the orchestrator runs it — no network on the implementer path):
 
 ```bash
-RUN_LIVE_HARNESS=1 uv run --with claude-agent-sdk \
+RUN_LIVE_HARNESS=1 uv run --no-project --with claude-agent-sdk==0.2.165 \
   python tests/harness-instruction-following/domain_loads_live.py
 ```
 
@@ -134,7 +134,7 @@ A domain that reliably does **not** load its skill — or the multi-domain case 
 ## Running the CI-safe layers
 
 ```bash
-uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following
+uv run --script tests/run_tests.py tests/harness-instruction-following
 ```
 
 This collects only the Python test modules; the live `*.sh` smokes are shell scripts and are not collected or invoked by pytest.
@@ -196,4 +196,4 @@ The CI/manual boundary holds on four checks, all confirmed in this worktree:
 1. **Default `pytest` collects no live `.sh` scripts and imports no `claude-agent-sdk`.** `pytest` collects only `test_*.py` modules; the live `*.sh` smokes are shell scripts and are never collected. None of the collected modules imports `claude_agent_sdk` at top level — the only import lives deferred inside `sdk_load_harness.run_skill_load_session` (reached via `_run_session_async`), and [test_deferred_import_isolation.py](test_deferred_import_isolation.py) asserts importing every live-harness module leaves `claude_agent_sdk` and codex-cli out of `sys.modules`.
 2. **Every live script SKIPs without `RUN_LIVE_HARNESS=1`.** [claude-live-smoke.sh](claude-live-smoke.sh), [codex-live-smoke.sh](codex-live-smoke.sh), [orchestrator-live-smoke.sh](orchestrator-live-smoke.sh), and [always-loaded-codex-smoke.sh](always-loaded-codex-smoke.sh) each print `SKIP` and exit 0 when the gate is unset; the orchestrator-run Python live entries ([stage_loads_live.py](stage_loads_live.py), [domain_loads_live.py](domain_loads_live.py)) gate the same way and defer the SDK import behind the gate.
 3. **The only committed workflow runs the docs build, not the live suite.** [`.github/workflows/docs-site.yml`](../../.github/workflows/docs-site.yml) runs `docs/build_site.sh`; no workflow runs `RUN_LIVE_HARNESS=1` or invokes the live smokes.
-4. **The full CI-safe suite is green.** `uv run --with pytest --with pyyaml python -m pytest tests/harness-instruction-following` passes with no model call and no credentials.
+4. **The full CI-safe suite is green.** `uv run --script tests/run_tests.py tests/harness-instruction-following` passes with no model call and no credentials.

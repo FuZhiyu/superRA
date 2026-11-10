@@ -4,6 +4,12 @@
 # dependencies = [
 #     "pyzotero==1.13.0",
 # ]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
+# # These two ship no wheel; build them even under a user-level no-build.
+# no-binary-package = ["bibtexparser", "sgmllib3k"]
+# build-constraint-dependencies = ["setuptools==84.0.0"]
 # ///
 """Unified pyzotero command surface for the zotero-paper-reader skill.
 

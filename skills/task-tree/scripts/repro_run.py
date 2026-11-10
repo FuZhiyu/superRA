@@ -2,6 +2,9 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = ["pyyaml"]
+#
+# [tool.uv]
+# exclude-newer = "2026-10-10T00:00:00Z"
 # ///
 """The `superra repro` command surface: build, status, explain, dag.
 
