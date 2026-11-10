@@ -62,8 +62,8 @@ def normalize(data: bytes) -> bytes:
         pdf = pikepdf.Pdf.open(io.BytesIO(data), attempt_recovery=False)
     except pikepdf.PasswordError:
         raise Skip("encrypted") from None
-    except pikepdf.PdfError as exc:
-        raise Skip(f"unreadable ({exc})") from None
+    except pikepdf.PdfError:
+        raise Skip("unreadable PDF") from None
     with pdf:
         if pdf.is_encrypted:
             raise Skip("encrypted")
@@ -79,8 +79,11 @@ def normalize(data: bytes) -> bytes:
             if not len(pdf.docinfo):
                 del pdf.trailer["/Info"]
         if "/Metadata" in pdf.Root:
-            xml = etree.fromstring(pdf.Root.Metadata.read_bytes(),
-                                   etree.XMLParser(resolve_entities=False, no_network=True))
+            try:
+                xml = etree.fromstring(pdf.Root.Metadata.read_bytes(),
+                                       etree.XMLParser(resolve_entities=False, no_network=True))
+            except etree.XMLSyntaxError:
+                raise Skip("malformed XMP metadata") from None
             for element in list(xml.iter()):
                 if not isinstance(element.tag, str):
                     continue
@@ -154,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
             records.append({"path": str(path), "result": "skipped", "reason": str(exc)})
         except OSError as exc:
             records.append({"path": str(path), "result": "skipped", "reason": f"unreadable ({exc.strerror})"})
+        except Exception as exc:  # one bad file never aborts the batch
+            records.append({"path": str(path), "result": "skipped", "reason": f"cleaner error ({type(exc).__name__})"})
     if args.json:
         print(json.dumps(records))
     else:

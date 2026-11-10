@@ -223,3 +223,46 @@ def test_normalize_never_downloads_an_online_only_file(fig_project, monkeypatch,
     assert fig_project.run("normalize", str(fig_project.root / "output" / "fig.pdf")) == 0
     assert "online-only; download to clean" in capsys.readouterr().err
     assert fig_project.read("output/fig.pdf") == "placeholder"
+
+
+def test_normalize_by_path_matches_globs_on_the_declared_path(fig_project, tmp_path):
+    outside = tmp_path / "ext"
+    configure(fig_project, '"*.pdf": off', '"${EXT}/*.txt": "tr -d 0-9 < {path} > {path}.tmp && mv {path}.tmp {path}"')
+    fig_project.write("superRA/config.yaml", fig_project.read("superRA/config.yaml").replace(
+        "    OUT: output\n", f"    OUT: output\n    EXT: {outside}\n"))
+    fig_project.write("superRA/03-ext/task.md", task("Ext", f"""\
+  - name: ext
+    cmd: mkdir -p {outside} && date +%N > {outside}/n.txt
+    outs:
+      - "${{EXT}}/n.txt\""""))
+    assert fig_project.run("build", "03-ext") == 0
+    assert (outside / "n.txt").read_text() == "\n"
+    subprocess.run(f"date +%N > {outside}/n.txt", shell=True, check=True)
+    assert fig_project.states("03-ext")["ext"] == "stale"
+
+    assert fig_project.run("normalize", str(outside / "n.txt")) == 0
+    assert fig_project.states("03-ext")["ext"] == "fresh"
+
+
+def test_normalize_refuses_an_invalid_config(fig_project, capsys):
+    configure(fig_project, '"*.txt": builtin:txt')
+    fig_project.write("output/stamp.txt", "1\n")
+    assert fig_project.run("normalize", str(fig_project.root / "output" / "stamp.txt")) == 1
+    assert "unknown cleaner 'builtin:txt'" in capsys.readouterr().err
+
+
+@needs_uv
+def test_a_malformed_xmp_packet_skips_one_file_not_the_batch(tmp_path):
+    good, bad = tmp_path / "good.pdf", tmp_path / "bad.pdf"
+    for path in (good, bad):
+        subprocess.run([sys.executable, "-c", MKPDF, str(path)], check=True)
+    script = _repro_normalize.BUILTINS["builtin:pdf"]
+    # Give bad.pdf a /Metadata stream that is not XML, through the cleaner's own pikepdf.
+    subprocess.run(["uv", "run", "-q", "--no-project", "--with", "pikepdf==10.13.0.post1", "python", "-c",
+                    "import pikepdf, sys; pdf = pikepdf.open(sys.argv[1], allow_overwriting_input=True); "
+                    "pdf.Root.Metadata = pdf.make_stream(b'<not xml'); pdf.save(sys.argv[1], fix_metadata_version=False)", str(bad)], check=True)
+    result = subprocess.run(["uv", "run", "-q", "--script", str(script), "--json", str(bad), str(good)],
+                            check=True, capture_output=True, text=True)
+    records = {r["path"]: r for r in json.loads(result.stdout)}
+    assert records[str(bad)] == {"path": str(bad), "result": "skipped", "reason": "malformed XMP metadata"}
+    assert records[str(good)]["result"] == "normalized"

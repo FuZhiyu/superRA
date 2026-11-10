@@ -20,6 +20,7 @@ it. Stdlib only.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import os
 import shlex
@@ -94,7 +95,7 @@ def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_roo
         elif cleaner:
             by_cleaner.setdefault(cleaner, []).append((logical, path))
     for cleaner, group in by_cleaner.items():
-        before = {logical: path.read_bytes() for logical, path in group}
+        before = {logical: _digest(path) for logical, path in group}
         if cleaner in BUILTINS:
             _run_builtin(cleaner, group, outcome, env)
         else:
@@ -110,8 +111,16 @@ def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_roo
         for logical, path in group:
             if logical in skipped:
                 continue
-            (outcome.changed if path.read_bytes() != before[logical] else outcome.unchanged).append(logical)
+            (outcome.changed if _digest(path) != before[logical] else outcome.unchanged).append(logical)
     return outcome
+
+
+def _digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _online_only(path: Path) -> bool:

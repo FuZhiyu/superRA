@@ -153,7 +153,7 @@ A project last built by the pytask engine reads `pytask.lock` and `repro-builds.
 
 `impact <path...> [--scope <task-or-step>]` lists each affected step with its last recorded duration and total: direct consumers with script/declared/include/environment origins, then descendants with the file connecting them. `superRA/config.yaml` affects every step using a runner template, a `${VAR}`, or `env_deps`. Repeat `--scope` for multiple selections; steps outside it are marked, and stay in JSON as `in_scope: false`. `--json` adds the connecting edges.
 
-`normalize <target-or-path...>` applies the `normalize` cleaners in `superRA/config.yaml` ([task-file-contract.md](task-file-contract.md) §Reproduction Section) in place: a target cleans its steps' declared outs, any other existing path the file or every file under the directory. `build` applies the same cleaners after each step. An output regenerated outside `build` whose content is unchanged returns its step to `fresh` once cleaned. `--json` lists `changed`, `unchanged`, and `skipped` files by reason.
+`normalize <target-or-path...>` applies the `normalize` cleaners in `superRA/config.yaml` ([task-file-contract.md](task-file-contract.md) §Reproduction Section) in place: a target cleans its steps' declared outs, any other existing path the file or every file under the directory. An output regenerated outside `build` whose content is unchanged returns its step to `fresh` once cleaned. `--json` lists `changed`, `unchanged`, and `skipped` files by reason.
 
 ### Reviewed acceptance
 

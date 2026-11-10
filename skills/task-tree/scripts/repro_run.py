@@ -250,14 +250,16 @@ def _run_step(build: Build, step: Step, entry) -> str:
             cleaned = clean(step_out_files(paths.project_root, step), graph.config.normalize, paths.project_root)
         except CleanerFailed as exc:
             raise StepFailed(f"step {step.name!r}: {exc}") from None
+        if build.stopping.is_set():
+            raise StepFailed(f"step {step.name!r} was interrupted while its outputs were cleaned")
         build.notes[step.name] = skip_lines(cleaned, repro_command("normalize", [build.target(step)], "--json"))
 
         for out in step.outs:
             if out.sidecar is None:
                 continue
             sidecar = absolute(paths.project_root, out.sidecar.resolved)
-            if _mtime(sidecar) != sidecar_before[out.path.logical]:
-                continue  # the step maintains its own sidecar
+            if _mtime(sidecar) != sidecar_before[out.path.logical] and out.path.logical not in cleaned.changed:
+                continue  # the step maintains its own sidecar, unless a cleaner rewrote the out after it
             _write_sidecar(paths.project_root, out, sidecar, build.cache)
         if step.kind == "check":
             stamp = paths.project_root / stamp_ref(step.name)
@@ -816,8 +818,9 @@ def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
         sys.exit(1)
 
 
-def _normalize(args, graph, project_root: Path) -> int:
+def _normalize(args, graph, paths: RunnerPaths) -> int:
     """`repro normalize`: an item selecting steps cleans their outs; any other existing path is cleaned itself."""
+    project_root = paths.project_root
     files, targets, unknown = [], [], []
     for item in args.items:
         try:
@@ -832,16 +835,19 @@ def _normalize(args, graph, project_root: Path) -> int:
         if not path.exists():
             unknown.append(item)
             continue
-        logical = path.relative_to(project_root.resolve()).as_posix() if path.is_relative_to(project_root.resolve()) else str(path)
-        files += out_files(logical, path)
+        files += out_files(_declared_logical(graph, project_root, path), path)
     if unknown:
         print(f"Error: no step, task, or file matches {', '.join(unknown)}", file=sys.stderr)
         return 1
+    config_errors = [f for f in graph.findings if not f.task_path and f.severity == "error"]
+    if config_errors:
+        _refuse(config_errors)
     steps = {s.name: s for s in graph.steps}
     for name in select_steps(graph, targets)[0] if targets else []:
         files += step_out_files(project_root, steps[name])
     try:
-        outcome = clean(list(dict.fromkeys(files)), graph.config.normalize, project_root)
+        with mutation_lock(paths):
+            outcome = clean(list(dict.fromkeys(files)), graph.config.normalize, project_root)
     except CleanerFailed as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -854,6 +860,19 @@ def _normalize(args, graph, project_root: Path) -> int:
     for line in skip_lines(outcome, command):
         print(line, file=sys.stderr)
     return 0
+
+
+def _declared_logical(graph, project_root: Path, path: Path) -> str:
+    """The declared logical path of a file or directory, via the out that is or contains it; else project-relative."""
+    for step in graph.steps:
+        for out in step.outs:
+            declared = absolute(project_root, out.path.resolved).resolve()
+            if path == declared:
+                return out.path.logical
+            if path.is_relative_to(declared):
+                return f"{out.path.logical}/{path.relative_to(declared).as_posix()}"
+    root = project_root.resolve()
+    return path.relative_to(root).as_posix() if path.is_relative_to(root) else str(path)
 
 
 def _refuse(errors) -> None:
@@ -907,7 +926,8 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if args.command == "normalize":
-        sys.exit(_normalize(args, graph, project_root))
+        ensure_state_dir(paths)
+        sys.exit(_normalize(args, graph, paths))
 
     if graph.steps:
         ensure_state_dir(paths)
