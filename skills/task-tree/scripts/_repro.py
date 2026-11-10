@@ -1196,7 +1196,7 @@ def build_graph(
         _finding("", "error", f"{CONFIG_FILENAME}: 'normalize' must map each file glob to "
                               "builtin:pdf, a command, or off")
         normalize = {}
-    from _repro_normalize import config_errors
+    from _repro_normalize import config_errors  # deferred: it imports _repro_state, which imports this module
     for message in config_errors(normalize):
         _finding("", "error", f"{CONFIG_FILENAME}: {message}")
     graph.config = ReproConfig(

@@ -29,6 +29,8 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from _repro_state import path_online_only
+
 SCRIPTS_DIR = Path(__file__).resolve().parent
 BUILTINS = {"builtin:pdf": SCRIPTS_DIR / "normalize_pdf.py"}
 DEFAULT_RULES = {"*.pdf": "builtin:pdf"}
@@ -90,7 +92,7 @@ def clean(files: list[tuple[str, Path]], configured: dict[str, str], project_roo
     by_cleaner: dict[str, list[tuple[str, Path]]] = {}
     for logical, path in files:
         cleaner = cleaner_for(logical, rule_list)
-        if cleaner and _online_only(path):
+        if cleaner and path_online_only(path):
             outcome.skip("online-only; download to clean", logical)
         elif cleaner:
             by_cleaner.setdefault(cleaner, []).append((logical, path))
@@ -121,13 +123,6 @@ def _digest(path: Path) -> str:
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
-
-
-def _online_only(path: Path) -> bool:
-    """Reading this file would download it."""
-    from _repro_state import SF_DATALESS, file_flags, has_placeholder_xattr
-    info = path.stat()
-    return bool(file_flags(info) & SF_DATALESS) or (info.st_size == 0 and has_placeholder_xattr(path))
 
 
 def _run_builtin(cleaner: str, group: list[tuple[str, Path]], outcome: Outcome, env: dict[str, str]) -> None:

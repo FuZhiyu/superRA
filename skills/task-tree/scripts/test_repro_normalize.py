@@ -181,6 +181,19 @@ def test_cleaners_reach_files_inside_a_directory_output(tmp_path):
     assert proj.read("output/parts/a.txt") == "\n"
 
 
+def test_a_cleaned_directory_out_rewrites_the_sidecar_its_step_wrote(tmp_path):
+    proj = Project(tmp_path / "dirproj")
+    configure(proj, STRIP_DIGITS)
+    proj.write("superRA/01-gen/task.md", task("Gen", """\
+  - name: gen
+    cmd: mkdir -p output/parts && date +%N > output/parts/a.txt && echo mine > output/parts.sha256
+    outs:
+      - path: "${OUT}/parts"
+        sidecar: "${OUT}/parts.sha256\""""))
+    assert proj.run("build", ".") == 0
+    assert proj.read("output/parts.sha256").endswith("  ${OUT}/parts\n")
+
+
 def test_a_missing_uv_warns_and_keeps_the_step(fig_project, monkeypatch, capsys):
     monkeypatch.setattr(_repro_normalize.shutil, "which", lambda name: None)
     assert fig_project.run("build", "01-fig") == 0
@@ -222,7 +235,7 @@ def test_an_unknown_builtin_is_a_config_error(fig_project):
 
 def test_normalize_never_downloads_an_online_only_file(fig_project, monkeypatch, capsys):
     fig_project.write("output/fig.pdf", "placeholder")
-    monkeypatch.setattr(_repro_normalize, "_online_only", lambda path: True)
+    monkeypatch.setattr(_repro_normalize, "path_online_only", lambda path: True)
     assert fig_project.run("normalize", str(fig_project.root / "output" / "fig.pdf")) == 0
     assert "online-only; download to clean" in capsys.readouterr().err
     assert fig_project.read("output/fig.pdf") == "placeholder"

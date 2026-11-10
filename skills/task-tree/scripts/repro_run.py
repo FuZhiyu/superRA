@@ -261,7 +261,9 @@ def _run_step(build: Build, step: Step, entry) -> str:
             if out.sidecar is None:
                 continue
             sidecar = absolute(paths.project_root, out.sidecar.resolved)
-            if _mtime(sidecar) != sidecar_before[out.path.logical] and out.path.logical not in cleaned.changed:
+            logical = out.path.logical
+            if _mtime(sidecar) != sidecar_before[logical] and not any(
+                    changed == logical or changed.startswith(f"{logical}/") for changed in cleaned.changed):
                 continue  # the step maintains its own sidecar, unless a cleaner rewrote the out after it
             _write_sidecar(paths.project_root, out, sidecar, build.cache)
         if step.kind == "check":
