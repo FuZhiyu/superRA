@@ -25,7 +25,7 @@ uv run --script tests/run_tests.py skills/task-tree/scripts
   UV_NO_CONFIG=1 uv lock --script <script>
   uv run --script tests/run_tests.py tests/test_script_dependency_locks.py
   ```
-- **Ad hoc installs name exact versions.** A `--with <package>` in skill text, tests, or this file is `--with <package>==X.Y.Z`, with its dependencies pinned the same way; the test above enforces it.
+- **Ad hoc installs name exact versions.** A `--with <package>` in skill text, tests, or this file is `--with <package>==X.Y.Z`; the test above enforces it. Its dependencies stay unpinned unless named too, so a command that agents run often belongs in a locked script.
 - **`./superRA/superra` wrapper:** prefers this checkout's `skills/task-tree`, then an installed plugin, then a GitHub clone. The resolution chain lives in `skills/task-tree/scripts/wrapper_resolver.py`.
 
 ## Releasing

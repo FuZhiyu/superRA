@@ -109,11 +109,33 @@ def test_script_lock_matches_declared_dependencies(script: Path):
         assert all(f.get("hash", "").startswith("sha256:") for f in files), f"{package['name']} lacks hashes"
 
 
+def logical_lines(text: str):
+    """Yield (first line number, command) with backslash-continued lines joined."""
+    start, parts = 0, []
+    for number, line in enumerate(text.splitlines(), 1):
+        if not parts:
+            start = number
+        stripped = line.rstrip()
+        continued = stripped.endswith("\\")
+        parts.append(stripped[:-1] if continued else stripped)
+        if not continued:
+            yield start, " ".join(parts)
+            parts = []
+    if parts:
+        yield start, " ".join(parts)
+
+
+def test_logical_lines_join_continuations():
+    text = "uv run --no-project \\\n  --with requests \\\n  python x.py\nplain\n"
+    assert list(logical_lines(text)) == [(1, "uv run --no-project    --with requests    python x.py"), (4, "plain")]
+    assert AD_HOC.findall(next(logical_lines(text))[1])[0][1] == "requests"
+
+
 def test_ad_hoc_installs_are_pinned():
     unpinned = []
     for path in shipped_files((".md", ".sh", ".py", ".json", ".yml", ".yaml")) + DEV_TEXT:
         text = path.read_text(encoding="utf-8", errors="replace")
-        for number, line in enumerate(text.splitlines(), 1):
+        for number, line in logical_lines(text):
             if "uv" not in line:
                 continue
             for _, package in AD_HOC.findall(line):
