@@ -112,6 +112,8 @@ superra repro build . --force            # rerun every registered step
 superra repro explain 02-merge            # where each changed hash came from, grouped by cause
 superra repro explain Output/panel.parquet --json # one file's provenance, producer, and readers
 superra repro impact Code/helpers.jl --scope 02-merge # affected steps, including outside scope, with last durations
+superra repro normalize 02-merge          # clean the steps' declared outs with the configured cleaners
+superra repro normalize Figures/plot.pdf  # clean named files, e.g. after running a script directly
 superra repro dag --mermaid               # the step graph
 ```
 
@@ -150,6 +152,8 @@ A step takes the first state its own evidence supports, in the order `failed`, `
 A project last built by the pytask engine reads `pytask.lock` and `repro-builds.json` until its first build writes `repro-lock.json`; that build prints the `git rm` that retires them.
 
 `impact <path...> [--scope <task-or-step>]` lists each affected step with its last recorded duration and total: direct consumers with script/declared/include/environment origins, then descendants with the file connecting them. `superRA/config.yaml` affects every step using a runner template, a `${VAR}`, or `env_deps`. Repeat `--scope` for multiple selections; steps outside it are marked, and stay in JSON as `in_scope: false`. `--json` adds the connecting edges.
+
+`normalize <target-or-path...>` applies the `normalize` cleaners in `superRA/config.yaml` ([task-file-contract.md](task-file-contract.md) §Reproduction Section) in place: a target cleans its steps' declared outs, any other existing path the file or every file under the directory. `build` applies the same cleaners after each step. An output regenerated outside `build` whose content is unchanged returns its step to `fresh` once cleaned. `--json` lists `changed`, `unchanged`, and `skipped` files by reason.
 
 ### Reviewed acceptance
 

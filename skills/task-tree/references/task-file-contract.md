@@ -185,6 +185,7 @@ reproduction:
 | `vars` | Name → a literal, `env: NAME`, or `shell: "…"`. Evaluated once per invocation. |
 | `runners` | Name → command template containing `{script}`. |
 | `env_deps` | Optional paths added to every step's deps. Default environment-file handling belongs to [reproducibility](../../reproducibility/references/diagnosing.md#environment-changes). Machine-specific files — sysimages, caches — never belong here. |
+| `normalize` | File glob → output cleaner, applied after a step succeeds and before its outs are recorded: `builtin:pdf` (strips PDF dates, producer names, and document IDs; runs through `uv`), a shell command run from the project root with `{path}` replaced by the file (else appended) that rewrites it in place, or `off`. First match wins; a glob without `/` matches the file name, one with `/` the declared path. The default `"*.pdf": builtin:pdf` follows the configured entries, so `"*.pdf": off` disables it and `"*": off` disables every cleaner. A failing command fails the step; a PDF the built-in cleaner cannot rewrite (encrypted, signed, no `uv`) is left as written with a warning. |
 
 `${VAR}` interpolation applies to `cmd`, `deps`, `outs`, `script`, and `env_deps`. **Every node keeps its variable-form path as its id** alongside the resolved path.
 
@@ -195,7 +196,7 @@ reproduction:
 - **An external input** is hashed like any dep: a redelivered extract restales its consumers.
 - **An `env_deps` file** that changes invalidates every step.
 - **A Julia `.jl` dep** expands to every file it reaches through a statically resolvable `include`, so a helper edit invalidates its consumers without being listed. Each included file keeps the path as written, below the project root or a `${VAR}` directory. An `include` that does not resolve, or reaches a file outside both, is reported for hand declaration.
-- **Identical output stops the cascade.** A rerun that regenerates its outs byte for byte leaves its descendants fresh.
+- **Identical output stops the cascade.** A rerun that regenerates its outs byte for byte, after the `normalize` cleaners, leaves its descendants fresh. Steps run with `SOURCE_DATE_EPOCH=315532800` unless the environment sets it, so tools that honor it stamp a fixed date.
 - **A failed forced rerun** stays `failed` until a successful retry, which the next build attempts even with unchanged inputs.
 
 ### The YAML subset
