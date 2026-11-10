@@ -325,8 +325,10 @@ function renderMarkdown(text, sectionName, taskPath, contentBase) {
               a.setAttribute('data-open-path', taskRelOpenPath(taskPath, artifactTarget));
             }
             if (!window.STANDALONE) a.setAttribute('data-peek', taskRelOpenPath(taskPath, artifactTarget));
+            return;
           }
-          return;
+          /* Outside attachments/: a project file link, resolved from the
+             attachment's own folder (contentDirRel carries it). */
         }
         if (window.DOC_MODE) {
           /* Doc pages cite repo files by repo-root-relative path (the authoring
