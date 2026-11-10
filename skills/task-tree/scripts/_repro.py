@@ -39,7 +39,7 @@ SECTION_KEYS = ("steps",)
 STEP_KEYS = ("name", "cmd", "runner", "script", "deps", "outs", "kind", "params")
 RETIRED_KEYS = ("tier",)
 RETIRED_KEY_WARNING = "{key!r} is retired and ignored; remove the key and name task targets instead"
-CONFIG_KEYS = ("vars", "runners", "env_deps")
+CONFIG_KEYS = ("vars", "runners", "env_deps", "normalize")
 RETIRED_CONFIG_KEYS = ("env_probe", "code_roots")
 
 STEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -509,12 +509,14 @@ class ReproConfig:
     variables: dict[str, str] = field(default_factory=dict)
     runners: dict[str, str] = field(default_factory=dict)
     env_deps: list[str] = field(default_factory=list)
+    normalize: dict[str, str] = field(default_factory=dict)  # as configured; `_repro_normalize` adds the defaults
 
     def to_dict(self) -> dict:
         return {
             "vars": dict(self.variables),
             "runners": dict(self.runners),
             "env_deps": list(self.env_deps),
+            "normalize": dict(self.normalize),
         }
 
 
@@ -1187,10 +1189,21 @@ def build_graph(
     if not isinstance(runners, dict):
         _finding("", "error", f"{CONFIG_FILENAME}: 'runners' must be a mapping")
         runners = {}
+    normalize = raw_config.get("normalize") or {}
+    if isinstance(normalize, dict):  # the parser reads a bare `off` as false
+        normalize = {k: "off" if v is False else v for k, v in normalize.items()}
+    if not isinstance(normalize, dict) or any(not isinstance(v, str) or not v.strip() for v in normalize.values()):
+        _finding("", "error", f"{CONFIG_FILENAME}: 'normalize' must map each file glob to "
+                              "builtin:pdf, a command, or off")
+        normalize = {}
+    from _repro_normalize import config_errors  # deferred: it imports _repro_state, which imports this module
+    for message in config_errors(normalize):
+        _finding("", "error", f"{CONFIG_FILENAME}: {message}")
     graph.config = ReproConfig(
         variables=variables,
         runners={str(k): str(v) for k, v in runners.items()},
         env_deps=[_norm(p) for p in _string_list(raw_config.get("env_deps"))],
+        normalize={str(k): v.strip() for k, v in normalize.items()},
     )
     if resolve_vars:
         for raw in graph.config.env_deps:

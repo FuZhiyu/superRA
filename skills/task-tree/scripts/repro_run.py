@@ -41,6 +41,7 @@ from _repro import Graph, Out, Step, build_graph, step_errors  # noqa: E402
 from _repro_acceptance import capture_receipt, check_sources, current_state, mutation_lock, supersede  # noqa: E402
 from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
+from _repro_normalize import CleanerFailed, Outcome, clean, out_files, step_env  # noqa: E402
 from _repro_state import (  # noqa: E402
     BLOCKING,
     LOCK_FILENAME,
@@ -114,6 +115,7 @@ class Build:
     gated: set[str] = field(default_factory=set)  # steps the download gate stopped
     completed: dict[str, LockEntry] = field(default_factory=dict)
     outcomes: dict[str, tuple[str, str]] = field(default_factory=dict)  # name -> (outcome, detail)
+    notes: dict[str, list[str]] = field(default_factory=dict)  # name -> warnings from a successful run
     stopping: threading.Event = field(default_factory=threading.Event)
     running: dict[str, subprocess.Popen] = field(default_factory=dict)
     running_lock: threading.Lock = field(default_factory=threading.Lock)
@@ -224,7 +226,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
                 supersede(paths, step.name)  # acceptance survives until the step is committed to run
                 committed = True
                 process = subprocess.Popen(  # noqa: S602 - a declared shell step
-                    step.cmd, shell=True, cwd=str(paths.project_root),
+                    step.cmd, shell=True, cwd=str(paths.project_root), env=step_env(),
                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
                 )
                 build.running[step.name] = process
@@ -247,13 +249,22 @@ def _run_step(build: Build, step: Step, entry) -> str:
             raise StepFailed(f"step {step.name!r} was interrupted; see {paths.log_ref(step.name)}")
         if returncode != 0:
             raise StepFailed(f"step {step.name!r} exited {returncode}; see {paths.log_ref(step.name)}")
+        try:
+            cleaned = clean(step_out_files(paths.project_root, step), graph.config.normalize, paths.project_root)
+        except CleanerFailed as exc:
+            raise StepFailed(f"step {step.name!r}: {exc}") from None
+        if build.stopping.is_set():
+            raise StepFailed(f"step {step.name!r} was interrupted while its outputs were cleaned")
+        build.notes[step.name] = skip_lines(cleaned, repro_command("normalize", [build.target(step)], "--json"))
 
         for out in step.outs:
             if out.sidecar is None:
                 continue
             sidecar = absolute(paths.project_root, out.sidecar.resolved)
-            if _mtime(sidecar) != sidecar_before[out.path.logical]:
-                continue  # the step maintains its own sidecar
+            logical = out.path.logical
+            if _mtime(sidecar) != sidecar_before[logical] and not any(
+                    changed == logical or changed.startswith(f"{logical}/") for changed in cleaned.changed):
+                continue  # the step maintains its own sidecar, unless a cleaner rewrote the out after it
             _write_sidecar(paths.project_root, out, sidecar, build.cache)
         if step.kind == "check":
             stamp = paths.project_root / stamp_ref(step.name)
@@ -280,6 +291,17 @@ def _run_step(build: Build, step: Step, entry) -> str:
     record["outcome"] = "success"
     write_run_record(paths, step.name, record)
     return "executed"
+
+
+def step_out_files(project_root: Path, step: Step) -> list[tuple[str, Path]]:
+    return [item for out in step.outs
+            for item in out_files(out.path.logical, absolute(project_root, out.path.resolved))]
+
+
+def skip_lines(outcome: Outcome, command: str) -> list[str]:
+    """One line per reason a cleaner left files as written."""
+    return [f"Warning: {len(names)} output(s) left as written ({reason}): {capped_join(names, command)}"
+            for reason, names in outcome.skipped.items()]
 
 
 def _write_sidecar(project_root: Path, out: Out, sidecar: Path, cache: HashCache) -> None:
@@ -385,7 +407,8 @@ def _interrupt_on_termination():
 def _attempt(build: Build, step: Step) -> tuple[str, str]:
     try:
         entry = _decide(build, step)
-        return _run_step(build, step, entry), ""
+        outcome = _run_step(build, step, entry)
+        return outcome, "\n".join(build.notes.get(step.name, ()))
     except NotStarted:
         return "skipped", "build interrupted"
     except (StepFailed, ReproStateError, OSError) as exc:
@@ -723,6 +746,14 @@ def build_parser() -> argparse.ArgumentParser:
     revoke.add_argument("targets", nargs="+", help="Task paths, task#step selectors, or unique step names")
     revoke.add_argument("--json", action="store_true", dest="as_json")
 
+    normalize = _sub(sub, "normalize", "Clean outputs in place with the configured cleaners (PDF metadata by default)", [
+        "superra repro normalize 02-merge             # the declared outputs of its steps",
+        "superra repro normalize Figures/plot.pdf     # named files, e.g. after running a script directly",
+        "superra repro normalize . --json",
+    ])
+    normalize.add_argument("items", nargs="+", help="Task paths, task#step selectors, step names, or file and directory paths")
+    normalize.add_argument("--json", action="store_true", dest="as_json")
+
     dag = _sub(sub, "dag", "Render the step graph", [
         "superra repro dag",
         "superra repro dag --mermaid",
@@ -792,6 +823,63 @@ def _explain(args, graph, paths: RunnerPaths, plan_name: str) -> None:
         sys.exit(1)
 
 
+def _normalize(args, graph, paths: RunnerPaths) -> int:
+    """`repro normalize`: an item selecting steps cleans their outs; any other existing path is cleaned itself."""
+    project_root = paths.project_root
+    files, targets, unknown = [], [], []
+    for item in args.items:
+        try:
+            selects = bool(select_steps(graph, [item])[0])
+        except ReproStateError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        if selects:
+            targets.append(item)
+            continue
+        path = Path(item).resolve()
+        if not path.exists():
+            unknown.append(item)
+            continue
+        files += [(_declared_logical(graph, project_root, f.resolve()), f) for _, f in out_files(str(path), path)]
+    if unknown:
+        print(f"Error: no step, task, or file matches {', '.join(unknown)}", file=sys.stderr)
+        return 1
+    config_errors = [f for f in graph.findings if not f.task_path and f.severity == "error"]
+    if config_errors:
+        _refuse(config_errors)
+    steps = {s.name: s for s in graph.steps}
+    for name in select_steps(graph, targets)[0] if targets else []:
+        files += step_out_files(project_root, steps[name])
+    try:
+        with mutation_lock(paths):
+            outcome = clean(list(dict.fromkeys(files)), graph.config.normalize, project_root)
+    except (CleanerFailed, ReproStateError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    if args.as_json:
+        print(json.dumps({"changed": outcome.changed, "unchanged": outcome.unchanged, "skipped": outcome.skipped}, indent=2))
+        return 0
+    command = repro_command("normalize", args.items, "--json")
+    print(f"{len(outcome.changed)} file(s) cleaned, {len(outcome.unchanged)} already clean"
+          + (f": {capped_join(outcome.changed, command)}" if outcome.changed else "."))
+    for line in skip_lines(outcome, command):
+        print(line, file=sys.stderr)
+    return 0
+
+
+def _declared_logical(graph, project_root: Path, path: Path) -> str:
+    """The declared logical path of a file or directory, via the out that is or contains it; else project-relative."""
+    for step in graph.steps:
+        for out in step.outs:
+            declared = absolute(project_root, out.path.resolved).resolve()
+            if path == declared:
+                return out.path.logical
+            if path.is_relative_to(declared):
+                return f"{out.path.logical}/{path.relative_to(declared).as_posix()}"
+    root = project_root.resolve()
+    return path.relative_to(root).as_posix() if path.is_relative_to(root) else str(path)
+
+
 def _refuse(errors) -> None:
     """Exit on reproduction errors that touch the build selection."""
     if errors:
@@ -841,6 +929,10 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "dag":
         print(render_dag(graph, mermaid=args.mermaid))
         return
+
+    if args.command == "normalize":
+        ensure_state_dir(paths)
+        sys.exit(_normalize(args, graph, paths))
 
     if graph.steps:
         ensure_state_dir(paths)

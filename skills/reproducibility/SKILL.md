@@ -46,7 +46,8 @@ Other flags: `superra repro <command> --help`.
 
 `[BLOCKING]` **Record a result in `## Results` only after `superra repro status <targets>` shows every selected step `fresh`.** A step behind a `stale`, `missing`, or `failed` producer reads `stale`. A selected step reading `unverified` fails this gate, though `status` exits 0.
 
-1. **Produce the result through the graph:** `superra repro build <targets>`, or [accept](references/rerun-or-accept.md#accept) a result already produced from the same committed code, such as by an interactive run.
+1. **Produce the result through the graph:** `superra repro build <targets>`.
+   - **Outputs regenerated outside `build`, such as by an interactive run:** clean them with `superra repro normalize <targets or paths>` before recording or committing them, then [accept](references/rerun-or-accept.md#accept) any step still not `fresh`.
 2. **In `## Results`, state what the evidence covers:** the targets, the external inputs they read, the outcome of each check step, and which steps ran versus which were accepted. A result checked with `--only`, or resting on `unverified` producers, says so and names where tracing stopped: the saved inputs, or the `unverified` boundary `status` prints.
 3. **Commit the changed `repro-lock.json` and `repro-acceptance/` records with the work.**
 
