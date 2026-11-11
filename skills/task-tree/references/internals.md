@@ -363,7 +363,7 @@ An absent upstream sidecar does not block an existing artifact: the dependency r
 
 ### Build guards
 
-Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance rechecks declarations and hashes immediately before writing.
+Build guards compare the selected commands/specifications, resolved paths, and relevant artifact ownership. Unrelated task creation, active status changes, prose, and unused configuration edits do not abort a run. Full graph validation applies at invocation start; changes to the selected contract prevent inconsistent success evidence. Acceptance rechecks declarations and cached hashes immediately before writing.
 
 ### Explain sources and history
 
