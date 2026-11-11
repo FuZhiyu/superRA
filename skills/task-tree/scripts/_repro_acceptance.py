@@ -472,10 +472,10 @@ def inspect_baseline(graph, step, paths, cache=None):
 
 
 class Heartbeat:
-    """A stderr line per interval while `accept` reads file content; none when no read outlasts it."""
+    """A stderr line per interval of reading file content, timed from the first read."""
 
     def __init__(self, cache, clock=time.monotonic):
-        self.cache, self.clock, self.label, self.last = cache, clock, '', clock()
+        self.cache, self.clock, self.label, self.last = cache, clock, '', None
         cache.tick = self
 
     def step(self, name, position, total):
@@ -483,7 +483,9 @@ class Heartbeat:
 
     def __call__(self):
         now = self.clock()
-        if now - self.last >= HEARTBEAT_SECONDS:
+        if self.last is None:
+            self.last = now
+        elif now - self.last >= HEARTBEAT_SECONDS:
             self.last = now
             print(f'accept: hashing {self.label}, {self.cache.bytes_read / 1e9:.1f} GB read', file=sys.stderr)
 

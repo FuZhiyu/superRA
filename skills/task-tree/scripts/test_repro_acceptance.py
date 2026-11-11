@@ -441,7 +441,7 @@ def test_a_dependency_rewritten_while_its_step_runs_fails_the_step(project):
 def test_a_slow_accept_reports_progress_on_stderr_only(project, capsys):
     _edit_sources(project)
     project.paths.cache_file.unlink()
-    ticks = iter(range(0, 10 ** 6, 6))  # each look at the clock is six seconds later
+    ticks = iter(range(0, 10 ** 6, 11))  # each look at the clock is eleven seconds later
     capsys.readouterr()
     accept(project.graph(), project.paths, CHAIN, 'reviewed', {}, dry_run=True, clock=lambda: next(ticks))
     captured = capsys.readouterr()
