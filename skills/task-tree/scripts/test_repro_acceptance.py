@@ -9,7 +9,7 @@ from _repro_acceptance import (
     accept, preview, read_ledger, receipt_path,
     ReproStateError, LEDGER,
 )
-from _repro_state import compute_status, read_lock, read_run_record
+from _repro_state import HashCache, compute_status, read_lock, read_run_record
 
 
 def review(project, names=('01-a#build-a',), *, apply=True):
@@ -347,3 +347,119 @@ def test_local_state_carries_the_dropbox_ignore_attribute(project):
     assert project.run('status', '.') in (0, 1)
     assert _dropbox_ignored(project.paths.state_dir)
 
+
+
+# ---------------------------------------------------------------------------
+# Hashes come from the shared cache
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def reads(monkeypatch):
+    """Every file whose content any `HashCache` reads, in order."""
+    seen = []
+    hashed = HashCache._hashed
+
+    def counting(self, path, info):
+        before = self.full_reads
+        value = hashed(self, path, info)
+        if self.full_reads > before:
+            seen.append(str(path))
+        return value
+
+    monkeypatch.setattr(HashCache, '_hashed', counting)
+    return seen
+
+
+def _edit_sources(project):
+    assert project.run('build', *CHAIN) == 0
+    project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
+    project.write('Code/b.sh', project.read('Code/b.sh') + '# harmless\n')
+
+
+def test_accept_reads_each_file_once_and_a_repeat_reads_nothing(project, reads):
+    _edit_sources(project)
+    project.paths.cache_file.unlink()  # start cold
+    reads.clear()
+    result = accept(project.graph(), project.paths, CHAIN, 'Harmless source changes', {})
+    assert len(result['steps']) == 3
+    assert str(project.root / 'output/a.txt') in reads  # build-a's out and build-b's dep
+    assert len(reads) == len(set(reads))
+    reads.clear()
+    accept(project.graph(), project.paths, CHAIN, 'Harmless source changes', {}, dry_run=True)
+    assert reads == []
+
+
+def test_a_cached_acceptance_records_what_a_fresh_read_records(project):
+    _edit_sources(project)
+    graph = project.graph()
+    cached = preview(graph, project.paths, CHAIN, 'reviewed', {})
+    fresh = preview(graph, project.paths, CHAIN, 'reviewed', {}, HashCache())
+    assert cached == fresh and cached['steps'][0]['record']
+
+
+def test_a_refused_accept_keeps_the_hashes_it_computed(project, reads):
+    _edit_sources(project)
+    project.paths.cache_file.unlink()
+    with pytest.raises(ReproStateError, match='requires --reason'):
+        accept(project.graph(), project.paths, CHAIN, '', {})
+    reads.clear()
+    accept(project.graph(), project.paths, CHAIN, 'Harmless source changes', {}, dry_run=True)
+    assert reads == []
+
+
+def test_a_build_reads_no_unchanged_dependency_of_the_step_it_runs(project, reads):
+    assert project.run('build', *CHAIN) == 0
+    project.write('Code/b.sh', project.read('Code/b.sh') + 'true\n')
+    reads.clear()
+    assert project.run('build', *CHAIN) == 0
+    assert str(project.root / 'output/a.txt') not in reads
+    assert reads.count(str(project.root / 'Code/b.sh')) == 1
+
+
+def test_a_file_changed_between_the_two_passes_refuses_acceptance(project, monkeypatch):
+    import _repro_acceptance
+    _edit_sources(project)
+    calls = []
+
+    def rewrite_before_the_second_pass(graph):
+        calls.append(graph)
+        if len(calls) == 2:
+            project.write('output/a.txt', 'changed under the reviewer\n')
+
+    monkeypatch.setattr(_repro_acceptance, 'check_sources', rewrite_before_the_second_pass)
+    with pytest.raises(ReproStateError, match='state changed during acceptance'):
+        accept(project.graph(), project.paths, ['01-a#build-a'], 'reviewed', {})
+    assert read_ledger(project.paths)['steps'] == {}
+
+
+def test_a_dependency_rewritten_while_its_step_runs_fails_the_step(project):
+    project.write('Code/a.sh', 'mkdir -p output\necho hello > output/a.txt\necho "# grew" >> Code/a.sh\n')
+    assert project.run('build', '01-a') == 1
+    assert 'dependencies changed during execution' in read_run_record(project.paths, 'build-a')['error']
+
+
+def test_a_slow_accept_reports_progress_on_stderr_only(project, capsys):
+    _edit_sources(project)
+    project.paths.cache_file.unlink()
+    ticks = iter(range(0, 10 ** 6, 6))  # each look at the clock is six seconds later
+    capsys.readouterr()
+    accept(project.graph(), project.paths, CHAIN, 'reviewed', {}, dry_run=True, clock=lambda: next(ticks))
+    captured = capsys.readouterr()
+    assert captured.out == ''
+    lines = captured.err.splitlines()
+    assert lines and all(line.startswith('accept: hashing ') and line.endswith(' GB read') for line in lines)
+    assert 'build-a (1 of 3)' in lines[0]
+
+
+def test_a_quick_accept_prints_no_progress_and_stdout_never_carries_it(project, capsys, monkeypatch):
+    import _repro_acceptance
+    _edit_sources(project)
+    capsys.readouterr()
+    assert project.run('accept', *CHAIN, '--dry-run', '--json') == 0
+    quick = capsys.readouterr()
+    assert 'hashing' not in quick.err
+    project.paths.cache_file.unlink()
+    monkeypatch.setattr(_repro_acceptance, 'HEARTBEAT_SECONDS', 0)
+    assert project.run('accept', *CHAIN, '--dry-run', '--json') == 0
+    slow = capsys.readouterr()
+    assert 'accept: hashing ' in slow.err and slow.out == quick.out

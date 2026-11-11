@@ -246,6 +246,8 @@ class HashCache:
     def __init__(self, path: Path | None = None):
         self.path = path
         self.full_reads = 0
+        self.bytes_read = 0
+        self.tick = None  # called after each block read, for progress
         self._entries: dict[str, list] = {}
         self._online: dict[str, bool] = {}  # directory -> holds online-only content, from its last walk
         self._dirty = False
@@ -286,6 +288,9 @@ class HashCache:
             with path.open("rb") as handle:
                 for block in iter(lambda: handle.read(1 << 20), b""):
                     digest.update(block)
+                    self.bytes_read += len(block)
+                    if self.tick is not None:
+                        self.tick()
         except OSError:
             return Unread("unreadable")
         self.full_reads += 1

@@ -347,12 +347,23 @@ def test_accept_refuses_a_file_it_cannot_hash_and_its_preview_never_opens_one(pr
     project.write("Code/a.sh", "mkdir -p output\necho hello > output/a.txt\n# comment\n")
     assert project.states("01-a")["build-a"] == "stale"
     offline.evict("Code/a.sh")
+    _clear_cache(project)
     with pytest.raises(ReproStateError, match=r"build-a: cannot record 1 file\(s\) this machine cannot hash:\n"
                                               r"\s+Code/a.sh\s+\d+ B\s+online-only here\n.*online-only-files.md"):
         accept(project.graph(), project.paths, ["01-a#build-a"], "reviewed", {})
     details = inspect_baseline(project.graph(), project.graph().step("build-a"), project.paths)
     row = next(r for r in details["diffs"] if r["node"] == "Code/a.sh")
     assert row["diff"] is None and row["history"] == "unavailable"
+
+
+def test_accept_records_an_online_only_file_from_its_cached_hash_without_opening_it(project, offline):
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", "mkdir -p output\necho hello > output/a.txt\n# comment\n")
+    assert project.states("01-a")["build-a"] == "stale"  # caches the new bytes
+    offline.evict("Code/a.sh")
+    accept(project.graph(), project.paths, ["01-a#build-a"], "reviewed", {})
+    entry = project.status(*CHAIN).entry("build-a")
+    assert (entry.status, entry.reason) == ("fresh", "reviewed baseline")
 
 
 def test_an_acceptance_over_uncached_online_only_files_reads_unverified_not_invalid(project, offline):

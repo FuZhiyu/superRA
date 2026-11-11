@@ -19,6 +19,7 @@
 
 ### Fixed
 
+- **`repro accept` no longer re-reads every file from disk.** It hashed each selected step's declared files four to six times, so accepting many steps over large data took minutes and printed nothing until the end. `accept` now reuses the hash cache `status` keeps: a file whose size and modification time are unchanged costs one `stat`, and a call that hashes for more than 10 seconds reports its progress on stderr. `build` reuses the cache the same way when it records a step. An online-only file is accepted when this machine already holds its hash.
 - **`repro build --dry-run` no longer reports a false `dependency cycle`.** A dry run gave up on a step named before its producer in a chain of steps.
 - **`task move` re-points hard-coded task paths.** A move rewrites `superRA/<task-path>` literals in `## Reproduction` declarations, in other task-tree Markdown, and in tracked source files such as `Code/`, so steps and scripts stop naming a directory that no longer exists. Logs, JSON, data files, and the lock keep the path they recorded, and paths into other projects are left alone. The move lists the project files and the steps it changed.
 - **Dashboard file links with `..` open again.** On the dashboard's own machine, clicking a task-body link such as `../../output/fig.png` returned "Access denied" even when the file sat inside the project.
