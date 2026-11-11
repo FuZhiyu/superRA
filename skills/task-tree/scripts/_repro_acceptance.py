@@ -269,7 +269,7 @@ def source_snapshots(step, paths, state):
     return snapshots
 
 
-def capture_receipt(graph, step, paths, before, cache=None):
+def capture_receipt(graph, step, paths, before, cache):
     state = current_state(graph, step, paths, cache, recorded=False)
     if state['deps'] != before['deps']:
         raise ReproStateError(f'{step.name}: dependencies changed during execution; rerun')
@@ -435,7 +435,6 @@ def state_differences(before, after):
 
 
 def inspect_baseline(graph, step, paths, cache=None):
-    cache = cache or HashCache()
     accepted = read_ledger(paths)['steps'].get(step.name)
     reviewed = None
     if accepted:
