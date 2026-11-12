@@ -226,18 +226,22 @@ def lock_digest(entry):
     return identity(lock_state(entry)) if entry else None
 
 
-def state_paths(graph, step, paths):
-    """The files `current_state` hashes, bar the out behind a saved input's missing sidecar."""
+def state_nodes(graph, step):
+    """A step's dependency nodes, directory deps included, and its products."""
     deps, products = step_nodes(step, output_nodes(graph))
-    hashed = [node[1] for node in deps + directory_dep_nodes(graph, step) + products]
-    return [absolute(paths.project_root, path) for path in hashed + [out.path.resolved for out in step.outs]]
+    return deps + directory_dep_nodes(graph, step), products
+
+
+def state_paths(step, paths, deps, products):
+    """The files `current_state` hashes, bar the out behind a saved input's missing sidecar."""
+    hashed = [node[1] for node in deps + products] + [out.path.resolved for out in step.outs]
+    return [absolute(paths.project_root, path) for path in hashed]
 
 
 def current_state(graph, step, paths, cache=None, *, recorded=True):
     cache = cache or HashCache()
-    cache.warm_paths(state_paths(graph, step, paths))
-    deps, products = step_nodes(step, output_nodes(graph))
-    deps += directory_dep_nodes(graph, step)
+    deps, products = state_nodes(graph, step)
+    cache.warm_paths(state_paths(step, paths, deps, products))
     entry = read_lock(paths.lock_file).get(step.name) if recorded else None
     prior = entry.depends_on if entry else {}
     state = {
@@ -517,7 +521,8 @@ def preview(graph, paths, targets, reason, reviews, cache=None, progress=None):
     selected = [name for name in _topological({s.name: s for s in graph.steps}, parents) if name in names]
     if progress:
         progress.steps(len(selected))
-    cache.warm_paths(path for name in selected for path in state_paths(graph, graph.step(name), paths))
+    cache.warm_paths(path for step in map(graph.step, selected)
+                     for path in state_paths(step, paths, *state_nodes(graph, step)))
     for position, name in enumerate(selected, 1):
         step = graph.step(name)
         if progress:
