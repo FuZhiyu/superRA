@@ -226,8 +226,16 @@ def lock_digest(entry):
     return identity(lock_state(entry)) if entry else None
 
 
+def state_paths(graph, step, paths):
+    """The files `current_state` hashes, bar the out behind a saved input's missing sidecar."""
+    deps, products = step_nodes(step, output_nodes(graph))
+    hashed = [node[1] for node in deps + directory_dep_nodes(graph, step) + products]
+    return [absolute(paths.project_root, path) for path in hashed + [out.path.resolved for out in step.outs]]
+
+
 def current_state(graph, step, paths, cache=None, *, recorded=True):
     cache = cache or HashCache()
+    cache.warm_paths(state_paths(graph, step, paths))
     deps, products = step_nodes(step, output_nodes(graph))
     deps += directory_dep_nodes(graph, step)
     entry = read_lock(paths.lock_file).get(step.name) if recorded else None
@@ -480,6 +488,9 @@ class Heartbeat:
     def step(self, name, position, total):
         self.label = f'{name} ({position} of {total})'
 
+    def steps(self, total):
+        self.label = f"{total} step{'' if total == 1 else 's'}"
+
     def __call__(self):
         now = self.clock()
         if self.last is None:
@@ -504,6 +515,9 @@ def preview(graph, paths, targets, reason, reviews, cache=None, progress=None):
         parents[dst].append(src)
     rows = []
     selected = [name for name in _topological({s.name: s for s in graph.steps}, parents) if name in names]
+    if progress:
+        progress.steps(len(selected))
+    cache.warm_paths(path for name in selected for path in state_paths(graph, graph.step(name), paths))
     for position, name in enumerate(selected, 1):
         step = graph.step(name)
         if progress:

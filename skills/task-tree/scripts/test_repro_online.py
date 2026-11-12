@@ -107,6 +107,11 @@ def _clear_cache(project) -> None:
     project.paths.cache_file.unlink(missing_ok=True)
 
 
+@pytest.fixture(autouse=True)
+def _hash_on_threads(threaded):
+    """Online-only handling holds when uncached files are hashed on threads."""
+
+
 @pytest.fixture
 def offline(monkeypatch, project):
     return Offline(monkeypatch, project.root)
@@ -181,6 +186,22 @@ def test_a_directory_is_checked_before_it_is_listed(tmp_path, monkeypatch):
     assert entry.reason == "dependency Data/panel is online-only here"
     assert os.path.realpath(proj.root / "Data/panel/y2021") not in offline.listed
     assert entry.files[0]["online_only"] is True and entry.files[0]["size"] is None
+
+
+def test_a_directory_reports_the_first_problem_its_walk_meets(tmp_path, monkeypatch, reads):
+    tree = tmp_path / "tree"
+    for name in ("a/1.txt", "a/2.txt", "b/3.txt"):
+        (tree / name).parent.mkdir(parents=True, exist_ok=True)
+        (tree / name).write_text(name)
+    (tree / "b/gone").symlink_to(tree / "missing")
+    offline = Offline(monkeypatch, tmp_path)
+    assert HashCache().path_state(tree) == Unread("unreadable")
+    assert len(reads.workers) == 3  # the files before the broken link are still hashed
+
+    offline.evict("tree/a/2.txt")
+    cache = HashCache()
+    assert cache.path_state(tree) == Unread("online-only")  # met before the broken link
+    assert cache.probe(tree) == (True, None)
 
 
 def test_a_read_error_on_an_existing_output_is_unverified_never_missing(project):

@@ -22,6 +22,7 @@ import stat
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -234,6 +235,20 @@ def unread(value) -> bool:
     return isinstance(value, Unread)
 
 
+HASH_THREADS_ENV = "SUPERRA_HASH_THREADS"
+MAX_HASH_THREADS = 8
+PARALLEL_BYTES = 16 << 20  # below this much uncached content, a thread pool costs more than it saves
+_MISS = object()
+
+
+def hash_threads() -> int:
+    """Threads for hashing uncached files: `SUPERRA_HASH_THREADS`, else up to 8, one per core."""
+    try:
+        return max(1, int(os.environ[HASH_THREADS_ENV]))
+    except (KeyError, ValueError):
+        return min(MAX_HASH_THREADS, os.cpu_count() or 1)
+
+
 class HashCache:
     """Content hashes keyed on (size, mtime_ns), persisted as JSON.
 
@@ -252,6 +267,7 @@ class HashCache:
         self._online: dict[str, bool] = {}  # directory -> holds online-only content, from its last walk
         self._dirty = False
         self._flush_lock = threading.Lock()
+        self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
         if path is not None and path.is_file():
             try:
                 loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -272,32 +288,76 @@ class HashCache:
             return Unread("unreadable")
         return self._hashed(path, info)
 
-    def _hashed(self, path: Path, info: os.stat_result) -> str | Unread | None:
+    def _known(self, path: Path, info: os.stat_result):
+        """A file's state from metadata and the cache; `_MISS` when only its content can tell."""
         if not stat.S_ISREG(info.st_mode):
             return None
         if info.st_size == 0 and has_placeholder_xattr(path):
             return Unread("online-only")  # never an empty file's hash
-        key = str(path)
-        cached = self._entries.get(key)
+        cached = self._entries.get(str(path))
         if cached and cached[0] == info.st_size and cached[1] == info.st_mtime_ns:
             return cached[2]
         if file_flags(info) & SF_DATALESS:
             return Unread("online-only", info.st_size)
+        return _MISS
+
+    def _digest(self, path: Path, stop: threading.Event | None = None) -> str | Unread:
+        """Read one file; safe on a worker thread, which gives up once *stop* is set."""
         digest = hashlib.sha256()
         try:
             with path.open("rb") as handle:
                 for block in iter(lambda: handle.read(1 << 20), b""):
+                    if stop is not None and stop.is_set():
+                        return Unread("unreadable")
                     digest.update(block)
-                    self.bytes_read += len(block)
-                    if self.tick is not None:
-                        self.tick()
+                    with self._read_lock:
+                        self.bytes_read += len(block)
+                        if self.tick is not None:
+                            self.tick()
         except OSError:
             return Unread("unreadable")
-        self.full_reads += 1
-        value = digest.hexdigest()
-        self._entries[key] = [info.st_size, info.st_mtime_ns, value]
-        self._dirty = True
+        return digest.hexdigest()
+
+    def _store(self, path: Path, info: os.stat_result, value: str | Unread) -> str | Unread:
+        if not unread(value):
+            self.full_reads += 1
+            self._entries[str(path)] = [info.st_size, info.st_mtime_ns, value]
+            self._dirty = True
         return value
+
+    def _hashed(self, path: Path, info: os.stat_result) -> str | Unread | None:
+        value = self._known(path, info)
+        return self._store(path, info, self._digest(path)) if value is _MISS else value
+
+    def warm(self, files: Iterable[tuple[Path, os.stat_result]]) -> None:
+        """Hash the uncached files among *files* on several threads, ahead of the reads that follow.
+
+        A batch too small to gain is left to those reads.
+        """
+        misses = {str(path): (path, info) for path, info in files if self._known(path, info) is _MISS}
+        threads = min(hash_threads(), len(misses))
+        if threads < 2 or sum(info.st_size for _, info in misses.values()) < PARALLEL_BYTES:
+            return
+        stop = threading.Event()
+        with ThreadPoolExecutor(max_workers=threads) as pool:
+            try:
+                digests = pool.map(lambda path: self._digest(path, stop), [path for path, _ in misses.values()])
+                for (path, info), value in zip(misses.values(), digests):
+                    self._store(path, info, value)
+            except BaseException:  # an interrupt ends the reads in flight instead of waiting for them
+                stop.set()
+                pool.shutdown(cancel_futures=True)
+                raise
+
+    def warm_paths(self, paths: Iterable[Path]) -> None:
+        """`warm` for paths not yet stat'ed; a directory is left to `tree_hash`."""
+        files = []
+        for path in paths:
+            try:
+                files.append((path, path.stat()))
+            except OSError:
+                continue
+        self.warm(files)
 
     def tree_hash(self, path: Path) -> str | Unread:
         """One hash over every file under a directory, by relative path.
@@ -310,7 +370,6 @@ class HashCache:
         """
         digest = hashlib.sha256()
         entries: list[tuple[str, str]] = []
-        visited: set[tuple[int, int]] = set()
         unreadable: list[OSError] = []
         online = False
         try:
@@ -319,34 +378,21 @@ class HashCache:
                 return Unread("online-only")
         except OSError:
             return Unread("unreadable")
-        for parent, dirnames, filenames in os.walk(path, onerror=unreadable.append, followlinks=True):
-            info = os.stat(parent)
-            if (info.st_dev, info.st_ino) in visited:
-                dirnames[:] = []
-                continue
-            visited.add((info.st_dev, info.st_ino))
-            dirnames.sort()
-            for dirname in dirnames:
-                try:
-                    if file_flags(os.stat(os.path.join(parent, dirname))) & SF_DATALESS:
-                        self._online[str(path)] = True
-                        return Unread("online-only")
-                except OSError:
-                    return Unread("unreadable")  # a broken link
-            for filename in sorted(filenames):
-                child = Path(parent) / filename
-                try:
-                    child_info = child.stat()
-                except OSError:
-                    return Unread("unreadable")  # a broken link
-                if not stat.S_ISREG(child_info.st_mode):
-                    continue
-                online = online or is_online_only(child, child_info)
-                child_hash = self._hashed(child, child_info)
-                if unread(child_hash):
-                    self._online[str(path)] = online or child_hash.why == "online-only"
-                    return Unread(child_hash.why)
-                entries.append((os.path.relpath(child, path).replace(os.sep, "/"), child_hash))
+        files = list(_tree_files(path, unreadable))
+        # A walk that stopped early still hashes the files before the stop: the first problem met wins.
+        stopped = files.pop() if files and unread(files[-1]) else None
+        self.warm(files)
+        for child, child_info in files:
+            online = online or is_online_only(child, child_info)
+            child_hash = self._hashed(child, child_info)
+            if unread(child_hash):
+                self._online[str(path)] = online or child_hash.why == "online-only"
+                return Unread(child_hash.why)
+            entries.append((os.path.relpath(child, path).replace(os.sep, "/"), child_hash))
+        if stopped:
+            if stopped.why == "online-only":
+                self._online[str(path)] = True
+            return stopped
         self._online[str(path)] = online
         if unreadable:
             return Unread("unreadable")
@@ -406,6 +452,39 @@ class HashCache:
             except OSError:
                 return
             self._dirty = False
+
+
+def _tree_files(path: Path, unreadable: list[OSError]):
+    """Each regular file under a directory with its `stat`, in hashing order.
+
+    A walk that cannot continue ends with the `Unread` saying why: an
+    online-only subdirectory, which is never listed, or a broken link.
+    """
+    visited: set[tuple[int, int]] = set()
+    for parent, dirnames, filenames in os.walk(path, onerror=unreadable.append, followlinks=True):
+        info = os.stat(parent)
+        if (info.st_dev, info.st_ino) in visited:
+            dirnames[:] = []
+            continue
+        visited.add((info.st_dev, info.st_ino))
+        dirnames.sort()
+        for dirname in dirnames:
+            try:
+                if file_flags(os.stat(os.path.join(parent, dirname))) & SF_DATALESS:
+                    yield Unread("online-only")
+                    return
+            except OSError:
+                yield Unread("unreadable")  # a broken link
+                return
+        for filename in sorted(filenames):
+            child = Path(parent) / filename
+            try:
+                child_info = child.stat()
+            except OSError:
+                yield Unread("unreadable")  # a broken link
+                return
+            if stat.S_ISREG(child_info.st_mode):
+                yield child, child_info
 
 
 def _holds_online_only(path: Path) -> bool:
@@ -1051,6 +1130,8 @@ def compute_status(
         targets=targets, selected=selected, upstream=upstream,
     )
 
+    cache.warm_paths(path for step in graph.steps if step.name in needed
+                     for path in _compared_paths(step, lock.get(step.name), paths, outputs))
     for step in graph.steps:
         if step.name not in needed:
             continue
@@ -1198,6 +1279,18 @@ def _compare(
         head = f"{first.kind} {first.node} {first.change}"
     result.reason = _plural(head, len(changes) - 1)
     return False
+
+
+def _compared_paths(step: Step, entry: LockEntry | None, paths: RunnerPaths, outputs: dict[str, Node]) -> list[Path]:
+    """The files `_compare` hashes: none for a step never built, the outs alone when one is missing."""
+    if entry is None:
+        return []
+    deps, products = step_nodes(step, outputs)
+    nodes = list(products)
+    if step.kind == "check" or all(
+            absolute(paths.project_root, path).exists() for node in products for path in node[1:] if path):
+        nodes += [node for node in deps if node[0] in entry.depends_on]
+    return [absolute(paths.project_root, node[1]) for node in nodes]
 
 
 def _unverified(result: StepStatus, unknown: list[tuple[str, str, str]]) -> None:

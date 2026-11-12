@@ -334,6 +334,8 @@ Each step's entry is one line, keys sorted inside, steps in name order with a bl
 
 Freshness reads `spec`, `deps`, and `outs`; `sizes` only lets an online-only file not in the hash cache read changed, never matching. `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason.
 
+**Parallel hashing.** `HashCache.warm` hashes a batch's uncached files on `min(8, cores)` threads (`SUPERRA_HASH_THREADS` overrides; `1` is serial) once two or more total `PARALLEL_BYTES`. A pass ahead of serial code (`tree_hash`, `compute_status`, `current_state`, `preview`) names only files that code will hash, so `status` still reads nothing for a never-built step.
+
 Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record's platform joins its entry only when its `lock_id` still names that entry. Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes.
 
 ### Acceptance records

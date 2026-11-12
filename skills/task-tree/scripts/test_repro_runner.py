@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
+import signal
+import threading
+import time
 from pathlib import Path
 
 import pytest
 
+import _repro_state
 import cli
 import repro_run
 from _repro import build_graph
@@ -15,6 +21,7 @@ from _repro_state import (
     STATE_DIRNAME,
     HashCache,
     compute_status,
+    hash_threads,
     read_lock,
     render_dag,
     runner_paths,
@@ -246,6 +253,91 @@ def test_directory_state_covers_every_file_inside(tmp_path):
 
     (directory / "nested" / "b.txt").write_text("b")
     assert HashCache().path_state(directory) != before
+
+
+def _parts(tmp_path, count=6) -> tuple[Path, list[Path]]:
+    directory = tmp_path / "parts"
+    for index in range(count):
+        path = directory / f"half-{index % 2}" / f"{index}.bin"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(bytes([index]) * (1000 + index))
+    return directory, sorted(p for p in directory.rglob("*") if p.is_file())
+
+
+def test_uncached_files_are_hashed_on_threads_to_the_hashes_one_thread_gives(tmp_path, reads, threaded, monkeypatch):
+    directory, files = _parts(tmp_path)
+    cache = HashCache()
+    state = cache.path_state(directory)
+    assert sorted(reads) == sorted(reads.workers) == [str(p) for p in files]
+    assert cache.full_reads == len(files)
+    assert cache.bytes_read == sum(p.stat().st_size for p in files)
+
+    reads.clear()
+    assert [cache.file_hash(p) for p in files] == [hashlib.sha256(p.read_bytes()).hexdigest() for p in files]
+    assert reads == []
+
+    monkeypatch.setenv("SUPERRA_HASH_THREADS", "1")
+    assert HashCache().path_state(directory) == state
+    assert len(reads) == len(files) and reads.workers == []
+
+
+@pytest.mark.parametrize("case", ["under the size floor", "one uncached file"])
+def test_a_batch_too_small_to_gain_is_hashed_on_the_calling_thread(tmp_path, reads, monkeypatch, case):
+    directory, files = _parts(tmp_path, count=1 if case == "one uncached file" else 6)
+    monkeypatch.setenv("SUPERRA_HASH_THREADS", "4")
+    if case == "one uncached file":
+        monkeypatch.setattr(_repro_state, "PARALLEL_BYTES", 0)
+    HashCache().path_state(directory)
+    assert len(reads) == len(files) and reads.workers == []
+
+
+def test_an_interrupt_ends_the_reads_in_flight(tmp_path, threaded):
+    files = [tmp_path / name for name in ("a.bin", "b.bin")]
+    for path in files:
+        path.write_bytes(b"x" * (32 << 20))
+    cache, ticks = HashCache(), []
+
+    def interrupt_once_then_dawdle():
+        ticks.append(1)
+        if len(ticks) == 1:
+            signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)
+        time.sleep(0.005)
+
+    cache.tick = interrupt_once_then_dawdle
+    with pytest.raises(KeyboardInterrupt):
+        cache.warm_paths(files)
+    assert cache.bytes_read < sum(path.stat().st_size for path in files)
+
+
+def test_hash_threads_follow_the_cores_up_to_eight_unless_the_environment_sets_them(monkeypatch):
+    monkeypatch.delenv("SUPERRA_HASH_THREADS", raising=False)
+    for cores, expected in ((4, 4), (None, 1), (24, 8)):
+        monkeypatch.setattr(os, "cpu_count", lambda cores=cores: cores)
+        assert hash_threads() == expected
+    for value, expected in (("3", 3), ("0", 1), ("many", 8)):
+        monkeypatch.setenv("SUPERRA_HASH_THREADS", value)
+        assert hash_threads() == expected
+
+
+@pytest.mark.parametrize("scenario", ["never built", "built", "an out is missing"])
+def test_a_threaded_status_reads_exactly_the_files_a_serial_one_reads(project, reads, threaded, monkeypatch, scenario):
+    if scenario != "never built":
+        assert project.run("build", *CHAIN, "03-x") == 0
+    if scenario == "an out is missing":
+        (project.root / "output/a.txt").unlink()
+    read = {}
+    for threads in ("4", "1"):
+        project.paths.cache_file.unlink(missing_ok=True)
+        monkeypatch.setenv("SUPERRA_HASH_THREADS", threads)
+        reads.clear()
+        project.status()
+        read[threads] = sorted(reads)
+        assert bool(reads.workers) == (threads == "4" and scenario != "never built")
+    assert read["4"] == read["1"]
+    if scenario == "never built":
+        assert read["4"] == []
+    if scenario == "an out is missing":
+        assert str(project.root / "Code/a.sh") not in read["4"]
 
 
 # ---------------------------------------------------------------------------

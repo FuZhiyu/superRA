@@ -353,23 +353,6 @@ def test_local_state_carries_the_dropbox_ignore_attribute(project):
 # Hashes come from the shared cache
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def reads(monkeypatch):
-    """Every file whose content any `HashCache` reads, in order."""
-    seen = []
-    hashed = HashCache._hashed
-
-    def counting(self, path, info):
-        before = self.full_reads
-        value = hashed(self, path, info)
-        if self.full_reads > before:
-            seen.append(str(path))
-        return value
-
-    monkeypatch.setattr(HashCache, '_hashed', counting)
-    return seen
-
-
 def _edit_sources(project):
     assert project.run('build', *CHAIN) == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
@@ -395,6 +378,18 @@ def test_a_cached_acceptance_records_what_a_fresh_read_records(project):
     cached = preview(graph, project.paths, CHAIN, 'reviewed', {})
     fresh = preview(graph, project.paths, CHAIN, 'reviewed', {}, HashCache())
     assert cached == fresh and cached['steps'][0]['record']
+
+
+def test_a_threaded_accept_reads_each_file_once_and_records_what_a_serial_one_records(
+        project, reads, threaded, monkeypatch):
+    _edit_sources(project)
+    project.paths.cache_file.unlink()
+    reads.clear()
+    graph = project.graph()
+    across_steps = preview(graph, project.paths, CHAIN, 'reviewed', {})
+    assert reads.workers and len(reads) == len(set(reads))
+    monkeypatch.setenv('SUPERRA_HASH_THREADS', '1')
+    assert preview(graph, project.paths, CHAIN, 'reviewed', {}, HashCache()) == across_steps
 
 
 def test_a_refused_accept_keeps_the_hashes_it_computed(project, reads):
@@ -449,6 +444,15 @@ def test_a_slow_accept_reports_progress_on_stderr_only(project, capsys):
     lines = captured.err.splitlines()
     assert lines and all(line.startswith('accept: hashing ') and line.endswith(' GB read') for line in lines)
     assert 'build-a (1 of 3)' in lines[0]
+
+
+def test_progress_names_the_step_count_while_all_steps_are_hashed_together(project, capsys, threaded):
+    _edit_sources(project)
+    project.paths.cache_file.unlink()
+    ticks = iter(range(0, 10 ** 6, 11))
+    capsys.readouterr()
+    accept(project.graph(), project.paths, CHAIN, 'reviewed', {}, dry_run=True, clock=lambda: next(ticks))
+    assert capsys.readouterr().err.splitlines()[0].startswith('accept: hashing 3 steps, ')
 
 
 def test_a_quick_accept_prints_no_progress_and_stdout_never_carries_it(project, capsys, monkeypatch):
