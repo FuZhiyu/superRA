@@ -334,8 +334,6 @@ Each step's entry is one line, keys sorted inside, steps in name order with a bl
 
 Freshness reads `spec`, `deps`, and `outs`; `sizes` only lets an online-only file not in the hash cache read changed, never matching. `built_on` feeds `explain`'s environment comparison and the check-elsewhere status reason.
 
-**Parallel hashing.** `HashCache.warm` hashes a batch's uncached files on `min(8, cores)` threads (`SUPERRA_HASH_THREADS` overrides; `1` is serial) once two or more total `PARALLEL_BYTES`. A pass ahead of serial code (`tree_hash`, `compute_status`, `current_state`, `preview`) names only files that code will hash, so `status` still reads nothing for a never-built step.
-
 Without `repro-lock.json`, the runner reads the pytask engine's `pytask.lock` and `repro-builds.json`, converted in memory; a build record's platform joins its entry only when its `lock_id` still names that entry. Older normal-output locks supply successful output hashes without source snapshots; older sidecar locks supply only sidecar hashes.
 
 ### Acceptance records
@@ -386,6 +384,8 @@ A `.jl` dep expands through `include` arguments of these forms: a string literal
 [repro_run.py](../scripts/repro_run.py) runs the build itself. Steps are scheduled in dependency order over the selection's step edges, on a thread pool under `-j`; a failed step skips its descendants. Each step is checked with `compute_status` over the whole build selection, counting steps completed earlier in the run: `fresh` (including a valid acceptance) skips and keeps its lock entry; `unverified` skips unless forced; anything else, or a forced step, runs after its inputs are confirmed on disk, not online-only even when cached, and hashable here, and its acceptance is superseded. A dry run decides the same way and writes nothing.
 
 A successful step's receipt is captured only after its declared outs are verified; dependency edits during execution fail the step. The step's lock entry is then written atomically under `RECORD_LOCK`, the in-process lock that also serializes acceptance-ledger rewrites from worker threads. Run records distinguish interrupted/pending work from success. A project-local process lock coordinates builds, accept, and revoke on POSIX systems; records use atomic replacement. Immediate hash and declaration rechecks detect edits from writers outside that lock, except a rewrite that keeps a file's size and mtime: the rechecks read the hash cache `status` uses. Status, impact, and explain remain engine-free.
+
+**Parallel hashing.** `HashCache.warm` hashes a batch's uncached files on `min(8, cores)` threads (`SUPERRA_HASH_THREADS` overrides; `1` is serial) once two or more total `PARALLEL_BYTES`. A pass ahead of serial code (`tree_hash`, `compute_status`, `current_state`, `preview`) names only files that code will hash: `status` reads nothing for a never-built step, and a directory walk ends at the first file it cannot hash. Two exceptions: the sidecar of a saved input or of a missing out, and the files in a batch with one that fails while being read.
 
 ## Script Inventory
 

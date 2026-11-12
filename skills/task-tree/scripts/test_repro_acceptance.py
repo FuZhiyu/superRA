@@ -387,9 +387,12 @@ def test_a_threaded_accept_reads_each_file_once_and_records_what_a_serial_one_re
     reads.clear()
     graph = project.graph()
     across_steps = preview(graph, project.paths, CHAIN, 'reviewed', {})
+    on_threads = sorted(reads)
     assert reads.workers and len(reads) == len(set(reads))
+    reads.clear()
     monkeypatch.setenv('SUPERRA_HASH_THREADS', '1')
     assert preview(graph, project.paths, CHAIN, 'reviewed', {}, HashCache()) == across_steps
+    assert sorted(reads) == on_threads
 
 
 def test_a_refused_accept_keeps_the_hashes_it_computed(project, reads):

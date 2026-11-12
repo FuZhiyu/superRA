@@ -378,8 +378,14 @@ class HashCache:
                 return Unread("online-only")
         except OSError:
             return Unread("unreadable")
-        files = list(_tree_files(path, unreadable))
-        # A walk that stopped early still hashes the files before the stop: the first problem met wins.
+        # The loop below returns at the first file it cannot hash, so the walk ends there too:
+        # nothing past it is listed or read, and the first problem met wins.
+        files = []
+        for found in _tree_files(path, unreadable):
+            files.append(found)
+            state = found if unread(found) else self._known(*found)
+            if unread(state) or (state is _MISS and not os.access(found[0], os.R_OK)):
+                break
         stopped = files.pop() if files and unread(files[-1]) else None
         self.warm(files)
         for child, child_info in files:

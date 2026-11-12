@@ -291,6 +291,21 @@ def test_a_batch_too_small_to_gain_is_hashed_on_the_calling_thread(tmp_path, rea
     assert len(reads) == len(files) and reads.workers == []
 
 
+def test_a_directory_walk_ends_at_its_first_unreadable_file(tmp_path, reads, threaded, monkeypatch):
+    directory, files = _parts(tmp_path)
+    files[2].chmod(0)
+    try:
+        assert HashCache().path_state(directory).why == "unreadable"
+        on_threads = set(reads)
+        assert reads.workers
+        reads.clear()
+        monkeypatch.setenv("SUPERRA_HASH_THREADS", "1")
+        assert HashCache().path_state(directory).why == "unreadable"
+    finally:
+        files[2].chmod(0o644)
+    assert on_threads == set(reads) == {str(path) for path in files[:3]}
+
+
 def test_an_interrupt_ends_the_reads_in_flight(tmp_path, threaded):
     files = [tmp_path / name for name in ("a.bin", "b.bin")]
     for path in files:

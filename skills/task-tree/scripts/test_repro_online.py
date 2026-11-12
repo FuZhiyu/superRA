@@ -204,6 +204,18 @@ def test_a_directory_reports_the_first_problem_its_walk_meets(tmp_path, monkeypa
     assert cache.probe(tree) == (True, None)
 
 
+def test_a_directory_walk_ends_at_its_first_online_only_file(tmp_path, monkeypatch, reads):
+    tree = tmp_path / "tree"
+    for name in ("a1.txt", "a2.txt", "b.txt", "c.txt", "d.txt", "later/e.txt"):
+        (tree / name).parent.mkdir(parents=True, exist_ok=True)
+        (tree / name).write_text(name)
+    offline = Offline(monkeypatch, tmp_path)
+    offline.evict("tree/b.txt")
+    assert HashCache().path_state(tree) == Unread("online-only")
+    assert sorted(reads) == sorted(reads.workers) == [str(tree / "a1.txt"), str(tree / "a2.txt")]
+    assert os.path.realpath(tree / "later") not in offline.listed
+
+
 def test_a_read_error_on_an_existing_output_is_unverified_never_missing(project):
     assert project.run("build", *CHAIN) == 0
     _clear_cache(project)
