@@ -21,6 +21,7 @@ from _repro_state import (
 LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
 LEGACY_LEDGER = 'repro-acceptance.json'
 SNAPSHOT_LIMIT = 128 * 1024
+HEARTBEAT_SECONDS = 10.0
 
 
 def identity(value):
@@ -225,10 +226,22 @@ def lock_digest(entry):
     return identity(lock_state(entry)) if entry else None
 
 
+def state_nodes(graph, step):
+    """A step's dependency nodes, directory deps included, and its products."""
+    deps, products = step_nodes(step, output_nodes(graph))
+    return deps + directory_dep_nodes(graph, step), products
+
+
+def state_paths(step, paths, deps, products):
+    """The files `current_state` hashes, bar the out behind a saved input's missing sidecar."""
+    hashed = [node[1] for node in deps + products] + [out.path.resolved for out in step.outs]
+    return [absolute(paths.project_root, path) for path in hashed]
+
+
 def current_state(graph, step, paths, cache=None, *, recorded=True):
     cache = cache or HashCache()
-    deps, products = step_nodes(step, output_nodes(graph))
-    deps += directory_dep_nodes(graph, step)
+    deps, products = state_nodes(graph, step)
+    cache.warm_paths(state_paths(step, paths, deps, products))
     entry = read_lock(paths.lock_file).get(step.name) if recorded else None
     prior = entry.depends_on if entry else {}
     state = {
@@ -268,8 +281,8 @@ def source_snapshots(step, paths, state):
     return snapshots
 
 
-def capture_receipt(graph, step, paths, before):
-    state = current_state(graph, step, paths, recorded=False)
+def capture_receipt(graph, step, paths, before, cache):
+    state = current_state(graph, step, paths, cache, recorded=False)
     if state['deps'] != before['deps']:
         raise ReproStateError(f'{step.name}: dependencies changed during execution; rerun')
     if any(value is None for group in state.values() for value in group.values()):
@@ -282,7 +295,7 @@ def capture_receipt(graph, step, paths, before):
                'run': dict(read_run_record(paths, step.name), outcome='success')}
     from _repro_scope import boundary_inputs
     scope = getattr(graph, '_execution_names', {s.name for s in graph.steps})
-    boundary = boundary_inputs(graph, scope, paths, consumers={step.name})
+    boundary = boundary_inputs(graph, scope, paths, cache, consumers={step.name})
     old_boundary = before.get('boundary_inputs', [])
     fingerprints = lambda rows: {(r['logical'], r['resolved']): r['digest'] for r in rows}
     if fingerprints(boundary) != fingerprints(old_boundary):
@@ -433,19 +446,19 @@ def state_differences(before, after):
     return changes
 
 
-def inspect_baseline(graph, step, paths):
+def inspect_baseline(graph, step, paths, cache=None):
     accepted = read_ledger(paths)['steps'].get(step.name)
     reviewed = None
     if accepted:
         diffs = [dict(row, diff=None, history='unavailable')
-                 for row in state_differences(accepted['state'], current_state(graph, step, paths))]
+                 for row in state_differences(accepted['state'], current_state(graph, step, paths, cache))]
         reviewed = {'available': True, 'basis': 'reviewed', 'receipt': None, 'diffs': diffs}
     entry = read_lock(paths.lock_file).get(step.name)
     try:
         before = baseline(step, paths, entry)
     except ReproStateError as exc:
         return reviewed or {'available': False, 'reason': str(exc), 'diffs': []}
-    now = current_state(graph, step, paths)
+    now = current_state(graph, step, paths, cache)
     diffs = []
     by_logical = {d.logical: d for d in step.deps}
     for change in differences(before['lock']['deps'], now['deps']):
@@ -469,7 +482,30 @@ def inspect_baseline(graph, step, paths):
     return {'available': True, 'receipt': before['receipt'], 'diffs': diffs, 'reviewed': reviewed}
 
 
-def preview(graph, paths, targets, reason, reviews):
+class Heartbeat:
+    """A stderr line per interval of reading file content, timed from the first read."""
+
+    def __init__(self, cache, clock=time.monotonic):
+        self.cache, self.clock, self.label, self.last = cache, clock, '', None
+        cache.tick = self
+
+    def step(self, name, position, total):
+        self.label = f'{name} ({position} of {total})'
+
+    def steps(self, total):
+        self.label = f"{total} step{'' if total == 1 else 's'}"
+
+    def __call__(self):
+        now = self.clock()
+        if self.last is None:
+            self.last = now
+        elif now - self.last >= HEARTBEAT_SECONDS:
+            self.last = now
+            print(f'accept: hashing {self.label}, {self.cache.bytes_read / 1e9:.1f} GB read', file=sys.stderr)
+
+
+def preview(graph, paths, targets, reason, reviews, cache=None, progress=None):
+    cache = cache or HashCache(paths.cache_file)
     from _repro import step_errors
     names, unknown = select_steps(graph, targets, include_ancestors=False)
     if unknown or not names or not targets:
@@ -482,14 +518,19 @@ def preview(graph, paths, targets, reason, reviews):
     for src, dst, _ in graph.step_edges:
         parents[dst].append(src)
     rows = []
-    for name in _topological({s.name: s for s in graph.steps}, parents):
-        if name not in names:
-            continue
+    selected = [name for name in _topological({s.name: s for s in graph.steps}, parents) if name in names]
+    if progress:
+        progress.steps(len(selected))
+    cache.warm_paths(path for step in map(graph.step, selected)
+                     for path in state_paths(step, paths, *state_nodes(graph, step)))
+    for position, name in enumerate(selected, 1):
         step = graph.step(name)
+        if progress:
+            progress.step(name, position, len(selected))
         if read_run_record(paths, name).get('outcome') in ('failed', 'running', 'pending'):
             raise ReproStateError(f'{name}: last execution did not succeed')
         before = baseline(step, paths, lock.get(name), required=step.kind == 'check')
-        state = current_state(graph, step, paths)
+        state = current_state(graph, step, paths, cache)
         if any(v is None for group in state.values() for v in group.values()):
             raise ReproStateError(f'{name}: required input or output is missing')
         unhashed = {node: (node, unread_phrase(value), value.size) for group in state.values()
@@ -507,7 +548,7 @@ def preview(graph, paths, targets, reason, reviews):
             'products': (before['lock'] or {}).get('products', {}), 'outputs': before['outputs']}
         changes = state_differences(previous_state, state)
         from _repro_scope import boundary_inputs
-        boundary = boundary_inputs(graph, {name}, paths, consumers={name})
+        boundary = boundary_inputs(graph, {name}, paths, cache, lock, consumers={name})
         previous_boundary = {item['logical']: item for item in
                              (previous_record or before).get('boundary_inputs', [])}
         for item in boundary:
@@ -517,7 +558,7 @@ def preview(graph, paths, targets, reason, reviews):
                                 'before': previous['digest'], 'after': item['digest']})
         # A step its own status reads fresh keeps its evidence; anything that
         # status reports, such as an unverified saved input, is a change.
-        local = compute_status(graph, paths, targets=[f"{step.task_path or '.'}#{name}"]).entry(name)
+        local = compute_status(graph, paths, targets=[f"{step.task_path or '.'}#{name}"], cache=cache).entry(name)
         digests = {item['logical']: item['digest'] for item in boundary}
         for change in local.changes:
             node = change.node + '::boundary'
@@ -529,27 +570,36 @@ def preview(graph, paths, targets, reason, reviews):
             {'lock': lock_digest(lock.get(name)), 'state': state, 'boundary_inputs': boundary,
              'reason': reason, 'reviews': coverage})
         rows.append({'step': name, 'changes': changes, 'record': record,
-                     'baseline_details': inspect_baseline(graph, step, paths)})
+                     'baseline_details': inspect_baseline(graph, step, paths, cache)})
     return {'steps': rows, 'reason': reason, 'ready': bool(reason.strip())}
 
 
-def accept(graph, paths, targets, reason, reviews, *, dry_run=False):
-    """Record the reviewed current state in one call; *dry_run* previews and writes nothing."""
-    with mutation_lock(paths):
-        check_sources(graph)
-        result = preview(graph, paths, targets, reason, reviews)
-        if dry_run:
-            return result
-        if not result['ready']:
-            raise ReproStateError('acceptance requires --reason describing the reviewed current results')
-        # Re-read hashes immediately before writing.
-        check_sources(graph)
-        if preview(graph, paths, targets, reason, reviews) != result:
-            raise ReproStateError('state changed during acceptance; inspect a new preview')
-        for row in result['steps']:
-            if row['record'] is not None:
-                write_record(paths, row['step'], row['record'])
-        return dict(result, applied=True)
+def accept(graph, paths, targets, reason, reviews, *, dry_run=False, cache=None, clock=time.monotonic):
+    """Record the reviewed current state in one call; *dry_run* previews and writes nothing.
+
+    Hashes come from the persisted size-and-mtime cache, as in `status`.
+    """
+    cache = HashCache(paths.cache_file) if cache is None else cache
+    progress = Heartbeat(cache, clock)
+    try:
+        with mutation_lock(paths):
+            check_sources(graph)
+            result = preview(graph, paths, targets, reason, reviews, cache, progress)
+            if dry_run:
+                return result
+            if not result['ready']:
+                raise ReproStateError('acceptance requires --reason describing the reviewed current results')
+            # Recheck every file immediately before writing; a changed size or mtime rehashes it.
+            check_sources(graph)
+            if preview(graph, paths, targets, reason, reviews, cache, progress) != result:
+                raise ReproStateError('state changed during acceptance; inspect a new preview')
+            for row in result['steps']:
+                if row['record'] is not None:
+                    write_record(paths, row['step'], row['record'])
+            return dict(result, applied=True)
+    finally:
+        cache.tick = None
+        cache.flush()
 
 
 def revoke(graph, paths, targets):

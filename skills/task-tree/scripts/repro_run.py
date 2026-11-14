@@ -211,8 +211,8 @@ def _run_step(build: Build, step: Step, entry) -> str:
             for out in step.outs
             if out.sidecar is not None
         }
-        before = current_state(graph, step, paths, recorded=False)
-        before["boundary_inputs"] = boundary_inputs(graph, build.names, paths, consumers={step.name})
+        before = current_state(graph, step, paths, build.cache, recorded=False)
+        before["boundary_inputs"] = boundary_inputs(graph, build.names, paths, build.cache, consumers={step.name})
 
         started = time.time()
         write_run_record(paths, step.name, {"outcome": "running", "forced": must_retry, "started_at": started,
@@ -272,7 +272,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
             stamp.write_text(f"{spec_hash(step)}\n", encoding="utf-8")
 
         check_sources(graph)
-        receipt = capture_receipt(graph, step, paths, before)
+        receipt = capture_receipt(graph, step, paths, before, build.cache)
     except BaseException as exc:
         if committed or not build.stopping.is_set():
             supersede(paths, step.name)  # a failed step owes a rerun; an interrupt before its start does not
@@ -534,22 +534,24 @@ def run_build(
         or (record.get("outcome") == "failed" and record.get("forced", False))
     )
     interrupted = False
-    with mutation_lock(paths), _interrupt_on_termination():
-        will_run, report = _will_run(build)
-        print(_scope_line(build, report))
-        gate = _gate(build, will_run)
-        if gate and not dry_run:
-            raise ReproStateError(gate)
-        if not dry_run:
-            _preview(build, will_run)
-        try:
-            _schedule(build, n_workers)
-        except KeyboardInterrupt:
-            interrupted = True
-        # A step that failed to register is unknown, not gone: keep every entry.
-        if not dry_run and not interrupted and not graph.unregistered:
-            prune_lock(paths, {s.name for s in graph.steps} | {s.name for s in graph.archived_steps})
-    cache.flush()
+    try:
+        with mutation_lock(paths), _interrupt_on_termination():
+            will_run, report = _will_run(build)
+            print(_scope_line(build, report))
+            gate = _gate(build, will_run)
+            if gate and not dry_run:
+                raise ReproStateError(gate)
+            if not dry_run:
+                _preview(build, will_run)
+            try:
+                _schedule(build, n_workers)
+            except KeyboardInterrupt:
+                interrupted = True
+            # A step that failed to register is unknown, not gone: keep every entry.
+            if not dry_run and not interrupted and not graph.unregistered:
+                prune_lock(paths, {s.name for s in graph.steps} | {s.name for s in graph.archived_steps})
+    finally:
+        cache.flush()
     if dry_run:
         pending = [name for name in names if build.outcomes.get(name, ("",))[0] == "would execute"]
         blocked = [name for name in names if build.outcomes.get(name, ("",))[0] in ("failed", "skipped")]

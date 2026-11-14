@@ -22,6 +22,51 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 # ---------------------------------------------------------------------------
+# Hash-cache fixtures
+# ---------------------------------------------------------------------------
+
+
+class _Reads(list):
+    """Paths in the order their content was read; `workers` holds those read off the calling thread."""
+
+    def __init__(self):
+        super().__init__()
+        self.workers = []
+
+    def clear(self):
+        super().clear()
+        self.workers.clear()
+
+
+@pytest.fixture
+def reads(monkeypatch):
+    """Every file whose content any `HashCache` reads."""
+    import threading
+
+    from _repro_state import HashCache
+
+    seen, digest, caller = _Reads(), HashCache._digest, threading.current_thread()
+
+    def recording(self, path, *stop):
+        seen.append(str(path))
+        if threading.current_thread() is not caller:
+            seen.workers.append(str(path))
+        return digest(self, path, *stop)
+
+    monkeypatch.setattr(HashCache, '_digest', recording)
+    return seen
+
+
+@pytest.fixture
+def threaded(monkeypatch):
+    """Hash every batch of two or more uncached files on threads, whatever its size."""
+    import _repro_state
+
+    monkeypatch.setattr(_repro_state, 'PARALLEL_BYTES', 0)
+    monkeypatch.setenv(_repro_state.HASH_THREADS_ENV, '4')
+
+
+# ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
