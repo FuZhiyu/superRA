@@ -26,6 +26,8 @@ TASK_ROOT_DIRNAME = "superRA"
 LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 ATTACHMENTS_DIRNAME = "attachments"
+# Folders no walk enters, besides hidden ones: caches and installed environments.
+SKIP_DIRS = frozenset({"__pycache__", "node_modules", "venv", "site-packages"})
 
 
 def is_opaque_task_path(path: Path, plan_root: Path) -> bool:
@@ -831,7 +833,6 @@ def _iter_contained_markdown(root: Path, plan_root: Path):
     if has_symlink_task_component(scan_root, task_root) or not scan_root.is_dir():
         return
 
-    from _edit_detect import SKIP_DIRS
     for directory, dirnames, filenames in os.walk(scan_root, followlinks=False):
         current = Path(directory)
         dirnames[:] = sorted(

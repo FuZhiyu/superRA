@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from _checkout_scope import is_foreign
+from _task_io import SKIP_DIRS
 
 TASK_ROOT_DIRNAME = "superRA"
 STATE_DIRNAME = ".superra-repro"
@@ -32,8 +33,6 @@ BASELINE_VERSION = 2
 SCRIPT_SUFFIXES = frozenset({".jl", ".py", ".r", ".do", ".sh", ".ipynb", ".sql", ".m"})
 _TREE_SUFFIXES = SCRIPT_SUFFIXES | {".md"}
 _STRUCTURE_NAMES = frozenset({"task.md", "config.yaml"})
-# Folders no walk enters, besides hidden ones: caches and installed environments.
-SKIP_DIRS = frozenset({"__pycache__", "node_modules", "venv", "site-packages"})
 # Scratch and temporary folders: a script written there is not a candidate producer.
 _SCRATCH_DIRS = frozenset({"scratch", "tmp", "temp", "trash", "old", "archive"})
 # A directory holding more files than this is not a code directory; stay silent.
