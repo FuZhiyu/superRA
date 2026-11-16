@@ -4469,6 +4469,130 @@ class TestPropagateParentStatus:
         assert len(parsed) == len(set(parsed))
 
 
+class TestHookParsesOnce:
+    """One hook call parses each task.md once per content and builds each
+    reproduction graph once per tree state."""
+
+    def _tree(self, tmp_path: Path) -> Path:
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        _write_task_md(plan_root / "task.md", "Root", "in-progress")
+        for a in range(2):
+            branch = plan_root / f"b{a}"
+            branch.mkdir()
+            _write_task_md(branch / "task.md", f"b{a}", "in-progress")
+            for b in range(3):
+                leaf = branch / f"l{b}"
+                leaf.mkdir()
+                _write_task_md(leaf / "task.md", f"b{a}-l{b}", "in-progress")
+        _write_task_md(
+            plan_root / "b0" / "l0" / "task.md", "b0-l0", "in-progress",
+            results="See the [panel](../../../out/panel.csv).\n",
+            reproduction=(
+                "steps:\n  - name: build\n    cmd: python code/build.py\n"
+                "    deps:\n      - code/build.py\n    outs:\n      - out/panel.csv\n"
+            ),
+        )
+        (tmp_path / "code").mkdir()
+        (tmp_path / "code" / "build.py").write_text("print(1)\n", encoding="utf-8")
+        return plan_root
+
+    def _edit(self, tmp_path, monkeypatch, capsys, status: str):
+        """Seed a baseline, set leaf b0/l0 to `status`, run the Edit hook; return
+        (titles parsed in order, statuses parsed per title, build_graph variants)."""
+        import io
+        import _repro
+
+        plan_root = self._tree(tmp_path)
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+        session = {"session_id": "parse-once", "cwd": str(tmp_path)}
+
+        def run(payload: dict) -> None:
+            monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+            with pytest.raises(SystemExit):
+                task_hook.main()
+
+        run({"hook_event_name": "UserPromptSubmit", **session})
+        leaf_md = plan_root / "b0" / "l0" / "task.md"
+        leaf_md.write_text(
+            leaf_md.read_text(encoding="utf-8").replace(
+                "status: in-progress", f"status: {status}"
+            ),
+            encoding="utf-8",
+        )
+
+        parsed: list[tuple[str, str]] = []
+        builds: list[str] = []
+        parse_frontmatter, build_graph = _task_io.parse_frontmatter, _repro.build_graph
+
+        def counting_parse(text):
+            fm, body = parse_frontmatter(text)
+            parsed.append((fm.get("title"), fm.get("status")))
+            return fm, body
+
+        def counting_build(*args, **kwargs):
+            builds.append("literal" if kwargs.get("resolve_vars") is False else "hook")
+            return build_graph(*args, **kwargs)
+
+        _task_io._parse_task_text.cache_clear()
+        _task_io._parse_body_sections.cache_clear()
+        monkeypatch.setattr(_task_io, "parse_frontmatter", counting_parse)
+        monkeypatch.setattr(_repro, "build_graph", counting_build)
+        monkeypatch.setattr(task_hook, "_RECONCILED", False)
+        run({
+            "hook_event_name": "PostToolUse", "tool_name": "Edit",
+            "tool_input": {"file_path": str(leaf_md)}, **session,
+        })
+        capsys.readouterr()
+        return parsed, builds
+
+    def test_edit_without_rollup_write(self, tmp_path, monkeypatch, capsys):
+        parsed, builds = self._edit(tmp_path, monkeypatch, capsys, "implemented")
+        titles = [title for title, _ in parsed]
+        assert len(titles) == len(set(titles)) == 1 + 2 + 6
+        assert sorted(builds) == ["hook", "literal"]
+
+    def test_rollup_write_is_reread(self, tmp_path, monkeypatch, capsys):
+        """A branch the rollup rewrites is parsed again, and only it; the hook
+        graph rebuilds once on the post-rollup tree."""
+        parsed, builds = self._edit(tmp_path, monkeypatch, capsys, "revise")
+        titles = [title for title, _ in parsed]
+        assert {t: titles.count(t) for t in set(titles) if titles.count(t) > 1} == {
+            "Root": 2, "b0": 2,
+        }
+        assert [status for title, status in parsed if title == "b0"] == [
+            "in-progress", "revise",
+        ]
+        assert sorted(builds) == ["hook", "hook", "literal"]
+        assert builds.index("literal") > builds.index("hook")
+
+    def test_parse_task_rereads_same_size_rewrite(self, tmp_path):
+        """A rewrite keeping size and mtime still reads back; a returned Task
+        never shares mutable state with a later parse."""
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        task_md = plan_root / "task.md"
+        _write_task_md(task_md, "Root", "approved")
+        first = _task_io.parse_task(task_md, plan_root)
+        stat_before = task_md.stat()
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace("approved", "archived"),
+            encoding="utf-8",
+        )
+        os.utime(task_md, ns=(stat_before.st_atime_ns, stat_before.st_mtime_ns))
+        assert task_md.stat().st_size == stat_before.st_size
+        assert task_md.stat().st_mtime_ns == stat_before.st_mtime_ns
+        assert _task_io.parse_task(task_md, plan_root).status == "archived"
+
+        first.depends_on.append("leak")
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8").replace("archived", "approved"),
+            encoding="utf-8",
+        )
+        again = _task_io.parse_task(task_md, plan_root)
+        assert again.status == "approved" and again.depends_on == []
+
+
 class TestPropagateAll:
     def test_propagate_all_updates_all_parents(self, tmp_path):
         """--propagate-all updates all branch task statuses."""

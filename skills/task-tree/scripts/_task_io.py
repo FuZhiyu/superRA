@@ -6,6 +6,7 @@ Provides parsing, serialization, tree walking, and status rollup for the directo
 
 from __future__ import annotations
 
+import functools
 import heapq
 import os
 import re
@@ -323,6 +324,12 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
 _SECTION_ALIASES = {"Planner Guidance": "Details"}
 
 
+# Parsing is a pure function of the text, so these memos never go stale: a
+# rewritten task.md reads back as new text and misses. Sized above
+# `_edit_detect.MAX_TREE_FILES` so one walk of a large tree never evicts itself.
+_PARSE_CACHE_SIZE = 16384
+
+
 def parse_body_sections(body: str) -> dict[str, str]:
     """Split a task body on ``## `` headers into {section_name: content} pairs.
 
@@ -336,6 +343,11 @@ def parse_body_sections(body: str) -> dict[str, str]:
     a legacy heading and its current name both appear, their bodies merge with a
     blank line between rather than the later one overwriting the earlier.
     """
+    return dict(_parse_body_sections(body))
+
+
+@functools.lru_cache(maxsize=_PARSE_CACHE_SIZE)
+def _parse_body_sections(body: str) -> dict[str, str]:
     sections: dict[str, str] = {}
     current_name: str | None = None
     current_lines: list[str] = []
@@ -469,7 +481,7 @@ def parse_task(
 
     if text is None:
         text = task_md_path.read_text(encoding="utf-8")
-    fm, body = parse_frontmatter(text)
+    fm, body, sections = _parse_task_text(text)
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
@@ -490,14 +502,12 @@ def parse_task(
         )
     # Silently ignore review_status / integration_status if present in old files
 
-    sections = parse_body_sections(body)
-
     return Task(
         path=path,
         dir_path=task_md_path.parent,
         title=title,
         status=status,
-        depends_on=_to_list(fm.get("depends_on", [])),
+        depends_on=list(_to_list(fm.get("depends_on", []))),
         body=body,
         objective=sections.get("Objective", ""),
         results=sections.get("Results", ""),
@@ -505,6 +515,13 @@ def parse_task(
         revision_notes=sections.get("Revision Notes", ""),
         review_notes=sections.get("Review Notes", ""),
     )
+
+
+@functools.lru_cache(maxsize=_PARSE_CACHE_SIZE)
+def _parse_task_text(text: str) -> tuple[dict[str, str | list[str]], str, dict[str, str]]:
+    """Frontmatter, body, and sections of task.md text; callers must not mutate them."""
+    fm, body = parse_frontmatter(text)
+    return fm, body, _parse_body_sections(body)
 
 
 def write_task(task: Task) -> None:

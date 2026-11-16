@@ -68,6 +68,9 @@ _RECONCILED = False
 REPRO_STATE_DIRNAME = ".superra-repro"
 # Paths the detector found newly created in this call (see `_detected_paths`).
 _CREATED: set[str] = set()
+# Reproduction graphs built in this call, by (plan root, variant); `main` turns
+# sharing on, and a task file the hook writes clears it.
+_GRAPHS: dict[tuple[Path, str], object] | None = None
 REPRO_MARKER_SUBDIR = "hook-markers"
 # The `implemented` reminder tracks a status transition rather than a session,
 # so its markers live under one fixed key instead of a per-session one.
@@ -227,13 +230,28 @@ def _no_shell(command: str, cwd: Path) -> str:
     return "${shell}"
 
 
+def _shared_graph(plan_root: Path, variant: str, build):
+    if _GRAPHS is None:
+        return build()
+    key = (plan_root, variant)
+    if key not in _GRAPHS:
+        _GRAPHS[key] = build()
+    return _GRAPHS[key]
+
+
 def _hook_graph(plan_root: Path):
     """The reproduction graph for matching edits: literal and `env:` variables
     resolve; a `shell:` resolver never runs and its paths match nothing."""
     import _repro
-    return _repro.build_graph(
+    return _shared_graph(plan_root, "hook", lambda: _repro.build_graph(
         plan_root, project_root=plan_root.parent, shell_runner=_no_shell
-    )
+    ))
+
+
+def _hook_wrote() -> None:
+    """The hook rewrote task files: later phases rebuild their graphs."""
+    if _GRAPHS is not None:
+        _GRAPHS.clear()
 
 
 def _repro_owning_steps(graph, rel: str) -> list[str]:
@@ -447,17 +465,12 @@ def _clear_reproduction_markers_for_task(plan_root: Path, task_path: str) -> Non
     silence, never a block.
     """
     task_dir = plan_root if task_path == "" else plan_root / task_path
-    try:
-        text = (task_dir / "task.md").read_text(encoding="utf-8")
-    except OSError:
-        return
-
     _ensure_scripts_on_path()
     try:
         import _task_io as task_io
         import _repro
-        _, body = task_io.parse_frontmatter(text)
-        if _repro.REPRO_SECTION not in task_io.parse_body_sections(body):
+        task = task_io.parse_task(task_dir / "task.md", plan_root)
+        if _repro.REPRO_SECTION not in task_io.parse_body_sections(task.body):
             return
         graph = _hook_graph(plan_root)
     except Exception:
@@ -659,12 +672,17 @@ def _reconcile(
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 propagation_warnings: list[str] = []
-                if task_path is None:
-                    _propagate_whole_tree(task_io, plan_root, propagation_warnings)
-                else:
-                    task_io.propagate_parent_status(
-                        plan_root, task_path, feedback=propagation_warnings
-                    )
+                written = 1  # a rollup that raises may have written part of the chain
+                try:
+                    if task_path is None:
+                        written = _propagate_whole_tree(task_io, plan_root, propagation_warnings)
+                    else:
+                        written = task_io.propagate_parent_status(
+                            plan_root, task_path, feedback=propagation_warnings
+                        )
+                finally:
+                    if written:
+                        _hook_wrote()
             feedback.extend(_capped(
                 [f"Status propagation warning in {plan_root}: {w}" for w in propagation_warnings],
                 "{n} more status propagation warning(s) in " + str(plan_root)
@@ -679,7 +697,9 @@ def _reconcile(
             warnings.simplefilter("ignore")
             validation_warnings = task_validate.validate_plan(plan_root)
             from _repro import build_graph
-            graph = build_graph(plan_root, resolve_vars=False)
+            graph = _shared_graph(
+                plan_root, "literal", lambda: build_graph(plan_root, resolve_vars=False)
+            )
             findings = [f for f in graph.findings
                         if f.severity == "error" or f.category == "dependency"]
             if scope is not None:
@@ -950,6 +970,7 @@ def _bash_structural_feedback(data: dict) -> list[str]:
                 f"link rewrite failed for rename {old_slug} -> {new_slug} "
                 f"(non-fatal): {exc}"
             )
+        _hook_wrote()
 
     plan_roots: list[Path] = []
     seen: set[Path] = set()
@@ -1191,7 +1212,8 @@ def _unique_paths(paths: list[Path]) -> list[Path]:
 
 
 def main() -> None:
-    global _CODEX_EMPTY_JSON_MODE
+    global _CODEX_EMPTY_JSON_MODE, _GRAPHS
+    _GRAPHS = {}
 
     # Read tool call info from stdin (Claude Code PostToolUse protocol)
     try:
