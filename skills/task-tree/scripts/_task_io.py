@@ -1260,54 +1260,68 @@ def propagate_parent_status(
     ``[BLOCKING]``: the current status is held and a warning is appended to
     ``feedback`` when a list is passed.
 
+    Each task.md is parsed at most once: the topmost existing ancestor's subtree
+    is walked once (plus any ancestor a directory without ``task.md`` cuts off
+    from it) and every ancestor rolls up from that in-memory tree.
+
     Returns the number of ancestor tasks updated.
     """
-    updated = 0
-    # Walk up from task_path to root
     parts = task_path.strip("/").split("/") if task_path else []
+    # Ancestor paths from immediate parent to root
+    ancestors = ["/".join(parts[:i]) for i in range(len(parts) - 1, -1, -1)]
 
-    # Build list of ancestor paths from immediate parent to root
-    ancestors: list[str] = []
-    for i in range(len(parts) - 1, -1, -1):
-        ancestors.append("/".join(parts[:i]) if i > 0 else "")
-
-    for ancestor_path in ancestors:
+    walked: dict[str, Task] = {}
+    for ancestor_path in reversed(ancestors):
         ancestor_dir = plan_root / ancestor_path if ancestor_path else plan_root
         task_md = ancestor_dir / "task.md"
-        if not task_md.exists():
+        if ancestor_path in walked or not task_md.exists():
             continue
+        if ancestor_path:
+            subtree = parse_task(task_md, plan_root)
+            subtree.children = _walk_children(ancestor_dir, plan_root)
+        else:
+            subtree = walk_plan(plan_root)
+        walked[ancestor_path] = subtree
+        walked.update((t.path, t) for t in collect_all_tasks(subtree))
 
-        # Re-walk this subtree to get current children
-        ancestor_task = parse_task(task_md, plan_root)
-        ancestor_task.children = _walk_children(ancestor_dir, plan_root)
+    return sum(
+        roll_up_status(walked[path], feedback) for path in ancestors if path in walked
+    )
 
-        if ancestor_task.is_leaf:
-            continue
 
-        changed = False
-        rolled_status = compute_status(ancestor_task)
+def roll_up_status(task: Task, feedback: list[str] | None = None) -> bool:
+    """Write *task*'s status rolled up from its in-memory children if it differs.
 
-        if rolled_status == "approved" and ancestor_task.status != "approved":
-            from _task_validate import _review_notes_block_approval
+    Leaves, and a root with no regular ``task.md``, are left alone. An
+    ``approved`` rollup is never written onto a parent whose ``## Review Notes``
+    still carry ``[BLOCKING]``: the current status is held and a warning is
+    appended to ``feedback`` when a list is passed. An unreadable branch raises
+    its read error. Returns whether the file was written.
+    """
+    if task.parse_error:
+        raise OSError(task.parse_error)
+    task_md = task.dir_path / "task.md"
+    if task.is_leaf or (task.is_root and (task_md.is_symlink() or not task_md.exists())):
+        return False
 
-            if _review_notes_block_approval(rolled_status, ancestor_task.review_notes):
-                if feedback is not None:
-                    prefix = ancestor_task.path if ancestor_task.path else "(root)"
-                    feedback.append(
-                        f"{prefix}: children approved but parent Review Notes still "
-                        "carry [BLOCKING]; clear or re-review"
-                    )
-                continue
+    rolled_status = compute_status(task)
+    if rolled_status == "approved" and task.status != "approved":
+        from _task_validate import _review_notes_block_approval
 
-        if ancestor_task.status != rolled_status:
-            ancestor_task.status = rolled_status
-            changed = True
+        if _review_notes_block_approval(rolled_status, task.review_notes):
+            if feedback is not None:
+                prefix = task.path if task.path else "(root)"
+                feedback.append(
+                    f"{prefix}: children approved but parent Review Notes still "
+                    "carry [BLOCKING]; clear or re-review"
+                )
+            return False
 
-        if changed:
-            write_task(ancestor_task)
-            updated += 1
-
-    return updated
+    if task.status == rolled_status:
+        return False
+    task.status = rolled_status
+    write_task(task)
+    return True
 
 
 def collect_all_tasks(root: Task) -> list[Task]:

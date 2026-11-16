@@ -4432,6 +4432,42 @@ class TestPropagateParentStatus:
         updated = _task_io.propagate_parent_status(root_dir, "")
         assert updated == 0
 
+    def test_rollup_parses_each_task_once(self, tmp_path, monkeypatch):
+        """Whole-tree and single-chain rollup parse every task.md at most once."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for a in range(4):
+            branch = root_dir / f"b{a}"
+            branch.mkdir()
+            _write_task_md(branch / "task.md", f"b{a}", "not-started")
+            for b in range(3):
+                mid = branch / f"m{b}"
+                mid.mkdir()
+                _write_task_md(mid / "task.md", f"m{b}", "not-started")
+                for c in range(5):
+                    leaf = mid / f"l{c}"
+                    leaf.mkdir()
+                    _write_task_md(leaf / "task.md", f"l{c}", "approved")
+
+        parsed: list[Path] = []
+        parse_task = _task_io.parse_task
+
+        def counting_parse(task_md_path, *args, **kwargs):
+            parsed.append(Path(task_md_path))
+            return parse_task(task_md_path, *args, **kwargs)
+
+        monkeypatch.setattr(_task_io, "parse_task", counting_parse)
+
+        updated = task_hook._propagate_whole_tree(_task_io, root_dir)
+        assert updated == 1 + 4 + 12
+        assert len(parsed) == len(set(parsed)) == 1 + 4 + 12 + 60
+
+        parsed.clear()
+        _write_task_md(root_dir / "b0" / "m0" / "l0" / "task.md", "l0", "revise")
+        assert _task_io.propagate_parent_status(root_dir, "b0/m0/l0") == 3
+        assert len(parsed) == len(set(parsed))
+
 
 class TestPropagateAll:
     def test_propagate_all_updates_all_parents(self, tmp_path):

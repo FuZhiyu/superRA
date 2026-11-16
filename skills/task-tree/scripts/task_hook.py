@@ -725,38 +725,34 @@ def _reconcile(
 def _propagate_whole_tree(
     task_io, plan_root: Path, feedback: list[str] | None = None
 ) -> int:
-    """Recompute parent status across every branch in the tree.
+    """Recompute parent status across every branch in the tree from one walk.
 
-    propagate_parent_status only walks the ancestors of one task_path, so a
-    structural move (which can change several branches at once) needs every
-    leaf's ancestor chain recomputed. Propagating from each leaf covers all
-    intermediate parents; counts are summed for the stderr note.
+    propagate_parent_status only rolls up the ancestors of one task_path, so a
+    structural move or several edited task files (which can change several
+    branches at once) need every branch recomputed. Branches roll up in the
+    order the leaves' ancestor chains reach them, each once; counts are summed
+    for the stderr note.
     """
     root = task_io.walk_plan(plan_root)
-    leaf_paths: list[str] = []
-
-    def _collect(task) -> None:
-        if task.is_leaf:
-            if task.path:
-                leaf_paths.append(task.path)
-        else:
-            for child in task.children:
-                _collect(child)
-
-    _collect(root)
-
+    visited: set[str] = set()
     updated = 0
-    seen_warnings: set[str] = set()
-    for leaf_path in leaf_paths:
-        leaf_warnings: list[str] = []
-        updated += task_io.propagate_parent_status(
-            plan_root, leaf_path, feedback=leaf_warnings
-        )
-        for w in leaf_warnings:
-            # Ancestor chains overlap across leaves; report each warning once.
-            if feedback is not None and w not in seen_warnings:
-                seen_warnings.add(w)
-                feedback.append(w)
+
+    def _visit(task, chain: list) -> None:
+        nonlocal updated
+        if not task.is_leaf:
+            for child in task.children:
+                _visit(child, chain + [task])
+            return
+        if not task.path:
+            return
+        for ancestor in reversed(chain):
+            # Ancestor chains overlap across leaves; the rest of this one is done.
+            if ancestor.path in visited:
+                return
+            visited.add(ancestor.path)
+            updated += task_io.roll_up_status(ancestor, feedback)
+
+    _visit(root, [])
     return updated
 
 
