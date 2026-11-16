@@ -32,7 +32,8 @@ BASELINE_VERSION = 2
 SCRIPT_SUFFIXES = frozenset({".jl", ".py", ".r", ".do", ".sh", ".ipynb", ".sql", ".m"})
 _TREE_SUFFIXES = SCRIPT_SUFFIXES | {".md"}
 _STRUCTURE_NAMES = frozenset({"task.md", "config.yaml"})
-_SKIP_DIRS = frozenset({"__pycache__", "node_modules"})
+# Folders no walk enters, besides hidden ones: caches and installed environments.
+SKIP_DIRS = frozenset({"__pycache__", "node_modules", "venv", "site-packages"})
 # Scratch and temporary folders: a script written there is not a candidate producer.
 _SCRATCH_DIRS = frozenset({"scratch", "tmp", "temp", "trash", "old", "archive"})
 # A directory holding more files than this is not a code directory; stay silent.
@@ -149,7 +150,7 @@ def _tree_files(plan_root: Path) -> list[str] | None:
     if config.is_file():
         found.append(str(config))
     for parent, dirnames, filenames in os.walk(plan_root):
-        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in _SKIP_DIRS]
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in SKIP_DIRS]
         for name in filenames:
             if os.path.splitext(name)[1].lower() in _TREE_SUFFIXES:
                 found.append(os.path.join(parent, name))
@@ -169,7 +170,7 @@ def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> 
     for parent, dirnames, filenames in os.walk(root):
         dirnames[:] = (
             [d for d in dirnames
-             if not d.startswith(".") and d not in _SKIP_DIRS and d.lower() not in _SCRATCH_DIRS
+             if not d.startswith(".") and d not in SKIP_DIRS and d.lower() not in _SCRATCH_DIRS
              and not path_online_only(os.path.join(parent, d))]
             if recursive else []
         )

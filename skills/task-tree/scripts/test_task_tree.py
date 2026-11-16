@@ -4534,8 +4534,7 @@ class TestHookParsesOnce:
             builds.append("literal" if kwargs.get("resolve_vars") is False else "hook")
             return build_graph(*args, **kwargs)
 
-        _task_io._parse_task_text.cache_clear()
-        _task_io._parse_body_sections.cache_clear()
+        _task_io._clear_parse_memo()
         monkeypatch.setattr(_task_io, "parse_frontmatter", counting_parse)
         monkeypatch.setattr(_repro, "build_graph", counting_build)
         monkeypatch.setattr(task_hook, "_RECONCILED", False)
@@ -4591,6 +4590,37 @@ class TestHookParsesOnce:
         )
         again = _task_io.parse_task(task_md, plan_root)
         assert again.status == "approved" and again.depends_on == []
+
+
+
+class TestParseMemoBound:
+    """The parse memo keeps one version per task file, so a long-lived process
+    that sees many edits holds about one tree-walk of entries."""
+
+    def test_rewrites_of_one_file_keep_one_entry(self, tmp_path):
+        import _edit_detect
+        assert _task_io._PARSE_CACHE_SIZE > _edit_detect.MAX_TREE_FILES
+        _task_io._clear_parse_memo()
+        task_md = tmp_path / "task.md"
+        for i in range(50):
+            _write_task_md(task_md, f"v{i}", "in-progress", results=f"result {i}\n")
+            task = _task_io.parse_task(task_md)
+            assert task.title == f"v{i}" and task.results.strip() == f"result {i}"
+            assert _task_io.parse_body_sections(task.body)["Results"].strip() == f"result {i}"
+        assert len(_task_io._PARSED) == 1 and len(_task_io._SECTIONS) == 1
+
+    def test_cap_evicts_least_recently_parsed(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(_task_io, "_PARSE_CACHE_SIZE", 3)
+        _task_io._clear_parse_memo()
+        paths = []
+        for i in range(5):
+            paths.append(tmp_path / f"t{i}" / "task.md")
+            paths[-1].parent.mkdir()
+            _write_task_md(paths[-1], f"t{i}", "in-progress", results=f"r{i}\n")
+            _task_io.parse_task(paths[-1])
+        assert list(_task_io._PARSED) == [str(p) for p in paths[2:]]
+        assert len(_task_io._SECTIONS) == 3
+        _task_io._clear_parse_memo()
 
 
 class TestPropagateAll:

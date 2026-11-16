@@ -21,6 +21,9 @@ per transition, a reminder when a leaf reaches `implemented` with results
 files no step produces or reads (`_implemented_coverage_reminder`).
 It does not write the dashboard; a static dashboard is produced only on
 explicit `superra dashboard export`. Always exits 0 — never blocks the agent.
+A call slower than `SLOW_CALL_SECONDS` logs its per-phase timings
+(`_log_slow_call`); past `TIME_BUDGET_SECONDS` it skips the advisory phases
+and says so in one line (`_over_budget`).
 A UserPromptSubmit event only seeds the session's edit baseline, so an edit in
 the session's first tool call is still seen; a PreToolUse Bash event seeds only
 task trees with no baseline yet. A task.md edit reports validation warnings for
@@ -50,6 +53,7 @@ import subprocess
 import sys
 import time
 import warnings
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
@@ -75,6 +79,18 @@ REPRO_MARKER_SUBDIR = "hook-markers"
 # The `implemented` reminder tracks a status transition rather than a session,
 # so its markers live under one fixed key instead of a per-session one.
 IMPLEMENTED_MARKER_KEY = "transitions"
+# A call slower than this appends one JSON line to `.superra-repro/SLOW_CALL_LOG`
+# (beside `logs/`, never inside it), rotated to `<name>.1` past SLOW_CALL_LOG_BYTES.
+SLOW_CALL_SECONDS = 2.0
+SLOW_CALL_LOG = "slow-calls.log"
+SLOW_CALL_LOG_BYTES = 256 << 10
+# Past this wall time the advisory phases are skipped; rollup and the
+# post-reconcile detect always run.
+TIME_BUDGET_SECONDS = 5.0
+# This call, set by `main` and cleared on exit: payload, start, exclusive ms per
+# phase, the stack of nested-phase time, changed-path count, and the advisory
+# phases skipped over budget.
+_CALL: dict | None = None
 
 
 def _scripts_dir() -> Path:
@@ -222,6 +238,90 @@ def _record_mention(project_root: Path, session_key: str, text: str) -> None:
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.touch()
     except OSError:
+        pass
+
+
+@contextmanager
+def _phase(name: str):
+    """Add the time inside the block, less nested phases, to *name*."""
+    start = time.perf_counter()
+    if _CALL is not None:
+        _CALL["stack"].append(0.0)
+    try:
+        yield
+    finally:
+        try:
+            if _CALL is not None:
+                elapsed = time.perf_counter() - start
+                nested = _CALL["stack"].pop()
+                _CALL["ms"][name] = _CALL["ms"].get(name, 0.0) + (elapsed - nested) * 1000
+                if _CALL["stack"]:
+                    _CALL["stack"][-1] += elapsed
+        except Exception:
+            pass
+
+
+def _over_budget(skipped: str) -> bool:
+    """True, recording *skipped*, once this call has run past TIME_BUDGET_SECONDS."""
+    if _CALL is None or time.perf_counter() - _CALL["start"] <= TIME_BUDGET_SECONDS:
+        return False
+    _CALL["skipped"].add(skipped)
+    return True
+
+
+# Skipped advisory phase -> the command that runs it.
+_SKIPPED_COMMANDS = {
+    "validation": "superra task check",
+    "implemented-coverage reminders": "superra task check",
+    "reproduction reminders": "superra repro status .",
+}
+
+
+def _budget_note() -> list[str]:
+    if _CALL is None or not _CALL["skipped"]:
+        return []
+    skipped = [name for name in _SKIPPED_COMMANDS if name in _CALL["skipped"]]
+    commands = " and ".join(
+        f"`{c}`" for c in dict.fromkeys(_SKIPPED_COMMANDS[name] for name in skipped)
+    )
+    return [
+        f"This hook call passed its {TIME_BUDGET_SECONDS:g} s budget and skipped "
+        f"{', '.join(skipped)}; run {commands} to see them."
+    ]
+
+
+def _log_slow_call() -> None:
+    """Append this call's phase timings when it ran past SLOW_CALL_SECONDS. Fails open."""
+    try:
+        if _CALL is None:
+            return
+        data = _CALL["data"]
+        total = time.perf_counter() - _CALL["start"]
+        if total <= SLOW_CALL_SECONDS:
+            return
+        _ensure_scripts_on_path()
+        import _checkout_scope
+        import _edit_detect
+        anchor = _checkout_scope.session_anchor(data)
+        plan_root = _edit_detect._plan_root_above(anchor.resolve()) if anchor else None
+        state_dir = plan_root.parent / REPRO_STATE_DIRNAME if plan_root else None
+        if state_dir is None or not state_dir.is_dir():
+            return
+        log = state_dir / SLOW_CALL_LOG
+        if log.exists() and log.stat().st_size > SLOW_CALL_LOG_BYTES:
+            os.replace(log, log.with_name(SLOW_CALL_LOG + ".1"))
+        line = json.dumps({
+            "time": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "event": data.get("hook_event_name") or "",
+            "tool": data.get("tool_name") or data.get("tool") or "",
+            "changed": _CALL["changed"],
+            "total_ms": round(total * 1000),
+            "ms": {name: round(ms) for name, ms in _CALL["ms"].items()},
+            "skipped": sorted(_CALL["skipped"]),
+        }, separators=(",", ":"))
+        with open(log, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+    except Exception:
         pass
 
 
@@ -569,6 +669,9 @@ def _emit_empty_json_if_needed() -> None:
 
 
 def _exit_success(feedback: list[str] | None = None) -> None:
+    global _CALL
+    _log_slow_call()
+    _CALL = None
     feedback = feedback or []
     if feedback:
         print(_feedback_json(feedback))
@@ -669,7 +772,7 @@ def _reconcile(
     if propagate:
         _RECONCILED = True
         try:
-            with warnings.catch_warnings():
+            with _phase("rollup"), warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 propagation_warnings: list[str] = []
                 written = 1  # a rollup that raises may have written part of the chain
@@ -692,8 +795,10 @@ def _reconcile(
             feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
 
     # Validate — collect warnings for model-visible JSON feedback.
+    if _over_budget("validation"):
+        return feedback
     try:
-        with warnings.catch_warnings():
+        with _phase("validate"), warnings.catch_warnings():
             warnings.simplefilter("ignore")
             validation_warnings = task_validate.validate_plan(plan_root)
             from _repro import build_graph
@@ -1160,13 +1265,14 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
     implemented: list[str] = []
     task_edits: dict[Path, tuple[Path, list[str]]] = {}
 
-    for file_path in file_paths:
-        integrity.extend(_markdown_integrity_feedback(file_path))
-        match = _task_path_from_file_path(file_path)
-        if match is None:
-            continue
-        plan_root, task_path = match
-        task_edits.setdefault(plan_root.resolve(), (plan_root, []))[1].append(task_path)
+    with _phase("markdown"):
+        for file_path in file_paths:
+            integrity.extend(_markdown_integrity_feedback(file_path))
+            match = _task_path_from_file_path(file_path)
+            if match is None:
+                continue
+            plan_root, task_path = match
+            task_edits.setdefault(plan_root.resolve(), (plan_root, []))[1].append(task_path)
 
     for plan_root, task_paths in task_edits.values():
         frozen = _writes_frozen(plan_root, task_paths)
@@ -1184,8 +1290,11 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
             )
         )
         for task_path in task_paths:
-            _clear_reproduction_markers_for_task(plan_root, task_path)
-            implemented.extend(_implemented_coverage_reminder(plan_root, task_path))
+            with _phase("markers"):
+                _clear_reproduction_markers_for_task(plan_root, task_path)
+            if not _over_budget("implemented-coverage reminders"):
+                with _phase("coverage"):
+                    implemented.extend(_implemented_coverage_reminder(plan_root, task_path))
 
     feedback.extend(_capped(
         implemented,
@@ -1193,7 +1302,9 @@ def _process_paths(data: dict, file_paths: list[Path]) -> list[str]:
         "`superra task check --category reproduction --all` to see them.",
     ))
     feedback.extend(_integrity_feedback(integrity))
-    feedback.extend(_reproduction_reminder(data, file_paths))
+    if not _over_budget("reproduction reminders"):
+        with _phase("repro"):
+            feedback.extend(_reproduction_reminder(data, file_paths))
     return feedback
 
 
@@ -1212,8 +1323,10 @@ def _unique_paths(paths: list[Path]) -> list[Path]:
 
 
 def main() -> None:
-    global _CODEX_EMPTY_JSON_MODE, _GRAPHS
+    global _CODEX_EMPTY_JSON_MODE, _GRAPHS, _CALL
     _GRAPHS = {}
+    _CALL = {"start": time.perf_counter(), "ms": {}, "stack": [], "skipped": set(),
+             "changed": 0, "data": {}}
 
     # Read tool call info from stdin (Claude Code PostToolUse protocol)
     try:
@@ -1221,20 +1334,22 @@ def main() -> None:
         data = json.loads(raw) if raw.strip() else {}
     except Exception:
         data = {}
+    if isinstance(data, dict):
+        _CALL["data"] = data
 
     tool_name = data.get("tool_name", "") or data.get("tool", "")
     if data.get("hook_event_name") == "PreToolUse":
         # Seed any task tree this command reaches that has no baseline yet — a
         # worktree created mid-session — so its first Bash edit is still seen.
         if tool_name == "Bash":
-            with warnings.catch_warnings():
+            with _phase("detect"), warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 _detected_paths(data, tool_name, [], seed_only=True)
         _exit_success()
     if data.get("hook_event_name") == "UserPromptSubmit":
         # Seed the session's edit baseline so the first tool call is compared
         # against it; never reports.
-        with warnings.catch_warnings():
+        with _phase("detect"), warnings.catch_warnings():
             warnings.simplefilter("ignore")
             _detected_paths(data, "", [])
         _exit_success()
@@ -1252,18 +1367,22 @@ def main() -> None:
         warnings.simplefilter("ignore")  # parse_task warns on a bad status
         # Detect before any reconcile runs, so only the tool call's own writes
         # are reported.
-        changed = _unique_paths(
-            tool_paths + _detected_paths(data, tool_name, tool_paths)
-        )
+        with _phase("detect"):
+            changed = _unique_paths(
+                tool_paths + _detected_paths(data, tool_name, tool_paths)
+            )
+        _CALL["changed"] = len(changed)
         if tool_name == "Bash":
-            feedback.extend(_bash_structural_feedback(data))
+            with _phase("bash"):
+                feedback.extend(_bash_structural_feedback(data))
         feedback.extend(_process_paths(data, changed))
         if _RECONCILED:
             # Reconcile rewrites ancestor statuses; absorb the hook's own writes
             # so the next call does not report them as an edit.
-            _detected_paths(data, tool_name, tool_paths)
+            with _phase("redetect"):
+                _detected_paths(data, tool_name, tool_paths)
 
-    _exit_success(list(dict.fromkeys(feedback)))
+    _exit_success(list(dict.fromkeys(feedback + _budget_note())))
 
 
 if __name__ == "__main__":

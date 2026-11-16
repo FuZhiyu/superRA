@@ -6,12 +6,13 @@ Provides parsing, serialization, tree walking, and status rollup for the directo
 
 from __future__ import annotations
 
-import functools
 import heapq
 import os
 import re
 import stat
+import threading
 import warnings
+from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -324,10 +325,15 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
 _SECTION_ALIASES = {"Planner Guidance": "Details"}
 
 
-# Parsing is a pure function of the text, so these memos never go stale: a
-# rewritten task.md reads back as new text and misses. Sized above
-# `_edit_detect.MAX_TREE_FILES` so one walk of a large tree never evicts itself.
-_PARSE_CACHE_SIZE = 16384
+# Parse memo: one entry per task.md path, holding the text it was parsed from,
+# so a long-lived process keeps one version of each file and a rewritten file
+# misses on its new text. Capped above `_edit_detect.MAX_TREE_FILES` so one walk
+# of a large tree never evicts itself. `_SECTIONS` serves `parse_body_sections`
+# for the bodies of memoized tasks only.
+_PARSE_CACHE_SIZE = 8192
+_PARSED: OrderedDict[str, tuple[str, dict, str, dict]] = OrderedDict()
+_SECTIONS: dict[str, dict[str, str]] = {}
+_PARSE_LOCK = threading.Lock()
 
 
 def parse_body_sections(body: str) -> dict[str, str]:
@@ -343,10 +349,10 @@ def parse_body_sections(body: str) -> dict[str, str]:
     a legacy heading and its current name both appear, their bodies merge with a
     blank line between rather than the later one overwriting the earlier.
     """
-    return dict(_parse_body_sections(body))
+    sections = _SECTIONS.get(body)
+    return dict(sections if sections is not None else _parse_body_sections(body))
 
 
-@functools.lru_cache(maxsize=_PARSE_CACHE_SIZE)
 def _parse_body_sections(body: str) -> dict[str, str]:
     sections: dict[str, str] = {}
     current_name: str | None = None
@@ -481,7 +487,7 @@ def parse_task(
 
     if text is None:
         text = task_md_path.read_text(encoding="utf-8")
-    fm, body, sections = _parse_task_text(text)
+    fm, body, sections = _parse_task_text(os.path.abspath(task_md_path), text)
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
@@ -517,11 +523,34 @@ def parse_task(
     )
 
 
-@functools.lru_cache(maxsize=_PARSE_CACHE_SIZE)
-def _parse_task_text(text: str) -> tuple[dict[str, str | list[str]], str, dict[str, str]]:
-    """Frontmatter, body, and sections of task.md text; callers must not mutate them."""
+def _parse_task_text(
+    key: str, text: str
+) -> tuple[dict[str, str | list[str]], str, dict[str, str]]:
+    """Frontmatter, body, and sections of the task.md text at *key*, memoized
+    per path (`_PARSED`); callers must not mutate them."""
+    with _PARSE_LOCK:
+        entry = _PARSED.get(key)
+        if entry is not None and entry[0] == text:
+            _PARSED.move_to_end(key)
+            _SECTIONS[entry[2]] = entry[3]
+            return entry[1], entry[2], entry[3]
     fm, body = parse_frontmatter(text)
-    return fm, body, _parse_body_sections(body)
+    sections = _parse_body_sections(body)
+    with _PARSE_LOCK:
+        old = _PARSED.pop(key, None)
+        if old is not None:
+            _SECTIONS.pop(old[2], None)
+        _PARSED[key] = (text, fm, body, sections)
+        _SECTIONS[body] = sections
+        while len(_PARSED) > _PARSE_CACHE_SIZE:
+            _SECTIONS.pop(_PARSED.popitem(last=False)[1][2], None)
+    return fm, body, sections
+
+
+def _clear_parse_memo() -> None:
+    with _PARSE_LOCK:
+        _PARSED.clear()
+        _SECTIONS.clear()
 
 
 def write_task(task: Task) -> None:
@@ -802,10 +831,13 @@ def _iter_contained_markdown(root: Path, plan_root: Path):
     if has_symlink_task_component(scan_root, task_root) or not scan_root.is_dir():
         return
 
+    from _edit_detect import SKIP_DIRS
     for directory, dirnames, filenames in os.walk(scan_root, followlinks=False):
         current = Path(directory)
         dirnames[:] = sorted(
-            name for name in dirnames if not (current / name).is_symlink()
+            name for name in dirnames
+            if not name.startswith(".") and name not in SKIP_DIRS
+            and not (current / name).is_symlink()
         )
         for name in sorted(filenames):
             candidate = current / name
