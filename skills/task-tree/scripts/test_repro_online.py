@@ -107,6 +107,11 @@ def _clear_cache(project) -> None:
     project.paths.cache_file.unlink(missing_ok=True)
 
 
+@pytest.fixture(autouse=True)
+def _hash_on_threads(threaded):
+    """Online-only handling holds when uncached files are hashed on threads."""
+
+
 @pytest.fixture
 def offline(monkeypatch, project):
     return Offline(monkeypatch, project.root)
@@ -181,6 +186,34 @@ def test_a_directory_is_checked_before_it_is_listed(tmp_path, monkeypatch):
     assert entry.reason == "dependency Data/panel is online-only here"
     assert os.path.realpath(proj.root / "Data/panel/y2021") not in offline.listed
     assert entry.files[0]["online_only"] is True and entry.files[0]["size"] is None
+
+
+def test_a_directory_reports_the_first_problem_its_walk_meets(tmp_path, monkeypatch, reads):
+    tree = tmp_path / "tree"
+    for name in ("a/1.txt", "a/2.txt", "b/3.txt"):
+        (tree / name).parent.mkdir(parents=True, exist_ok=True)
+        (tree / name).write_text(name)
+    (tree / "b/gone").symlink_to(tree / "missing")
+    offline = Offline(monkeypatch, tmp_path)
+    assert HashCache().path_state(tree) == Unread("unreadable")
+    assert len(reads.workers) == 3  # the files before the broken link are still hashed
+
+    offline.evict("tree/a/2.txt")
+    cache = HashCache()
+    assert cache.path_state(tree) == Unread("online-only")  # met before the broken link
+    assert cache.probe(tree) == (True, None)
+
+
+def test_a_directory_walk_ends_at_its_first_online_only_file(tmp_path, monkeypatch, reads):
+    tree = tmp_path / "tree"
+    for name in ("a1.txt", "a2.txt", "b.txt", "c.txt", "d.txt", "later/e.txt"):
+        (tree / name).parent.mkdir(parents=True, exist_ok=True)
+        (tree / name).write_text(name)
+    offline = Offline(monkeypatch, tmp_path)
+    offline.evict("tree/b.txt")
+    assert HashCache().path_state(tree) == Unread("online-only")
+    assert sorted(reads) == sorted(reads.workers) == [str(tree / "a1.txt"), str(tree / "a2.txt")]
+    assert os.path.realpath(tree / "later") not in offline.listed
 
 
 def test_a_read_error_on_an_existing_output_is_unverified_never_missing(project):
@@ -347,12 +380,23 @@ def test_accept_refuses_a_file_it_cannot_hash_and_its_preview_never_opens_one(pr
     project.write("Code/a.sh", "mkdir -p output\necho hello > output/a.txt\n# comment\n")
     assert project.states("01-a")["build-a"] == "stale"
     offline.evict("Code/a.sh")
+    _clear_cache(project)
     with pytest.raises(ReproStateError, match=r"build-a: cannot record 1 file\(s\) this machine cannot hash:\n"
                                               r"\s+Code/a.sh\s+\d+ B\s+online-only here\n.*online-only-files.md"):
         accept(project.graph(), project.paths, ["01-a#build-a"], "reviewed", {})
     details = inspect_baseline(project.graph(), project.graph().step("build-a"), project.paths)
     row = next(r for r in details["diffs"] if r["node"] == "Code/a.sh")
     assert row["diff"] is None and row["history"] == "unavailable"
+
+
+def test_accept_records_an_online_only_file_from_its_cached_hash_without_opening_it(project, offline):
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", "mkdir -p output\necho hello > output/a.txt\n# comment\n")
+    assert project.states("01-a")["build-a"] == "stale"  # caches the new bytes
+    offline.evict("Code/a.sh")
+    accept(project.graph(), project.paths, ["01-a#build-a"], "reviewed", {})
+    entry = project.status(*CHAIN).entry("build-a")
+    assert (entry.status, entry.reason) == ("fresh", "reviewed baseline")
 
 
 def test_an_acceptance_over_uncached_online_only_files_reads_unverified_not_invalid(project, offline):
