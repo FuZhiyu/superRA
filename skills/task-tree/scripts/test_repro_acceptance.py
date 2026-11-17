@@ -470,3 +470,19 @@ def test_a_quick_accept_prints_no_progress_and_stdout_never_carries_it(project, 
     assert project.run('accept', *CHAIN, '--dry-run', '--json') == 0
     slow = capsys.readouterr()
     assert 'accept: hashing ' in slow.err and slow.out == quick.out
+
+
+def test_a_held_build_lock_names_its_process_and_frees_when_released(project):
+    import os
+    from _repro_acceptance import mutation_lock
+    from _repro_state import ReproStateError
+
+    project.paths.state_dir.mkdir(parents=True, exist_ok=True)
+    with mutation_lock(project.paths):
+        with pytest.raises(ReproStateError, match=rf"is running \(process {os.getpid()}\)"):
+            with mutation_lock(project.paths):
+                pass
+    # The file still exists, and the lock is free: only a live holder keeps it.
+    assert (project.paths.state_dir / "mutation.lock").exists()
+    with mutation_lock(project.paths):
+        pass

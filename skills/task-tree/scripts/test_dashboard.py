@@ -334,6 +334,8 @@ class TestServerRoutes:
         # The HTML-attachment frame policy names CDN hosts as data; no tag loads one.
         assert not re.search(r'(?:src|href)="https://cdn\.jsdelivr\.net', html)
         assert "fonts.googleapis.com" in html
+        # The font stylesheet must not hold the scripts below it.
+        assert 'display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'">' in html
         # No standalone-only inlining leaks into the served page.
         assert "data:font/woff2;base64," not in html
         assert "var STANDALONE_IMAGES =" not in html
@@ -545,8 +547,6 @@ class TestServerRoutes:
             resp = await gen
             body_iter = resp.body_iterator
             await body_iter.__anext__()  # initial heartbeat
-            startup_refresh = await body_iter.__anext__()
-            assert "event: full-reload" in startup_refresh
 
             queue = next(iter(plan_dashboard._worktree_clients[wt]))
             for _ in range(queue.maxsize):
@@ -1342,11 +1342,72 @@ class TestWatcherLifecycle:
             await plan_dashboard._ensure_watcher("wt-a")
             task = plan_dashboard._worktree_watchers.get("wt-a")
             assert task is not None and not task.done()
-            assert "event: full-reload" in queue.get_nowait()
+            # Nothing changed since the page was rendered: no reload.
+            assert queue.empty()
             # A second ensure for the same worktree does not start a second.
             await plan_dashboard._ensure_watcher("wt-a")
             assert plan_dashboard._worktree_watchers["wt-a"] is task
             assert queue.empty()
+            await plan_dashboard._stop_watcher("wt-a")
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_watcher_start_ignores_child_order(self, tmp_path):
+        """Building the reproduction graph reorders cached children in place;
+        a page load after that is still not told to reload."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        root = plan_dashboard._worktree_cache["wt-a"].plan_root
+        for name in ("a", "b"):
+            (root / name).mkdir()
+            _write_task_md(root / name / "task.md", name.upper(), "not-started")
+        plan_dashboard.rebuild_worktree_state("wt-a")
+        plan_dashboard._worktree_cache["wt-a"].root_task.children.reverse()
+
+        async def _test():
+            queue: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {queue}
+            await plan_dashboard._ensure_watcher("wt-a")
+            assert queue.empty()
+            await plan_dashboard._stop_watcher("wt-a")
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_replacing_the_tree_drops_the_graph_built_from_it(self, tmp_path):
+        """The refetch after a reload must not get a graph of the old tree,
+        which the cache would serve: task.md mtimes match the edit already."""
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        state = plan_dashboard._worktree_cache["wt-a"]
+        plan_dashboard._repro_graph(state)
+        assert "wt-a" in plan_dashboard._repro_graph_cache
+        plan_dashboard.rebuild_worktree_state("wt-a")
+        assert "wt-a" not in plan_dashboard._repro_graph_cache
+        self._reset()
+
+    def test_watcher_start_reloads_after_unwatched_new_task(self, tmp_path):
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        state = plan_dashboard._worktree_cache["wt-a"]
+        (state.plan_root / "added").mkdir()
+        _write_task_md(state.plan_root / "added" / "task.md", "Added", "not-started")
+
+        async def _test():
+            queue: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {queue}
+            await plan_dashboard._ensure_watcher("wt-a")
+            assert "event: full-reload" in queue.get_nowait()
+            assert "added" in state.task_index
             await plan_dashboard._stop_watcher("wt-a")
 
         try:
@@ -4437,6 +4498,7 @@ class TestStandaloneSelfContained:
         assert "cdn.jsdelivr.net/npm/htmx" not in html
         # Google Fonts is the one CDN tag left (allowed by scope).
         assert "fonts.googleapis.com" in html
+        assert 'display=swap" rel="stylesheet">' in html  # the export keeps the blocking link
 
     def test_img_loop_consults_standalone_images_first(self):
         """The client img[src] loop looks up STANDALONE_IMAGES before its
@@ -7138,7 +7200,7 @@ def _run_repro_render_node(harness_body):
         "_reproBuild", "reproActionsOn", "reproExplainable", "reproStepTarget", "reproTaskTarget",
         "reproIsRunning", "reproNodeMeta", "reproChipHTML", "reproBuildStatusHTML",
         "REPRO_FILE_TYPES", "REPRO_TYPE_OF", "reproLeaf", "reproFileType", "reproFileTypeTag",
-        "_reproFilesMemo", "reproFiles", "reproEdgeCarries", "_reproHiddenTypes", "reproTypeFilter", "reproTypeMenuHTML", "reproStepCode",
+        "_reproFilesMemo", "reproFiles", "reproEdgeCarries", "_reproHiddenTypes", "reproEdgeTypes", "reproTypeFilter", "reproTypeMenuHTML", "reproStepCode",
         "escapeHtml", "escapeAttr",
     ])
     # drawReproView writes into a container and rebinds handlers; the harness
@@ -7270,6 +7332,107 @@ class TestReproStatusBudget:
         answer = self._run(scenario())
         assert calls == [1, 2]
         assert answer == {"steps": [{"name": "run-2"}], "ok": True}
+
+    def test_state_changes_during_a_slow_computation_read_one_at_a_time(self, status, monkeypatch):
+        """A run superseded while an older one reads never reads itself; the newest
+        starts when the reader ends, and later requests get its result."""
+        state, queue, calls, release = status
+        compute = plan_dashboard._repro_status_payload
+        reading, most = [0], [0]
+
+        def counted(_state):
+            reading[0] += 1
+            most[0] = max(most[0], reading[0])
+            try:
+                return compute(_state)
+            finally:
+                reading[0] -= 1
+
+        monkeypatch.setattr(plan_dashboard, "_repro_status_payload", counted)
+
+        async def scenario():
+            release.clear()
+            for _ in range(3):  # run 1 reads; runs 2 and 3 wait
+                stale = await plan_dashboard._repro_status_within_budget(state)
+                assert stale["refreshing"] is True
+                plan_dashboard._invalidate_repro_status("wt-status")
+            waiting = await plan_dashboard._repro_status_within_budget(state)  # run 4
+            assert waiting["refreshing"] is True
+            release.set()
+            for _ in range(4):
+                await asyncio.wait_for(queue.get(), 5)
+            return await plan_dashboard._repro_status_within_budget(state)
+
+        answer = self._run(scenario())
+        assert most == [1]
+        assert calls == [1, 2]
+        assert answer == {"steps": [{"name": "run-2"}], "ok": True}
+
+    def test_a_slow_failure_is_reported_once_and_not_recomputed(self, status, monkeypatch):
+        state, queue, _calls, release = status
+        failures = []
+
+        def boom(_state):
+            failures.append(1)
+            assert release.wait(5)
+            raise RuntimeError("lock unreadable")
+
+        monkeypatch.setattr(plan_dashboard, "_repro_status_payload", boom)
+
+        async def scenario():
+            release.clear()
+            early = await plan_dashboard._repro_status_within_budget(state)
+            assert early["refreshing"] is True
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            return [await plan_dashboard._repro_status_within_budget(state) for _ in range(3)]
+
+        answers = self._run(scenario())
+        assert failures == [1]
+        assert all("lock unreadable" in a["unavailable"] and "refreshing" not in a for a in answers)
+
+    def test_a_late_failure_keeps_the_last_computed_result(self, status, monkeypatch):
+        state, queue, calls, release = status
+        good = plan_dashboard._repro_status_payload
+
+        def boom(_state):
+            assert release.wait(5)
+            raise RuntimeError("lock unreadable")
+
+        async def scenario():
+            await plan_dashboard._repro_status_within_budget(state)  # run 1 computes
+            monkeypatch.setattr(plan_dashboard, "_repro_status_payload", boom)
+            release.clear()
+            await plan_dashboard._repro_status_within_budget(state)  # fails late
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            plan_dashboard._repro_status_slots["wt-status"].late_until = 0.0  # the late window has passed
+            monkeypatch.setattr(plan_dashboard, "_repro_status_payload", good)
+            release.clear()
+            waiting = await plan_dashboard._repro_status_within_budget(state)
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            return waiting
+
+        waiting = self._run(scenario())
+        assert waiting == {"steps": [{"name": "run-1"}], "ok": True, "refreshing": True}
+
+    def test_a_poll_that_sees_a_build_end_starts_a_new_computation(self, status):
+        state, _queue, calls, _release = status
+
+        async def scenario():
+            await plan_dashboard._repro_status_within_budget(state)
+            slot = plan_dashboard._repro_status_slots["wt-status"]
+            before = slot.generation
+            plan_dashboard._note_build_state("wt-status", True)
+            assert slot.generation == before
+            plan_dashboard._note_build_state("wt-status", False)
+            assert slot.generation == before + 1
+            plan_dashboard._note_build_state("wt-status", False)
+            assert slot.generation == before + 1
+
+        self._run(scenario())
+        assert calls == [1]
 
     def test_a_failed_computation_fails_the_request_that_waited(self, status, monkeypatch):
         state, _queue, _calls, _release = status

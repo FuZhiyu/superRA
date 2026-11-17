@@ -495,6 +495,14 @@ def test_graph_file_row_previews_only_after_a_long_hover(browser, workspace):
     page.wait_for_selector('#file-peek', timeout=3000)
     page.mouse.move(2, 2)
     page.wait_for_selector('#file-peek', state='detached')
+
+    # A click pins the file and previews it without the wait; a second click undoes both.
+    row.click()
+    page.wait_for_selector('#file-peek', timeout=800)
+    assert page.locator('.rp-ports-out .rp-port-row.is-pinned').count() == 1
+    row.click()
+    page.wait_for_selector('#file-peek', state='detached', timeout=800)
+    assert page.locator('.rp-ports-out .rp-port-row.is-pinned').count() == 0
     page.close()
 
 
@@ -511,6 +519,9 @@ def test_text_preview_is_syntax_highlighted(browser, workspace):
       document.body.prepend(a); })""")
     page.locator('[data-peek="figs/calc.py"]').hover()
     page.wait_for_selector('#file-peek .file-peek-text .hljs-keyword:text-is("def")')
+    colors = page.evaluate("""() => { const text = document.querySelector('#file-peek .file-peek-text');
+      return [getComputedStyle(text.querySelector('.hljs-keyword')).color, getComputedStyle(text).color]; }""")
+    assert colors[0] != colors[1], 'a keyword is drawn in the plain text colour'
     page.locator('[data-peek="figs/notes.txt"]').hover()
     page.wait_for_selector('#file-peek .file-peek-text:has-text("def is not code here")')
     assert page.locator('#file-peek .file-peek-text [class^="hljs-"]').count() == 0
@@ -557,7 +568,8 @@ def test_remote_file_links_open_the_reading_pane(browser, workspace):
     page.locator('[data-rp-action=fold][data-value="analysis-0"]').click()
     page.wait_for_selector('#repro-node-step-0-0')
     page.locator('#repro-node-step-0-0').dispatch_event('click')
-    link = page.locator('#repro-detail [data-peek="out/0-0.txt"]')
+    page.locator('#repro-detail .rp-port-row:has([data-value="out/0-0.txt"]) [data-rp-action=file-open]').dispatch_event('click')
+    link = page.locator('#repro-detail .repro-file-detail a.hc-btn')
     assert link.get_attribute('href') == '#/analysis-0?file=out%2F0-0.txt'
     link.tap()
     page.wait_for_selector('#active-node :text("Not built yet.")')

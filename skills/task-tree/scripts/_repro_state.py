@@ -13,6 +13,7 @@ legacy ``pytask.lock`` (with ``repro-builds.json``) converted in memory.
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -23,6 +24,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -247,9 +249,6 @@ def hash_threads() -> int:
         return max(1, int(os.environ[HASH_THREADS_ENV]))
     except (KeyError, ValueError):
         return min(MAX_HASH_THREADS, os.cpu_count() or 1)
-
-
-SWEEP_BYTES = 4 << 20  # a cache file this large is swept at the next flush even with nothing new to save
 
 
 class HashCache:
@@ -490,16 +489,20 @@ class HashCache:
                 self._entries[key] = entry
 
     def _sweep(self) -> int:
-        """Drop each entry whose file is gone; return how many went.
+        """Drop each entry whose file is gone from the project; return how many went.
 
-        An entry stays when its file may only be out of reach: behind a broken
-        link or an online-only folder, or outside the project in a folder that
-        is missing, as on an unmounted drive. The project is the folder that
-        holds the state directory. Folders are checked from the top down, so
-        nothing below an online-only folder is looked up.
+        Only a file that really lies inside the project is ever dropped. One
+        outside it, or reached through a link that leaves it, may sit on a
+        drive that is not mounted now, where a missing file and an absent drive
+        look alike; its entry stays. So does one whose folder or file cannot be
+        examined: online-only, unreadable, or failing with any error other than
+        "not found". The project is the folder that holds the state directory.
+        Folders are checked from the top down, so nothing below an online-only
+        folder is looked up.
         """
-        project = str(self.path.parent.parent) + os.sep
+        project = os.path.realpath(self.path.parent.parent) + os.sep
         folders: dict[str, bool | None] = {}  # True: there; False: gone; None: cannot tell
+        inside: dict[str, bool] = {}  # folder -> its real path lies in the project
 
         def there(folder: str) -> bool | None:
             if folder not in folders:
@@ -518,27 +521,42 @@ class HashCache:
                         folders[folder] = None
             return folders[folder]
 
+        def gone(key: str) -> bool:
+            if not os.path.isabs(key):
+                return False  # a relative key names a file only for the process that wrote it
+            folder = os.path.dirname(key)
+            state = there(folder)
+            if state is None:
+                return False
+            if folder not in inside:
+                inside[folder] = (os.path.realpath(folder) + os.sep).startswith(project)
+            if not inside[folder]:
+                return False
+            if state is False:
+                return True
+            try:
+                os.lstat(key)
+            except (FileNotFoundError, NotADirectoryError):
+                return True
+            except OSError:
+                pass  # out of reach is not gone
+            return False
+
         dropped = 0
         for key in list(self._entries):
-            folder = there(os.path.dirname(key))
-            gone = not os.path.lexists(key) if folder else folder is False and key.startswith(project)
-            if gone and self._entries.pop(key, None) is not None:
+            if gone(key) and self._entries.pop(key, None) is not None:
                 dropped += 1
         return dropped
 
     def flush(self) -> None:
         """Persist, but never create the state directory — `ensure_state_dir` owns
         that, so a tree with no steps stays untouched."""
-        if self.path is None or not self.path.parent.is_dir():
-            return
-        oversized = self._saved is not None and self._saved[0] > SWEEP_BYTES
-        if not self._dirty and not oversized:
+        if self.path is None or not self._dirty or not self.path.parent.is_dir():
             return
         from _repro_acceptance import atomic_text
-        with self._flush_lock:  # `-j` workers share one cache
+        with self._flush_lock, _save_lock(self.path.with_name(self.path.name + ".lock")):  # `-j` workers share one cache
             self._merge_saved()
-            if not self._sweep() and not self._dirty:
-                return
+            self._sweep()
             fresh = set(self._fresh)  # a worker may store more while the file is written
             try:
                 atomic_text(self.path, json.dumps(dict(self._entries)))
@@ -548,6 +566,41 @@ class HashCache:
             self._saved = (info.st_size, info.st_mtime_ns)
             self._fresh -= fresh
             self._dirty = bool(self._fresh)
+
+
+# How long a cache save waits for another process's save before saving anyway.
+SAVE_LOCK_WAIT = 2.0
+
+
+@contextmanager
+def _save_lock(path: Path):
+    """Hold an exclusive lock on *path* while one process saves the cache.
+
+    Waits up to `SAVE_LOCK_WAIT`, then goes on unlocked, as an older
+    plugin's save always does. Without `fcntl` there is no lock.
+    """
+    try:
+        import fcntl
+        handle = path.open("a")
+    except (ImportError, OSError):
+        yield
+        return
+    with handle:
+        deadline = time.monotonic() + SAVE_LOCK_WAIT
+        held = False
+        while not held:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                held = True
+            except OSError as exc:
+                if exc.errno not in (errno.EWOULDBLOCK, errno.EAGAIN) or time.monotonic() >= deadline:
+                    break  # a filesystem without locks saves at once
+                time.sleep(0.01)
+        try:
+            yield
+        finally:
+            if held:
+                fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):

@@ -61,7 +61,12 @@ def mutation_lock(paths):
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise ReproStateError('another reproduction build or acceptance mutation is running') from None
+            # The kernel holds the lock for a live process only, so naming it
+            # tells the reader what to wait for or stop.
+            handle.seek(0)
+            pid = handle.read().strip()
+            raise ReproStateError('another reproduction build or acceptance mutation is running'
+                                  + (f' (process {pid})' if pid.isdigit() else '')) from None
         try:
             handle.truncate(0)
             handle.write(str(os.getpid()))
