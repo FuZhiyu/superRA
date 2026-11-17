@@ -2742,6 +2742,8 @@ function onReproClick(event) {
       view.querySelectorAll('.rp-port-row').forEach(function(row){row.classList.toggle('is-pinned',row.firstChild.dataset.value===_reproPortsOpen.pinned);});
       var again=inPane?document.querySelector('.repro-file-detail .repro-detail-title'):Array.from(view.querySelectorAll('.rp-port-row [data-rp-action='+action+']')).find(function(b){return b.dataset.value===value;});
       if(again)again.focus({preventScroll:true});
+      /* Pinning a file previews it at once; the hover wait is for a pointer only passing by. */
+      if(action==='file-pin'){if(_reproPortsOpen.pinned&&again&&again.dataset.peek)filePeekShow(again);else filePeekClose();}
     }
     else if(action==='file-close'){_reproFile='';renderReproDetail(_reproSelected);}
     else if(action==='port-fold'){

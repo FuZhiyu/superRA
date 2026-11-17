@@ -495,6 +495,14 @@ def test_graph_file_row_previews_only_after_a_long_hover(browser, workspace):
     page.wait_for_selector('#file-peek', timeout=3000)
     page.mouse.move(2, 2)
     page.wait_for_selector('#file-peek', state='detached')
+
+    # A click pins the file and previews it without the wait; a second click undoes both.
+    row.click()
+    page.wait_for_selector('#file-peek', timeout=800)
+    assert page.locator('.rp-ports-out .rp-port-row.is-pinned').count() == 1
+    row.click()
+    page.wait_for_selector('#file-peek', state='detached', timeout=800)
+    assert page.locator('.rp-ports-out .rp-port-row.is-pinned').count() == 0
     page.close()
 
 
