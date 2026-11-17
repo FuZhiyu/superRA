@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
@@ -541,7 +542,7 @@ class HashCache:
         if self.path is None or not self._dirty or not self.path.parent.is_dir():
             return
         from _repro_acceptance import atomic_text
-        with self._flush_lock:  # `-j` workers share one cache
+        with self._flush_lock, _save_lock(self.path.with_name(self.path.name + ".lock")):  # `-j` workers share one cache
             self._merge_saved()
             self._sweep()
             fresh = set(self._fresh)  # a worker may store more while the file is written
@@ -553,6 +554,41 @@ class HashCache:
             self._saved = (info.st_size, info.st_mtime_ns)
             self._fresh -= fresh
             self._dirty = bool(self._fresh)
+
+
+# How long a cache save waits for another process's save before saving anyway.
+SAVE_LOCK_WAIT = 2.0
+
+
+@contextmanager
+def _save_lock(path: Path):
+    """Hold an exclusive lock on *path* while one process saves the cache.
+
+    Waits up to `SAVE_LOCK_WAIT`, then goes on unlocked, as an older
+    plugin's save always does. Without `fcntl` there is no lock.
+    """
+    try:
+        import fcntl
+        handle = path.open("a")
+    except (ImportError, OSError):
+        yield
+        return
+    with handle:
+        deadline = time.monotonic() + SAVE_LOCK_WAIT
+        held = False
+        while not held:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                held = True
+            except OSError:
+                if time.monotonic() >= deadline:
+                    break
+                time.sleep(0.01)
+        try:
+            yield
+        finally:
+            if held:
+                fcntl.flock(handle, fcntl.LOCK_UN)
 
 
 def _tree_files(path: Path, unreadable: list[OSError]):

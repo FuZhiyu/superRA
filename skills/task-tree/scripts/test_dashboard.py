@@ -7271,6 +7271,41 @@ class TestReproStatusBudget:
         assert calls == [1, 2]
         assert answer == {"steps": [{"name": "run-2"}], "ok": True}
 
+    def test_state_changes_during_a_slow_computation_read_one_at_a_time(self, status, monkeypatch):
+        """A run superseded while an older one reads never reads itself; the newest
+        starts when the reader ends, and later requests get its result."""
+        state, queue, calls, release = status
+        compute = plan_dashboard._repro_status_payload
+        reading, most = [0], [0]
+
+        def counted(_state):
+            reading[0] += 1
+            most[0] = max(most[0], reading[0])
+            try:
+                return compute(_state)
+            finally:
+                reading[0] -= 1
+
+        monkeypatch.setattr(plan_dashboard, "_repro_status_payload", counted)
+
+        async def scenario():
+            release.clear()
+            for _ in range(3):  # run 1 reads; runs 2 and 3 wait
+                stale = await plan_dashboard._repro_status_within_budget(state)
+                assert stale["refreshing"] is True
+                plan_dashboard._invalidate_repro_status("wt-status")
+            waiting = await plan_dashboard._repro_status_within_budget(state)  # run 4
+            assert waiting["refreshing"] is True
+            release.set()
+            for _ in range(4):
+                await asyncio.wait_for(queue.get(), 5)
+            return await plan_dashboard._repro_status_within_budget(state)
+
+        answer = self._run(scenario())
+        assert most == [1]
+        assert calls == [1, 2]
+        assert answer == {"steps": [{"name": "run-2"}], "ok": True}
+
     def test_a_slow_failure_is_reported_once_and_not_recomputed(self, status, monkeypatch):
         state, queue, _calls, release = status
         failures = []
