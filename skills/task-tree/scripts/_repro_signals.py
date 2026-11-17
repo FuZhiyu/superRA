@@ -99,17 +99,19 @@ def _matches(candidate: str, declared: str) -> bool:
     variable-rooted directory covers the files under it
     (`${OUT}/estimates` covers `output/estimates/a.csv`). A declaration that is
     nothing but a variable (`${OUT}`) has no tail and covers everything; a
-    glob tail is cut at its first wildcard.
+    glob tail matches the candidate's trailing segments.
     Matching a tail can only suppress a warning — an unresolved variable must
     never make a registered out look unregistered.
     """
-    from _repro import covers, glob_base, is_glob
+    from _repro import covers, glob_match, is_glob
     if "${" in declared:
         tail = _literal_tail(declared)
-        needle = [s for s in (glob_base(tail) if is_glob(tail) else tail).split("/") if s]
+        segments = candidate.split("/")
+        if is_glob(tail):
+            return any(glob_match(tail, "/".join(segments[i:])) for i in range(len(segments)))
+        needle = [s for s in tail.split("/") if s]
         if not needle:
             return True
-        segments = candidate.split("/")
         return any(
             segments[i:i + len(needle)] == needle
             for i in range(len(segments) - len(needle) + 1)

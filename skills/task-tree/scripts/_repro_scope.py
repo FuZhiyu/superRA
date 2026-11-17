@@ -3,17 +3,18 @@ from __future__ import annotations
 
 import threading
 
-from _repro import build_graph, glob_base, is_glob, overlaps
+from _repro import build_graph, overlaps
 from _repro_state import (
     Change, HashCache, ReproStateError, absolute, directory_dep_nodes, is_online_only,
     output_nodes, read_lock, read_run_record, spec_hash, step_nodes, unread, unread_phrase,
 )
 
 
-def _owners(graph, path):
-    path = glob_base(path) if is_glob(path) else path
+def _owners(graph, path, glob=False):
+    """(step, out) pairs that write *path*; for a glob, every out it overlaps."""
     return [(s, out) for s in graph.steps for out in s.outs
-            if path == out.path.resolved or path.startswith(out.path.resolved + '/')]
+            if (overlaps(path, out.path.resolved, glob=True) if glob
+                else path == out.path.resolved or path.startswith(out.path.resolved + '/'))]
 
 
 def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):
@@ -31,37 +32,49 @@ def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):
         if step.name not in names or (consumers is not None and step.name not in consumers):
             continue
         for dep in step.deps:
-            owners = _owners(graph, dep.resolved)
+            owners = _owners(graph, dep.resolved, dep.glob)
             if not owners:
                 continue
-            producer, out = max(owners, key=lambda pair: len(pair[1].path.resolved))
-            if producer.name in names:
-                continue
-            key = (dep.logical, dep.resolved, producer.name)
-            if key not in rows:
-                digest = cache.path_state(absolute(paths.project_root, dep.resolved))
-                if producer.name not in baselines:
-                    try:
-                        baselines[producer.name] = baseline(producer, paths, lock.get(producer.name))
-                    except ReproStateError:
-                        baselines[producer.name] = {}
-                evidence = baselines[producer.name]
-                recorded = evidence.get('outputs', {}).get(out.path.logical)
-                actual = cache.path_state(absolute(paths.project_root, out.path.resolved)) if recorded else None
-                here = unread_phrase(digest) if unread(digest) else None
-                provenance = (here if here else 'missing' if digest is None else
-                              'no successful build recorded' if recorded is None else
-                              'cannot be checked here' if unread(actual) else
-                              'matches successful output' if actual == recorded else 'differs from successful output')
-                if here:
-                    digest = None
-                rows[key] = dict(logical=dep.logical, resolved=dep.resolved, producer=producer.name,
-                                 **({'here': here} if here else {}),
-                                 task=producer.task_path, digest=digest, provenance=provenance,
-                                 sidecar=out.sidecar is not None,
-                                 consumers=[], producer_outcome=read_run_record(paths, producer.name).get('outcome'))
-            rows[key]['consumers'].append(step.name)
+            if dep.glob:  # a glob reads every out it overlaps, from each producer
+                by_producer = {}
+                for producer, out in owners:
+                    by_producer.setdefault(producer.name, (producer, []))[1].append(out)
+                groups = list(by_producer.values())
+            else:
+                producer, out = max(owners, key=lambda pair: len(pair[1].path.resolved))
+                groups = [(producer, [out])]
+            for producer, outs in groups:
+                if producer.name in names:
+                    continue
+                key = (dep.logical, dep.resolved, producer.name)
+                if key not in rows:
+                    rows[key] = _boundary_row(dep, producer, outs, paths, cache, lock, baselines, baseline)
+                rows[key]['consumers'].append(step.name)
     return list(rows.values())
+
+
+def _boundary_row(dep, producer, outs, paths, cache, lock, baselines, baseline):
+    """A saved input read from *producer*: its bytes here against that producer's successful build."""
+    digest = cache.path_state(absolute(paths.project_root, dep.resolved))
+    if producer.name not in baselines:
+        try:
+            baselines[producer.name] = baseline(producer, paths, lock.get(producer.name))
+        except ReproStateError:
+            baselines[producer.name] = {}
+    evidence = baselines[producer.name]
+    recorded = [evidence.get('outputs', {}).get(out.path.logical) for out in outs]
+    actual = [cache.path_state(absolute(paths.project_root, out.path.resolved)) if r else None
+              for out, r in zip(outs, recorded)]
+    here = unread_phrase(digest) if unread(digest) else None
+    provenance = (here if here else 'missing' if digest is None else
+                  'no successful build recorded' if None in recorded else
+                  'cannot be checked here' if any(unread(a) for a in actual) else
+                  'matches successful output' if actual == recorded else 'differs from successful output')
+    return dict(logical=dep.logical, resolved=dep.resolved, producer=producer.name,
+                **({'here': here} if here else {}),
+                task=producer.task_path, digest=None if here else digest, provenance=provenance,
+                sidecar=any(out.sidecar is not None for out in outs),
+                consumers=[], producer_outcome=read_run_record(paths, producer.name).get('outcome'))
 
 
 def _bytes_verified(graph, paths, item):
@@ -170,12 +183,12 @@ def _execution_contract(graph, names):
             continue
         deps, products = step_nodes(step, outputs)
         deps += directory_dep_nodes(graph, step)
-        paths = {d.resolved for d in step.deps} | {out.path.resolved for out in step.outs}
+        paths = {(d.resolved, d.glob) for d in step.deps} | {(out.path.resolved, False) for out in step.outs}
         # Also detect another output nested below an output owned by this step.
         ownership = sorted((path, owner.name, owner.task_path, out.path.resolved,
                             out.path.logical, out.sidecar.resolved if out.sidecar else None)
-                           for path in paths for owner in graph.steps for out in owner.outs
-                           if overlaps(path, out.path.resolved))
+                           for path, glob in paths for owner in graph.steps for out in owner.outs
+                           if overlaps(path, out.path.resolved, glob=glob))
         contract[name] = dict(task=step.task_path, spec=spec_hash(step), deps=sorted(deps),
                               products=sorted(products), ownership=ownership)
     # Duplicate step names can be omitted by the graph parser. Retain those

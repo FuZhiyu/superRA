@@ -860,10 +860,14 @@ def path_target(graph, target, project_root):
     consumers = [s for s in graph.steps if any(text in (d.logical, d.resolved) for d in s.deps)]
     if producer is None and not consumers:
         return None
+    writers = []
     if node is None:
         dep = next(d for d in consumers[0].deps if text in (d.logical, d.resolved))
         node, resolved = output_nodes(graph).get(dep.resolved, (dep.logical, dep.resolved))[:2]
-    return dict(path=text, node=node, resolved=resolved, producer=producer, consumers=consumers)
+        if dep.glob:  # a glob's writers are the steps whose outs it overlaps
+            writers = sorted({src for src, _, via in graph.step_edges if via == dep.logical})
+    return dict(path=text, node=node, resolved=resolved, producer=producer, consumers=consumers,
+                writers=[graph.step(name) for name in writers])
 
 
 def explain(report, paths, cache, kind, value, *, full_diff=False, plan_name='superRA') -> dict:
@@ -911,7 +915,7 @@ def _explain_path(resolver, target) -> dict:
     return {
         'target': target['path'], 'kind': 'path', 'node': node, 'current': current, 'here': here,
         'current_sources': resolver.sources(owner or readers[0], node, current, resolved=resolved),
-        'producer': target_ref(owner) if owner else None,
+        'producer': target_ref(owner) if owner else ', '.join(map(target_ref, target.get('writers', []))) or None,
         'consumers': [target_ref(s) for s in readers],
         'rows': rows, 'groups': group_rows(rows),
     }

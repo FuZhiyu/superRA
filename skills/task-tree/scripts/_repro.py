@@ -49,9 +49,11 @@ VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 # ---------------------------------------------------------------------------
 # Glob deps
 # ---------------------------------------------------------------------------
-# A dep with `*`, `?`, or `[...]` reads the files it matches: `*` stays inside
-# one path segment, a whole `**` segment spans any number of them, and a
-# wildcard never matches a leading dot, as in the shell.
+# A dep whose declared (logical) path has `*`, `?`, or `[...]` reads the files
+# it matches: `*` stays inside one path segment, a whole `**` segment spans any
+# number of them, and a wildcard never matches a leading dot, as in the shell.
+# A literal `[` is written `[[]`. Glob-ness comes from the logical path, so a
+# `[` in the project root or a `${VAR}` value never makes a path a glob.
 
 GLOB_CHARS = frozenset("*?[")
 
@@ -85,8 +87,9 @@ def _segment_regex(segment: str) -> str:
             out.append("[^/]")
         elif end > 0:
             inner = segment[i + 1:end]
-            inner = "^" + inner[1:] if inner.startswith("!") else inner
-            out.append("[" + inner.replace("\\", "\\\\") + "]")
+            negate = inner.startswith("!")
+            body = re.sub(r"([\\\[\]])", r"\\\1", inner[negate:])
+            out.append("[" + "^" * negate + body + "]")
             i = end
         else:
             out.append(re.escape(char))
@@ -105,7 +108,7 @@ def glob_regex(pattern: str) -> re.Pattern:
         for i, segment in enumerate(segments):
             last = i == len(segments) - 1
             if segment == "**":
-                parts.append("(?:(?!\\.)[^/]+/?)*" if last else "(?:(?!\\.)[^/]+/)*")
+                parts.append("(?:(?!\\.)[^/]+/)*(?!\\.)[^/]+" if last else "(?:(?!\\.)[^/]+/)*")
             else:
                 parts.append(_segment_regex(segment) + ("" if last else "/"))
         compiled = _GLOB_RES[pattern] = re.compile("".join(parts) + r"\Z")
@@ -129,20 +132,23 @@ def glob_could_hold(pattern: str, directory: str) -> bool:
     return True
 
 
-def covers(dep: str, path: str) -> bool:
-    """Whether a dep reads `path`: the file itself, a file inside a directory dep, or a glob match."""
-    if is_glob(dep):
+def covers(dep: str, path: str, glob: bool | None = None) -> bool:
+    """Whether a dep reads `path`: the file itself, a file inside a directory dep, or a glob match.
+
+    *glob* is the dep's `PathRef.glob`; a bare string is judged by its own characters.
+    """
+    if is_glob(dep) if glob is None else glob:
         return glob_match(dep, path)
     return path == dep or path.startswith(dep + "/")
 
 
-def overlaps(dep: str, path: str) -> bool:
-    """Whether a dep reads `path` or something inside it.
+def overlaps(dep: str, path: str, glob: bool | None = None) -> bool:
+    """Whether a dep reads `path` or something inside it; *glob* as in `covers`.
 
     For a glob, a `path` with no extension counts as a directory, which
     overlaps when a match could lie in it.
     """
-    if not is_glob(dep):
+    if not (is_glob(dep) if glob is None else glob):
         return path == dep or path.startswith(dep + "/") or dep.startswith(path + "/")
     base = glob_base(dep)
     return (not path or base == path or base.startswith(path + "/") or glob_match(dep, path)
@@ -552,6 +558,10 @@ class PathRef:
 
     logical: str
     resolved: str
+
+    @property
+    def glob(self) -> bool:
+        return is_glob(self.logical)
 
     def to_dict(self) -> dict:
         return {"logical": self.logical, "resolved": self.resolved}
@@ -1164,7 +1174,7 @@ def _build_step(
             unknown_vars += unknown
         step.outs.append(Out(path=ref, sidecar=sidecar))
     for ref in [step.script] + [r for out in step.outs for r in (out.path, out.sidecar)]:
-        if ref is not None and is_glob(ref.logical):
+        if ref is not None and ("*" in ref.logical or "?" in ref.logical):
             raise _StepError(f"step {name!r} names {ref.logical}; only 'deps' entries take a glob")
 
     if unknown_vars and strict_vars:
@@ -1477,7 +1487,7 @@ def step_errors(graph: Graph, names, tasks=()) -> tuple[list[Finding], list[str]
             continue
         for step in steps:
             for dep in step.deps:
-                if any(dep.logical == o.logical or (overlaps(dep.resolved, o.resolved) if is_glob(dep.resolved)
+                if any(dep.logical == o.logical or (overlaps(dep.resolved, o.resolved, glob=True) if dep.glob
                        else dep.resolved == o.resolved or dep.resolved.startswith(o.resolved + "/")) for o in outs):
                     errors.append(Finding(task_path=step.task_path, category=CATEGORY, severity="error",
                         message=f"step {step.name!r} reads {dep.logical}, which task {task_path or '(root)'} "
@@ -1539,21 +1549,21 @@ def _link(graph: Graph, project_root: Path) -> None:
 
     for step in graph.steps:
         for dep in step.deps:
-            glob = is_glob(dep.resolved)
+            glob = dep.glob
             on_disk = project_root / (glob_base(dep.resolved) if glob else dep.resolved)
-            if (not glob and dep.resolved not in graph.producers and on_disk.is_dir()
-                    and {"kind": "declared"} in step.dependency_origins.get(dep.logical, [])):
-                findings.append(Finding(task_path=step.task_path, category=CATEGORY, severity="warning",
-                    message=(f"step {step.name!r} depends on folder {dep.logical}, so every file in it is "
-                             f"hashed, .DS_Store and build leftovers included; name the files it reads "
-                             f"or a glob such as {dep.logical}/*.csv")))
             if glob:
-                inside = {graph.producers[p] for p in producer_paths if overlaps(dep.resolved, p)}
+                inside = {graph.producers[p] for p in producer_paths if overlaps(dep.resolved, p, glob=True)}
             else:
                 producer = _producing_step(dep.resolved, producer_paths, graph.producers)
                 inside = {graph.producers[p] for p in producer_paths if p.startswith(dep.resolved + "/")}
                 if producer is not None:
                     inside.add(producer)
+                elif ({"kind": "declared"} in step.dependency_origins.get(dep.logical, [])
+                        and on_disk.is_dir()):
+                    findings.append(Finding(task_path=step.task_path, category=CATEGORY, severity="warning",
+                        message=(f"step {step.name!r} depends on folder {dep.logical}, so every file in it is "
+                                 f"hashed, .DS_Store and build leftovers included; name the files it reads "
+                                 f"or a glob such as {dep.logical}/*.csv")))
             if inside:
                 edges.update((source, step.name, dep.logical) for source in inside)
                 continue
@@ -1611,6 +1621,26 @@ def check_reproduction(plan_root: Path, root: Task | None = None) -> list[Findin
     """Return the ``reproduction`` findings for a tree.
 
     Never-built outs are runner state, not a finding, so a fresh clone with a
-    complete graph checks clean.
+    complete graph checks clean. An external glob that matches no file is
+    reported here, not in `build_graph`, so the hook's graph never walks one.
     """
-    return build_graph(plan_root, root=root).findings
+    graph = build_graph(plan_root, root=root)
+    project_root = plan_root.resolve().parent
+    for entry in graph.external_inputs:
+        if entry.path.glob and entry.exists and not _glob_has_match(project_root / entry.path.resolved):
+            graph.findings.append(Finding(task_path=graph.step(entry.consumers[0]).task_path, category=CATEGORY,
+                severity="warning", message=f"{entry.path.logical} matches no file on disk"))
+    return graph.findings
+
+
+def _glob_has_match(path: Path) -> bool:
+    from _repro_state import glob_filters, glob_split
+    split = glob_split(path)
+    if split is None or not split[0].is_dir():
+        return path.exists()
+    enter, keep = glob_filters(str(split[0]), split[1])
+    for parent, dirnames, filenames in os.walk(split[0]):
+        if any(keep(parent, name) for name in filenames):
+            return True
+        dirnames[:] = [d for d in dirnames if enter(parent, d)]
+    return False

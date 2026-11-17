@@ -382,6 +382,19 @@ class TestEveryProducerEdit:
         assert "Code/lib/more.jl changed" in context
         assert "notes.txt" not in context
 
+    @pytest.mark.parametrize("dep", ["${CODE}/lib", '"${CODE}/lib/*.jl"'])
+    def test_a_bracket_in_the_project_path_stays_literal(self, tmp_path, dep):
+        root = tmp_path / "proj[1]"
+        _task(root / "superRA" / "task.md", "Root", "in-progress")
+        (root / "superRA" / "config.yaml").write_text(CONFIG, encoding="utf-8")
+        _task(root / "superRA" / "03-pipeline" / "task.md", "Pipeline", "in-progress",
+              VAR_STEPS.replace("- ${CODE}/lib", f"- {dep}"))
+        (root / "Code" / "lib").mkdir(parents=True)
+        (root / "Code" / "est.jl").write_text("# est\n", encoding="utf-8")
+        assert _bash(root) == ""
+        (root / "Code" / "lib" / "more.jl").write_text("# new\n", encoding="utf-8")
+        assert "Code/lib/more.jl changed" in _bash(root)
+
     def test_edit_in_the_first_tool_call_is_seen_after_a_prompt_seed(self, var_project):
         _seed_event(var_project)
         (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")

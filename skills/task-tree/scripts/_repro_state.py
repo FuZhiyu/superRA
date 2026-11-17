@@ -381,10 +381,10 @@ class HashCache:
         once. A directory's flags are checked before it is listed, since
         listing an online-only directory downloads its entries. A broken link,
         an unreadable file, or uncached online-only content makes the whole
-        directory `Unread` rather than silently leaving it out. With *glob*,
-        only the files it matches count, and the walk stops at its depth.
+        directory `Unread` rather than silently leaving it out. With *glob*, a
+        pattern relative to *path*, only the files it matches count.
         """
-        key = glob or str(path)
+        key = f"{path}/{glob}" if glob else str(path)
         digest = hashlib.sha256()
         entries: list[tuple[str, str]] = []
         unreadable: list[OSError] = []
@@ -428,9 +428,9 @@ class HashCache:
 
         One ``stat`` decides both the branch and, for a file, the cache key.
         """
-        if is_glob(str(path)) and not path.exists():
-            base = Path(glob_base(str(path)))
-            return self.tree_hash(base, str(path)) if base.is_dir() else None
+        split = glob_split(path)
+        if split:
+            return self.tree_hash(*split) if split[0].is_dir() else None
         try:
             info = path.stat()
         except (FileNotFoundError, NotADirectoryError):
@@ -449,11 +449,12 @@ class HashCache:
         under a directory that has not been walked. A legacy placeholder's size
         is unknown.
         """
-        if is_glob(str(path)) and not path.exists():
-            base = Path(glob_base(str(path)))
-            if walk and str(path) not in self._online and base.is_dir():
-                self._online[str(path)] = _holds_online_only(base)
-            return self._online.get(str(path), False), None
+        split = glob_split(path)
+        if split:
+            key = f"{split[0]}/{split[1]}"
+            if walk and key not in self._online and split[0].is_dir():
+                self._online[key] = _holds_online_only(*split)
+            return self._online.get(key, False), None
         try:
             info = path.stat()
         except OSError:
@@ -554,11 +555,11 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
 
     A walk that cannot continue ends with the `Unread` saying why: an
     online-only subdirectory, which is never listed, or a broken link. With
-    *glob* (an absolute pattern based at *path*), only matching files are
-    yielded and only directories a match could lie in are entered.
+    *glob* (a pattern relative to *path*), only matching files are yielded and
+    only directories a match could lie in are entered.
     """
     visited: set[tuple[int, int]] = set()
-    match = glob_regex(glob).match if glob else None
+    enter, keep = glob_filters(str(path), glob) if glob else (None, None)
     for parent, dirnames, filenames in os.walk(path, onerror=unreadable.append, followlinks=True):
         info = os.stat(parent)
         if (info.st_dev, info.st_ino) in visited:
@@ -566,9 +567,8 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
             continue
         visited.add((info.st_dev, info.st_ino))
         if glob:
-            dirnames[:] = [d for d in dirnames if glob_could_hold(glob, os.path.join(parent, d))]
-        if match:
-            filenames = [f for f in filenames if match(os.path.join(parent, f))]
+            dirnames[:] = [d for d in dirnames if enter(parent, d)]
+            filenames = [f for f in filenames if keep(parent, f)]
         dirnames.sort()
         for dirname in dirnames:
             try:
@@ -589,10 +589,42 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
                 yield child, child_info
 
 
-def _holds_online_only(path: Path) -> bool:
+def glob_split(path: Path) -> tuple[Path, str] | None:
+    """(base directory, pattern relative to it) when *path* is a glob, else None.
+
+    Only the part below the nearest existing directory is read as a pattern,
+    so a `[` in the project root or a `${VAR}` value stays literal.
+    """
+    text = str(path)
+    if not is_glob(text) or os.path.lexists(text):
+        return None
+    ancestor = path.parent
+    while not ancestor.exists() and ancestor != ancestor.parent:
+        ancestor = ancestor.parent
+    tail = os.path.relpath(text, ancestor).replace(os.sep, "/")
+    if not is_glob(tail):
+        return None
+    base = glob_base(tail)
+    return (ancestor / base, tail[len(base) + 1:]) if base else (ancestor, tail)
+
+
+def glob_filters(root: str, glob: str):
+    """(enter, keep) for an `os.walk` from *root*: whether a match could lie in a
+    subdirectory, and whether a file matches *glob*, a pattern relative to *root*."""
+    match = glob_regex(glob).match
+
+    def rel(parent: str, name: str) -> str:
+        return os.path.relpath(os.path.join(parent, name), root).replace(os.sep, "/")
+
+    return (lambda parent, name: glob_could_hold(glob, rel(parent, name)),
+            lambda parent, name: match(rel(parent, name)) is not None)
+
+
+def _holds_online_only(path: Path, glob: str | None = None) -> bool:
     """Whether a directory or anything under it is online-only, from `stat` alone.
 
-    Each directory's flag is checked before it is listed.
+    Each directory's flag is checked before it is listed. With *glob*, only
+    the files it matches and the directories they could lie in count.
     """
     try:
         if file_flags(os.stat(path)) & SF_DATALESS:
@@ -600,12 +632,16 @@ def _holds_online_only(path: Path) -> bool:
     except OSError:
         return False
     visited: set[tuple[int, int]] = set()
+    enter, keep = glob_filters(str(path), glob) if glob else (None, None)
     for parent, dirnames, filenames in os.walk(path, followlinks=True):
         info = os.stat(parent)
         if (info.st_dev, info.st_ino) in visited:
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
+        if glob:
+            dirnames[:] = [d for d in dirnames if enter(parent, d)]
+            filenames = [f for f in filenames if keep(parent, f)]
         for name in filenames:
             child = Path(parent) / name
             try:
@@ -680,9 +716,9 @@ def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
     declared = {d.logical for d in step.deps}
     extra: list[Node] = []
     for dep in step.deps:
-        if is_glob(dep.resolved):
+        if dep.glob:
             for path, node in covering:
-                if overlaps(dep.resolved, path) and node[0] not in declared:
+                if overlaps(dep.resolved, path, glob=True) and node[0] not in declared:
                     declared.add(node[0])
                     extra.append(node)
             continue
@@ -1864,6 +1900,8 @@ __all__ = [
     "node_sizes",
     "node_state",
     "outcome",
+    "glob_filters",
+    "glob_split",
     "path_state",
     "lock_entry",
     "prune_lock",

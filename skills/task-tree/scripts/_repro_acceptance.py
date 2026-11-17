@@ -641,11 +641,17 @@ def impact(graph, paths, files, scope=(), config_file=None):
     config_file = str(Path(config_file or paths.project_root / 'superRA' / CONFIG_FILENAME).resolve())
     configs = [p for p, path in resolved.items() if path == config_file]
     direct = []
+    root = str(paths.project_root.resolve())
+    relative = [os.path.relpath(p, root) if p.startswith(root + os.sep) else p for p in resolved.values()]
     for step in graph.steps:
         reasons = []
         for dep in step.deps:
-            path = str(absolute(paths.project_root, dep.resolved).resolve())
-            if dep.logical in files or any(overlaps(path, p) for p in resolved.values()):
+            if dep.glob:
+                hit = any(overlaps(dep.resolved, p, glob=True) for p in relative)
+            else:
+                path = str(absolute(paths.project_root, dep.resolved).resolve())
+                hit = any(overlaps(path, p, glob=False) for p in resolved.values())
+            if dep.logical in files or hit:
                 reasons.append({'path': dep.logical, 'origins': step.dependency_origins.get(dep.logical, [])})
         origins = _config_origins(graph, step) if configs else []
         if origins:

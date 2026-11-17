@@ -360,7 +360,7 @@ def _repro_owning_steps(graph, rel: str) -> list[str]:
     names = []
     for step in graph.steps:
         for dep in step.deps:
-            if covers(dep.resolved, rel):
+            if covers(dep.resolved, rel, glob=dep.glob):
                 names.append(step.name)
                 break
     return names
@@ -1176,36 +1176,37 @@ def _repro_watch(plan_root: Path) -> tuple[list[str], list[list]]:
     """What the baseline watches beyond the task root: (files, dirs).
 
     `files` are the literal-path deps and scripts of registered steps, minus step
-    outs. `dirs` are `[directory, suffixes | None]` scanned on every call: each
-    declared directory or glob dependency (every file it covers) and each
-    script's directory (new scripts of a configured runner's language),
-    skipping the task root.
+    outs. `dirs` are `[directory, suffixes | None, glob?]` scanned on every
+    call: each declared directory dependency (every file), each glob
+    dependency (its matches below its base), and each script's directory (new
+    scripts of a configured runner's language), skipping the task root.
     """
     import _edit_detect
-    from _repro import glob_base, is_glob
+    from _repro import glob_base
+    from _repro_state import glob_split
     project_root = plan_root.parent
     graph = _hook_graph(plan_root)
     suffixes = _edit_detect.runner_suffixes(graph.config.runners)
     files: list[str] = []
-    dirs: dict[str, list[str] | None] = {}
+    dirs: dict[tuple, list[str] | None] = {}
     for step in graph.steps:
         for dep in step.deps:
-            glob = is_glob(dep.resolved)
-            if "${" in dep.resolved or _repro_is_out(graph, glob_base(dep.resolved) if glob else dep.resolved):
-                continue
             path = project_root / dep.resolved
-            if glob:
-                if (project_root / glob_base(dep.resolved)).is_dir():
-                    dirs[str(path)] = None
+            split = glob_split(path) if dep.glob else None
+            if "${" in dep.resolved or _repro_is_out(graph, glob_base(dep.resolved) if split else dep.resolved):
+                continue
+            if split:
+                if split[0].is_dir():
+                    dirs[(str(split[0]), split[1])] = None
             elif path.is_dir():
-                dirs[str(path)] = None
+                dirs[(str(path),)] = None
             elif path.is_file():
                 files.append(str(path))
                 parent = path.parent
                 if (suffixes and path.suffix.lower() in suffixes
                         and plan_root != parent and plan_root not in parent.parents):
-                    dirs.setdefault(str(parent), suffixes)
-    return files, [[path, suffix] for path, suffix in dirs.items()]
+                    dirs.setdefault((str(parent),), suffixes)
+    return files, [[key[0], suffix, *key[1:]] for key, suffix in dirs.items()]
 
 
 def _detected_paths(

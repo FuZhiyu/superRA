@@ -1639,12 +1639,13 @@ function reproGlobRe(pattern){
   var segs=pattern.split('/');
   return new RegExp('^'+segs.map(function(seg,i){
     var last=i===segs.length-1;
-    if(seg==='**')return last?'(?:(?!\\.)[^/]+/?)*':'(?:(?!\\.)[^/]+/)*';
+    if(seg==='**')return last?'(?:(?!\\.)[^/]+/)*(?!\\.)[^/]+':'(?:(?!\\.)[^/]+/)*';
     var s=/^[*?[]/.test(seg)?'(?!\\.)':'';
     for(var j=0;j<seg.length;j++){
-      var c=seg[j],e=c==='['?seg.indexOf(']',j+2):-1;
+      var c=seg[j],e=-1;
+      if(c==='['){var k=j+1+(seg[j+1]==='!'?1:0);k+=seg[k]===']'?1:0;e=seg.indexOf(']',k);}
       if(c==='*')s+='[^/]*';else if(c==='?')s+='[^/]';
-      else if(e>0){s+='['+seg.slice(j+1,e).replace(/^!/,'^').replace(/\\/g,'\\\\')+']';j=e;}
+      else if(e>0){var inner=seg.slice(j+1,e),neg=inner[0]==='!';s+='['+(neg?'^':'')+inner.slice(neg?1:0).replace(/[\\\[\]]/g,'\\$&')+']';j=e;}
       else s+=c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     }
     return s+(last?'':'/');

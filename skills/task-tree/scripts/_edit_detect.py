@@ -158,14 +158,14 @@ def _tree_files(plan_root: Path) -> list[str] | None:
     return found
 
 
-def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> list[str]:
+def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True,
+              glob: str | None = None) -> list[str]:
     """Files under `root` (those with `suffixes`, or all), skipping hidden and
     scratch folders and never listing an online-only directory; empty when the
-    directory holds more than MAX_DIR_FILES. A glob `root` lists its matches."""
-    from _repro import glob_base, glob_could_hold, glob_match, is_glob
-    from _repro_state import path_online_only
-    glob = root if is_glob(root) else None
-    root = glob_base(glob) if glob else root
+    directory holds more than MAX_DIR_FILES. `glob`, relative to `root`, keeps
+    only its matches."""
+    from _repro_state import glob_filters, path_online_only
+    enter, keep = glob_filters(root, glob) if glob else (None, None)
     found: list[str] = []
     if path_online_only(root):
         return found
@@ -173,16 +173,15 @@ def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> 
         dirnames[:] = (
             [d for d in dirnames
              if not d.startswith(".") and d not in SKIP_DIRS and d.lower() not in _SCRATCH_DIRS
-             and (glob is None or glob_could_hold(glob, os.path.join(parent, d)))
+             and (glob is None or enter(parent, d))
              and not path_online_only(os.path.join(parent, d))]
             if recursive else []
         )
         for name in filenames:
-            path = os.path.join(parent, name)
-            if glob is not None and not glob_match(glob, path):
+            if glob is not None and not keep(parent, name):
                 continue
             if suffixes is None or os.path.splitext(name)[1].lower() in suffixes:
-                found.append(path)
+                found.append(os.path.join(parent, name))
         if len(found) > MAX_DIR_FILES:
             return []
     return found
@@ -256,9 +255,10 @@ def detect(
     added to that list is seeded, not reported; a new file under the task root
     is reported.
 
-    `watch_dirs` supplies `[directory, suffixes | None]` entries scanned on every
-    call: a directory or glob dependency (`None`: every file or match, a new one
-    counts as a change) or a code directory (script `suffixes`: only a *new* script counts).
+    `watch_dirs` supplies `[directory, suffixes | None, glob?]` entries scanned
+    on every call: a directory or glob dependency (`None`: every file, or every
+    match of the glob relative to the directory; a new one counts as a change)
+    or a code directory (script `suffixes`: only a *new* script counts).
     Entries are cached with `extra_files`. `created` collects the reported paths
     that did not exist in the previous baseline.
     """
@@ -324,16 +324,17 @@ def detect(
             visit(path, new_counts=False)
 
     project_root = str(plan_root.parent)
-    old_dirs = {entry[0] for entry in old["dirs"]} if not seeding else set()
+    old_dirs = {tuple(entry[:1] + entry[2:]) for entry in old["dirs"]} if not seeding else set()
     dirs = (
         sorted(watch_dirs() if watch_dirs else [], key=lambda entry: (entry[1] is not None, entry[0]))
         if structure_moved
         else list(old["dirs"])
     )
-    for root, suffixes in dirs:  # declared directories first: they report edits, code dirs only new scripts
+    for root, suffixes, *glob in dirs:  # declared directories first: they report edits, code dirs only new scripts
         # A directory newly declared this call is seeded, not reported.
-        counts = root in old_dirs
-        for path in _scan_dir(root, suffixes, recursive=suffixes is None or root != project_root):
+        counts = (root, *glob) in old_dirs
+        for path in _scan_dir(root, suffixes, recursive=suffixes is None or root != project_root,
+                              glob=glob[0] if glob else None):
             if path not in files:
                 visit(path, new_counts=counts, new_only=suffixes is not None)
 

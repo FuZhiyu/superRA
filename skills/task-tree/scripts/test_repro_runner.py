@@ -1103,9 +1103,61 @@ def test_a_glob_state_covers_only_its_matches(tmp_path):
     assert HashCache().path_state(tmp_path / "absent" / "*.csv") is None
 
 
-def test_a_glob_dep_orders_and_stales_on_its_matches_alone(dir_project):
+def test_a_trailing_double_star_fails_a_match_quickly(tmp_path):
+    deep = tmp_path / "data" / "estimates_by_quarter" / "robustness_checks_by_region"
+    deep.mkdir(parents=True)
+    (deep / ".DS_Store").write_text("finder")
+    (deep / "a.csv").write_text("a")
+    started = time.monotonic()
+    state = HashCache().path_state(tmp_path / "data" / "**")
+    assert time.monotonic() - started < 1
+    (deep / ".DS_Store").write_text("finder again")
+    assert HashCache().path_state(tmp_path / "data" / "**") == state
+
+
+def test_a_bracket_in_the_project_path_stays_literal(tmp_path):
+    root = tmp_path / "proj[1]"
+    (root / "data").mkdir(parents=True)
+    (root / "data" / "a.csv").write_text("a")
+    before = HashCache().path_state(root / "data" / "*.csv")
+    (root / "data" / "b.csv").write_text("b")
+    assert HashCache().path_state(root / "data" / "*.csv") != before
+    assert HashCache().path_state(root / "out" / "a.txt") is None
+
+
+def test_online_only_files_the_glob_does_not_match_are_ignored(tmp_path, monkeypatch):
+    (tmp_path / "Data" / "archive").mkdir(parents=True)
+    (tmp_path / "Data" / "a.csv").write_text("a")
+    (tmp_path / "Data" / "archive" / "big.parquet").write_text("evicted")
+    monkeypatch.setattr(_repro_state, "is_online_only", lambda path, info: Path(path).suffix == ".parquet")
+    assert HashCache().probe(tmp_path / "Data" / "*.csv", walk=True) == (False, None)
+    assert HashCache().probe(tmp_path / "Data" / "**" / "*.parquet", walk=True) == (True, None)
+
+
+def _glob_dir_project(dir_project):
     dir_project.write("superRA/01-gen/task.md", TASK_GEN.replace('"${OUT}/parts"', '"${OUT}/parts/a.txt"'))
     dir_project.write("superRA/02-use/task.md", TASK_USE.replace('"${OUT}/parts/a.txt"', '"${OUT}/parts/*.txt"'))
+    return dir_project
+
+
+def test_a_glob_dep_is_a_boundary_input_and_an_impact_reader(dir_project):
+    from _repro_acceptance import impact
+    from _repro_scope import boundary_inputs
+    project = _glob_dir_project(dir_project)
+    assert project.run("build", ".") == 0
+    rows = boundary_inputs(project.graph(), ["a-use"], project.paths)
+    assert [(row["logical"], row["producer"], row["provenance"]) for row in rows] == [
+        ("${OUT}/parts/*.txt", "z-gen", "matches successful output")]
+    changed = impact(project.graph(), project.paths, ["output/parts/new.txt"])
+    assert [row["step"] for row in changed["direct"]] == ["a-use"]
+    assert impact(project.graph(), project.paths, ["output/parts/new.log"])["direct"] == []
+    from _repro_provenance import path_target
+    target = path_target(project.graph(), "${OUT}/parts/*.txt", project.root)
+    assert [step.name for step in target["writers"]] == ["z-gen"]
+
+
+def test_a_glob_dep_orders_and_stales_on_its_matches_alone(dir_project):
+    _glob_dir_project(dir_project)
     assert dir_project.run("build", ".", "-j", "2") == 0
     assert dir_project.read("output/used.txt") == "v1\n"
     dir_project.write("output/parts/.DS_Store", "finder")

@@ -839,14 +839,34 @@ class TestFindings:
         assert _messages(graph, "warning") == []
         assert graph.external_inputs[0].exists is True
 
-    def test_a_folder_another_step_writes_draws_no_glob_warning(self, tmp_path):
+    @pytest.mark.parametrize("dep", ["out/parts", "out/parts/sub"])
+    def test_a_folder_inside_another_steps_out_draws_no_glob_warning(self, tmp_path, dep):
         plan = _plan(tmp_path)
-        (tmp_path / "out" / "parts").mkdir(parents=True)
+        (tmp_path / "out" / "parts" / "sub").mkdir(parents=True)
         _write_repro_task(plan / "01-a", "A", "steps:\n  - name: gen\n    cmd: true\n    outs: [out/parts]\n"
-                          "  - name: use\n    cmd: true\n    deps: [out/parts]\n")
+                          f"  - name: use\n    cmd: true\n    deps: [{dep}]\n")
         assert _messages(_graph(plan), "warning") == []
 
-    @pytest.mark.parametrize("field", ['outs: ["out/*.csv"]', 'runner: sh\n    script: "Code/*.sh"'])
+    def test_a_glob_that_matches_nothing_warns_in_task_check(self, tmp_path):
+        plan = _plan(tmp_path)
+        (tmp_path / "data").mkdir()
+        (tmp_path / "data" / "a.csv").write_text("x", encoding="utf-8")
+        block = 'steps:\n  - name: load\n    cmd: true\n    deps: ["{dep}"]\n'
+        _write_repro_task(plan / "01-a", "A", block.format(dep="data/*.CSV"))
+        assert any("data/*.CSV matches no file on disk" in f.message for f in check_reproduction(plan))
+        _write_repro_task(plan / "01-a", "A", block.format(dep="data/*.csv"))
+        assert [f for f in check_reproduction(plan) if f.severity == "warning"] == []
+
+    def test_a_bracket_in_an_out_stays_literal(self, tmp_path):
+        plan = _plan(tmp_path)
+        _write_repro_task(plan / "01-a", "A", "steps:\n  - name: fig\n    cmd: true\n    outs: ['fig[2a].pdf']\n"
+                          "  - name: use\n    cmd: true\n    deps: ['fig[[]2a].pdf']\n")
+        graph = _graph(plan)
+        assert _messages(graph, "error") == []
+        assert [(src, dst) for src, dst, _ in graph.step_edges] == [("fig", "use")]
+
+    @pytest.mark.parametrize("field", ['outs: ["out/*.csv"]', 'runner: sh\n    script: "Code/*.sh"',
+                                       'outs:\n      - path: out/a.parquet\n        sidecar: "out/*.sha"'])
     def test_only_deps_take_a_glob(self, tmp_path, field):
         plan = _plan(tmp_path)
         (plan / "config.yaml").write_text("reproduction:\n  runners:\n    sh: sh {script}\n", encoding="utf-8")
@@ -909,3 +929,32 @@ class TestFindings:
         graph = _graph(plan)
         assert [s.name for s in graph.steps] == ["b"]
         assert _has(graph, "error", "literal block scalars")
+
+
+# ---------------------------------------------------------------------------
+# Glob matching
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("pattern, path, hit", [
+    ("data/*.csv", "data/a.csv", True),
+    ("data/*.csv", "data/.a.csv", False),
+    ("data/*.csv", "data/sub/a.csv", False),
+    ("data/**/*.csv", "data/a.csv", True),
+    ("data/**/*.csv", "data/x/y/a.csv", True),
+    ("data/**/*.csv", "data/.git/a.csv", False),
+    ("**/*.csv", "a/b.csv", True),
+    ("data/**", "data/x/y", True),
+    ("data/**", "data/x/.DS_Store", False),
+    ("data/**", "data", False),
+    ("data/[!a].csv", "data/b.csv", True),
+    ("data/[[]1].csv", "data/[1].csv", True),
+])
+def test_glob_match(pattern, path, hit):
+    from _repro import glob_match
+    assert glob_match(pattern, path) is hit
+
+
+def test_an_unresolved_variable_glob_covers_only_its_matches():
+    from _repro_signals import _matches
+    assert _matches("output/fig/a.png", "${OUT}/fig/*.png")
+    assert not _matches("output/tables/a.csv", "${OUT}/fig/*.png")
