@@ -6588,7 +6588,8 @@ async function applyWorktree(wtId, path, artifactPath) {
 
 /* Re-point the htmx SSE stream at the active worktree's /events. The htmx sse
    extension caches its EventSource in the connect element's internalData; close
-   the old one, rewrite sse-connect to carry the new ?wt=, then re-process the
+   the old one (left open, it keeps delivering the previous worktree's summary
+   and reload events to this page), rewrite sse-connect to carry the new ?wt=, then re-process the
    element so the extension opens a fresh source and re-binds every sse-swap
    listener under it (summary bar, full-reload sentinel, and — after the sidebar
    rebuild re-runs htmx.process — the nav rows). No-op in standalone mode. */
@@ -6596,13 +6597,14 @@ function reconnectSse() {
   if (window.STANDALONE || !window.htmx) return;
   var main = document.querySelector('.main-content');
   if (!main) return;
-  var data = htmx.getInternalData ? htmx.getInternalData(main) : null;
-  if (data && data.sseEventSource) {
-    try { data.sseEventSource.close(); } catch (e) {}
-    data.sseEventSource = null;
-  }
+  /* htmx 2 keeps that record on the element and exposes no getter for it; the
+     stream the last htmx:sseOpen reported covers a build that stores it elsewhere. */
+  var data = main['htmx-internal-data'], source = (data && data.sseEventSource) || _sseSource;
+  if (source) { try { source.close(); } catch (e) {} }
+  if (data) data.sseEventSource = null;
   main.setAttribute('sse-connect', wtUrl('/events'));
   _sseOpened = false;
+  _sseSource = null;
   htmx.process(main);
 }
 
@@ -6650,8 +6652,9 @@ if (fullReloadEl) {
    (a server restart, a network drop) refetches here, since the page may be
    older than that cache. reconnectSse resets the flag: a worktree switch
    reloads by itself. */
-var _sseOpened = false;
-document.body.addEventListener('htmx:sseOpen', function() {
+var _sseOpened = false, _sseSource = null;
+document.body.addEventListener('htmx:sseOpen', function(e) {
+  if (e.detail && e.detail.source) _sseSource = e.detail.source;
   if (_sseOpened) onFullReload();
   _sseOpened = true;
 });
