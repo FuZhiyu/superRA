@@ -1323,6 +1323,39 @@ class TestFileTracingBrowser:
             assert again.evaluate(steps) == ["make-data"]
             browser.close()
 
+    def test_filter_popover_lists_files_and_filters_to_one(self, tmp_path):
+        """The Filter popover offers files as a facet and as typed matches;
+        picking one adds the same file chip as a file row's Filter button."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        steps = "() => [...document.querySelectorAll('.repro-node')].map(n => n.dataset.step).sort()"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, ""))
+            page.wait_for_selector(".repro-node")
+            page.click("#filter-trigger")
+            page.click('.wf-option:has-text("Writers and readers of a file")')
+            page.wait_for_selector('.wf-pick[data-wf-pick^="file|"]')
+            assert page.get_attribute(".wf-pop-search", "placeholder") == "Find a file…"
+            page.fill(".wf-pop-search", "a.parquet")
+            page.wait_for_function("() => document.querySelectorAll('.wf-pick').length === 1")
+            page.click('.wf-pick[data-wf-pick="file|out/a.parquet"]')
+            page.wait_for_selector(".wf-chip")
+            assert "a.parquet" in page.inner_text(".wf-chip")
+            assert page.evaluate(steps) == ["make-data", "use-a", "use-b"]
+
+            # Typing in the first view finds files beside tasks and steps.
+            page.evaluate("() => { _workspaceFilters.lineage = []; applyWorkspaceFilters(true); }")
+            page.click("#filter-trigger")
+            page.fill(".wf-pop-search", "b.csv")
+            page.wait_for_selector('.wf-sec:has-text("Files")')
+            page.keyboard.press("Enter")
+            page.wait_for_selector(".wf-chip")
+            assert "b.csv" in page.inner_text(".wf-chip")
+            browser.close()
+
     def test_a_file_inside_a_read_folder_traces_to_the_folder_reader(self, tmp_path):
         """A step that reads a folder reads the declared files inside it: the
         writer's port names the reader, and the reader's folder port unfolds

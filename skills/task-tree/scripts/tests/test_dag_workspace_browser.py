@@ -479,6 +479,44 @@ def test_file_hover_preview(browser, workspace):
     page.close()
 
 
+def test_graph_file_row_previews_only_after_a_long_hover(browser, workspace):
+    """A file row beside a selected step opens no preview while the pointer
+    passes over it, and opens one once the pointer rests there."""
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    enter(page, workspace['url'])
+    page.locator('[data-rp-action=fold][data-value="analysis-0"]').click()
+    page.wait_for_selector('#repro-node-step-0-0')
+    page.locator('#repro-node-step-0-0').dispatch_event('click')
+    row = page.locator('.rp-ports-out .rp-port[data-peek="out/0-0.txt"]')
+    assert row.get_attribute('data-peek-delay') == '1500'
+    row.hover()
+    page.wait_for_timeout(700)
+    assert page.locator('#file-peek').count() == 0
+    page.wait_for_selector('#file-peek', timeout=3000)
+    page.mouse.move(2, 2)
+    page.wait_for_selector('#file-peek', state='detached')
+    page.close()
+
+
+def test_text_preview_is_syntax_highlighted(browser, workspace):
+    figs = workspace['base'] / 'figs'
+    figs.mkdir(exist_ok=True)
+    (figs / 'calc.py').write_text('def mean(xs):\n    return sum(xs) / len(xs)\n')
+    (figs / 'notes.txt').write_text('def is not code here\n')
+    page = browser.new_page(viewport={'width': 1372, 'height': 768})
+    enter(page, workspace['url'])
+    page.evaluate("""() => ['figs/calc.py', 'figs/notes.txt'].forEach(path => {
+      const a = document.createElement('a'); a.href = '#'; a.textContent = path; a.dataset.peek = path;
+      a.style.cssText = 'display:block;position:relative;z-index:999;background:#fff';
+      document.body.prepend(a); })""")
+    page.locator('[data-peek="figs/calc.py"]').hover()
+    page.wait_for_selector('#file-peek .file-peek-text .hljs-keyword:text-is("def")')
+    page.locator('[data-peek="figs/notes.txt"]').hover()
+    page.wait_for_selector('#file-peek .file-peek-text:has-text("def is not code here")')
+    assert page.locator('#file-peek .file-peek-text [class^="hljs-"]').count() == 0
+    page.close()
+
+
 def test_task_body_file_links_preview_on_hover(browser, workspace):
     figs = workspace['base'] / 'figs'
     figs.mkdir(exist_ok=True)

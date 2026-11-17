@@ -2789,3 +2789,4 @@ html[data-doc-mode] .task-row-more { display:none !important; }
 .search-result-filter { position:absolute;top:8px;right:10px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-mid);font:var(--fs-micro) var(--font-mono);cursor:pointer;opacity:0; }
 .search-result:hover .search-result-filter,.search-result[aria-selected="true"] .search-result-filter { opacity:1; }
 .search-result-filter:hover { color:var(--accent);border-color:var(--accent); }
+.file-peek-text code { display:block;padding:0;background:none;font:inherit;white-space:inherit; }

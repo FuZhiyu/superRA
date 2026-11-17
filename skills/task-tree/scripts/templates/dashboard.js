@@ -778,7 +778,7 @@ function workspacePopOpen(kind, anchor) {
 function workspacePopShow(kind) {
   var pop=_wfPop;if(!pop)return;
   pop.kind=kind;pop.hl=0;
-  var search={add:'Filter by status, step state, task, or step…',scope:'Find a task…',deps:'Find a task or step…'}[kind];
+  var search={add:'Filter by status, step state, task, step, or file…',scope:'Find a task…',deps:'Find a task or step…',files:'Find a file…'}[kind];
   pop.el.innerHTML='<div class="wf-pop-head"></div>'+(search?'<input type="search" class="wf-pop-search" autocomplete="off" spellcheck="false" placeholder="'+search+'" aria-label="'+search.replace('…','')+'"'+(kind==='add'?' role="combobox" aria-expanded="true" aria-controls="wf-pop-body"':'')+'>':'')
     +'<div class="wf-pop-body" id="wf-pop-body"'+(kind==='add'?' role="listbox" aria-label="Filters"':'')+'></div><div class="wf-pop-foot"></div>';
   workspacePopRender();
@@ -805,7 +805,7 @@ function workspacePopPosition() {
 function workspacePopRender() {
   var pop=_wfPop;if(!pop)return;
   var el=pop.el,active=document.activeElement,key=el.contains(active)&&active.dataset.wfKey,input=el.querySelector('.wf-pop-search'),q=input?input.value.trim().toLowerCase():'';
-  var view=pop.kind==='add'?workspaceAddView(q):pop.kind==='status'?workspaceStatusView():pop.kind==='steps'?workspaceStepsView():pop.kind==='scope'?workspaceScopeView(q):pop.kind==='deps'?workspaceDepsView(q):workspaceAnchorView(Number(pop.kind.split(':')[1]));
+  var view=pop.kind==='add'?workspaceAddView(q):pop.kind==='status'?workspaceStatusView():pop.kind==='steps'?workspaceStepsView():pop.kind==='scope'?workspaceScopeView(q):pop.kind==='deps'?workspaceDepsView(q):pop.kind==='files'?workspaceFilesView(q):workspaceAnchorView(Number(pop.kind.split(':')[1]));
   if(!view){workspacePopClose(true);return;}
   el.setAttribute('aria-label',view.label);
   var head=el.querySelector('.wf-pop-head'),body=el.querySelector('.wf-pop-body'),foot=el.querySelector('.wf-pop-foot');
@@ -873,6 +873,26 @@ function workspaceDepsView(q) {
   return {label:'Dependencies of a task or step',head:'<strong>Dependencies of…</strong>'+workspaceSegHTML('data-wf-depdir',[['up','⇡ Up'],['down','⇣ Down'],['both','⇅ Both']],_wfDepDirection),
     body:out||'<p class="wf-empty">'+(index||q?'Nothing matches.':'Loading steps…')+'</p>',foot:'Pick a task (its whole subtree) or a single step.'};
 }
+/* Declared files, code last, that match *q* on their path; best match first when typed. */
+var WORKSPACE_FILE_ROWS=60;
+function workspaceFileMatches(q) {
+  var files=Object.values(reproFiles());
+  if(q)return files.map(function(f){return {f:f,score:scoreSearchRecord({title:reproLeaf(f.logical),slug:f.logical},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).map(function(x){return x.f;});
+  return files.sort(function(a,b){return REPRO_TYPE_RANK[a.type]-REPRO_TYPE_RANK[b.type]||reproLeaf(a.logical).localeCompare(reproLeaf(b.logical));});
+}
+function workspaceFileRowHTML(f, anchors) {
+  var leaf=reproLeaf(f.logical),dir=f.logical.slice(0,f.logical.length-leaf.length);
+  return reproFileTypeTag(f.type)+'<span class="wf-grow wf-label">'+(anchors&&anchors.has('file:'+f.logical)?'✓ ':'')+escapeHtml(leaf)+'<small>'+escapeHtml(dir||'project root')+'</small></span><span class="wf-cnt" title="Steps that read it">'+f.readers.length+'</span>';
+}
+function workspaceFilesView(q) {
+  var head='<strong>File</strong>'+workspaceSegHTML('data-wf-depdir',[['up','⇡ Writer'],['down','⇣ Readers'],['both','⇅ Both']],_wfDepDirection);
+  if(!_reproData)return {label:'Writers and readers of a file',head:head,body:'<p class="wf-empty">Loading files…</p>'};
+  var anchors=new Set(_workspaceFilters.lineage.map(workspaceAnchorKey)),files=workspaceFileMatches(q),shown=files.slice(0,WORKSPACE_FILE_ROWS);
+  return {label:'Writers and readers of a file',head:head,
+    body:shown.map(function(f){return '<button type="button" class="wf-row wf-pick" data-wf-pick="file|'+escapeAttr(f.logical)+'" data-wf-key="pick:file|'+escapeAttr(f.logical)+'">'+workspaceFileRowHTML(f,anchors)+'</button>';}).join('')
+      +(files.length>shown.length?'<p class="wf-empty">'+(files.length-shown.length)+' more. Type to narrow.</p>':'')||'<p class="wf-empty">'+(q?'Nothing matches.':'No step declares a file.')+'</p>',
+    foot:'Pick a file to keep the steps that write or read it.'};
+}
 function workspaceAnchorView(i) {
   var a=_workspaceFilters.lineage[i];if(!a)return null;
   return {label:lineageAnchorLead(a)+' '+lineageAnchorLabel(a),head:'<strong>'+escapeHtml(lineageAnchorLabel(a))+'</strong>'+(a.file?'<small class="wf-path">'+escapeHtml(a.file)+'</small>':''),
@@ -887,7 +907,7 @@ function workspaceAddView(q) {
     sections.push('<div class="wf-row wf-option" role="option" id="wf-opt-'+items.length+'" data-wf-item="'+items.length+'">'+html+'</div>');items.push({primary:primary,secondary:secondary});}
   function done(){workspacePopClose(true);applyWorkspaceFilters(true);}
   if(!q){
-    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){if(f[0]==='scope')_wfScopeList='in';workspacePopShow(f[0]);});});
+    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…'],['files','Writers and readers of a file…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){if(f[0]==='scope')_wfScopeList='in';workspacePopShow(f[0]);});});
     WORKSPACE_QUICK_FILTERS.forEach(function(p){add('Quick filters','<span class="wf-grow wf-label">'+p.label+'<small>'+p.desc+'</small></span>',function(){p.apply(_workspaceFilters);done();});});
   } else {
     var statusCounts=workspaceFacetCounts('status'),stepCounts=workspaceFacetCounts('steps'),index=workspaceStepIndex();
@@ -897,6 +917,7 @@ function workspaceAddView(q) {
       add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,'in');done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p},'both');}:null);});
     if(index)(_reproData.graph.steps||[]).map(function(s){return {s:s,score:scoreSearchRecord({title:s.name},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var n=x.s.name;
       add('Steps',workspaceGlyphHTML(index.state[n])+'<span class="wf-grow wf-label is-step">'+escapeHtml(n)+'<small>'+escapeHtml(workspaceTaskTitle(x.s.task))+'</small></span>'+workspaceActsHTML('step',n,false),function(){workspacePopClose(true);addLineageAnchor({step:n},'both');});});
+    if(index)workspaceFileMatches(q).slice(0,6).forEach(function(f){add('Files',workspaceFileRowHTML(f),function(){workspacePopClose(true);addLineageAnchor({file:f.logical},'both');});});
     if(!items.length)sections.push('<p class="wf-empty">Nothing matches “'+escapeHtml(q)+'”.</p>');
   }
   return {label:'Add a filter',body:sections.join(''),
@@ -929,7 +950,7 @@ function onWorkspacePopClick(e) {
   else if((el=e.target.closest('[data-wf-scope-list]'))){_wfScopeList=el.dataset.wfScopeList;workspacePopRender();}
   else if((el=e.target.closest('[data-wf-setdir]'))){var anchor=_workspaceFilters.lineage[Number(pop.kind.split(':')[1])];if(anchor){anchor.direction=el.dataset.wfSetdir;applyWorkspaceFilters(true);}}
   else if((el=e.target.closest('[data-wf-depdir]'))){_wfDepDirection=el.dataset.wfDepdir;workspacePopRender();}
-  else if((el=e.target.closest('[data-wf-pick]'))){var p=el.dataset.wfPick,step=p.indexOf('step|')===0,value=p.slice(5);workspacePopClose(true);addLineageAnchor(step?{step:value}:{task:value},_wfDepDirection);}
+  else if((el=e.target.closest('[data-wf-pick]'))){var p=el.dataset.wfPick,pick={};pick[p.slice(0,4)]=p.slice(5);workspacePopClose(true);addLineageAnchor(pick,_wfDepDirection);}
   else if(e.target.closest('[data-wf-another]'))workspacePopShow('deps');
   else if((el=e.target.closest('[data-wf-item]'))){pop.hl=Number(el.dataset.wfItem);pop.items[pop.hl].primary();}
 }
@@ -2214,11 +2235,14 @@ function reproStepCode(step){return (step.deps||[]).filter(function(d){return re
 /* The selected step's files as ports beside its card: inputs on the left,
    outputs on the right. REPRO_PORT_CAP show per side; the full list groups by
    folder once it passes REPRO_PORT_GROUP. */
-var REPRO_PORT_CAP=5,REPRO_PORT_GROUP=12,_reproPortsOpen={step:''};
+/* A file row in the graph previews only after a long hover, so passing over
+   the rows to follow a wire opens nothing. */
+var REPRO_PORT_CAP=5,REPRO_PORT_GROUP=12,REPRO_PORT_PEEK_MS=1500,_reproPortsOpen={step:''};
 function reproPortHTML(f,side,nested){
   var meta=side==='in'?(f.producers.length>1?f.producers.length+' steps':f.producers[0]||'external'):(f.readers.length?'→ '+f.readers.length:'final');
   var open=!nested&&!!(_reproPortsOpen.folders||{})[f.logical],pinned=_reproPortsOpen.pinned===f.logical,value=escapeAttr(f.logical);
-  return '<div class="rp-port-row'+(pinned?' is-pinned':'')+'"><button type="button" class="rp-port" data-rp-action="file-pin" data-value="'+value+'" aria-pressed="'+pinned+'" aria-label="'+escapeAttr(reproFileSummary(f))+'">'
+  var peek=window.STANDALONE||f.type==='folder'?'':' data-peek="'+escapeAttr(f.resolved)+'" data-peek-delay="'+REPRO_PORT_PEEK_MS+'"';
+  return '<div class="rp-port-row'+(pinned?' is-pinned':'')+'"><button type="button" class="rp-port" data-rp-action="file-pin" data-value="'+value+'"'+peek+' aria-pressed="'+pinned+'" aria-label="'+escapeAttr(reproFileSummary(f))+'">'
     +reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span><span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>'
     +'<span class="rp-port-acts"><button type="button" class="rp-port-act" data-rp-action="file-filter" data-value="'+value+'" title="Show only the steps that write or read this file">Filter</button>'
     +'<button type="button" class="rp-port-act" data-rp-action="file-open" data-value="'+value+'" title="Show this file in the details pane">Open</button></span>'
@@ -2860,12 +2884,20 @@ function reproFileList(files, task) {
    image or PDF loads from /files/ only under the server's preview limit, and
    pdf.js is imported on the first PDF hover, never at page load. */
 var FILE_PEEK_DELAY_MS = 250, FILE_PEEK_PDF_BUDGET_MS = 3000, FILE_PEEK_WIDTH = 320;
+/* Extension -> highlight.js language for a text preview; anything else stays plain. */
+var FILE_PEEK_LANGUAGES = { py: 'python', jl: 'julia', r: 'r', sh: 'bash', json: 'json', ipynb: 'json', md: 'markdown',
+  yaml: 'yaml', yml: 'yaml', toml: 'ini', html: 'xml', xml: 'xml', sql: 'sql', js: 'javascript', css: 'css' };
 var _filePeekTimer = null, _filePeekToken = 0, _filePeekTask = null, _filePeekThumbs = new Map(), _pdfjs = null;
 function filePeekSchedule(anchor) {
   clearTimeout(_filePeekTimer);
   var card = document.getElementById('file-peek');
   if (anchor && card && card._anchor === anchor) return;
-  _filePeekTimer = setTimeout(function() { if (anchor && anchor.isConnected) filePeekShow(anchor); else filePeekClose(); }, anchor ? FILE_PEEK_DELAY_MS : 150);
+  /* The wait can outlast a redraw of the anchor, so the card goes to whichever
+     element for the same file the pointer or the focus rests on by then. */
+  _filePeekTimer = setTimeout(function() {
+    var live = anchor && (anchor.isConnected ? anchor : Array.from(document.querySelectorAll('[data-peek]:hover')).find(function(a) { return a.dataset.peek === anchor.dataset.peek; }));
+    if (live && live.matches(':hover, :focus-visible')) filePeekShow(live); else filePeekClose();
+  }, anchor ? Number(anchor.dataset.peekDelay) || FILE_PEEK_DELAY_MS : 150);
 }
 function filePeekClose() {
   clearTimeout(_filePeekTimer);
@@ -2919,9 +2951,8 @@ function filePeekRender(card, path, peek, token) {
   if (peek.online_only) { note(onlineOnlyNote(peek)); return; }
   note(projectFileMeta(peek) + ' · modified ' + new Date(peek.mtime_ns / 1e6).toLocaleString());
   if (peek.head != null) {
-    var pre = document.createElement('pre');
+    var pre = renderArtifactCode(peek.head + (peek.truncated ? '\n…' : ''), FILE_PEEK_LANGUAGES[path.slice(path.lastIndexOf('.') + 1).toLowerCase()]);
     pre.className = 'repro-log file-peek-text';
-    pre.textContent = peek.head + (peek.truncated ? '\n…' : '');
     body.appendChild(pre);
   } else if ((peek.kind === 'image' || peek.kind === 'pdf') && !peek.previewable) {
     note(artifactUnavailableReason(peek));
@@ -3007,7 +3038,9 @@ document.addEventListener('focusin', function(e) {
 });
 document.addEventListener('focusout', function(e) { if (e.target.matches('[data-peek]')) filePeekSchedule(null); });
 ['scroll', 'keydown'].forEach(function(type) {
-  document.addEventListener(type, function(e) { if (type === 'scroll' || e.key === 'Escape') filePeekClose(); }, true);
+  /* A scroll closes an open card, which would drift off its anchor; a card
+     still waiting to open is left to check its anchor when the wait ends. */
+  document.addEventListener(type, function(e) { if (type === 'scroll' ? document.getElementById('file-peek') : e.key === 'Escape') filePeekClose(); }, true);
 });
 
 /* A project file shown in the reading pane — the remote viewer's stand-in for
