@@ -568,7 +568,8 @@ def test_remote_file_links_open_the_reading_pane(browser, workspace):
     page.locator('[data-rp-action=fold][data-value="analysis-0"]').click()
     page.wait_for_selector('#repro-node-step-0-0')
     page.locator('#repro-node-step-0-0').dispatch_event('click')
-    link = page.locator('#repro-detail [data-peek="out/0-0.txt"]')
+    page.locator('#repro-detail .rp-port-row:has([data-value="out/0-0.txt"]) [data-rp-action=file-open]').dispatch_event('click')
+    link = page.locator('#repro-detail .repro-file-detail a.hc-btn')
     assert link.get_attribute('href') == '#/analysis-0?file=out%2F0-0.txt'
     link.tap()
     page.wait_for_selector('#active-node :text("Not built yet.")')

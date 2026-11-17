@@ -1456,3 +1456,94 @@ class TestFileTracingBrowser:
             assert page.evaluate("document.querySelector('.rp-files-menu').open")
             assert '"types":["code"]' in unquote(page.evaluate("location.href"))
             browser.close()
+
+    def test_step_reader_lists_files_as_rows_naming_the_connected_step(self, tmp_path):
+        """The step's details pane lists its inputs and outputs as file rows that
+        name the writer or the readers and carry Filter and Open; the Connected
+        steps list is gone."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        rows = "rows => rows.map(r => r.firstChild.dataset.value + ' ' + r.querySelector('.rp-port-meta').innerText + ' ' + r.querySelectorAll('.rp-port-act').length)"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, "use-b"))
+            page.wait_for_selector("#repro-detail .repro-file-rows")
+            assert "Connected steps" not in page.inner_text("#repro-detail")
+            assert page.locator("#repro-detail .repro-file-rows").first.locator(".rp-port-row").evaluate_all(rows) == ["out/b_summary.csv final 2"]
+            page.click('#repro-detail [data-detail-section="inputs"] > summary')
+            assert page.locator('#repro-detail [data-detail-section="inputs"] .rp-port-row').evaluate_all(rows) == [
+                "code/use_b.sh external 2", "out/a.parquet make-data 2", "out/b.csv make-data 2",
+            ]
+
+            page.goto(_graph_url(export, "make-data"))
+            page.reload()
+            page.wait_for_selector("#repro-detail .repro-file-rows")
+            first = page.locator("#repro-detail .rp-port-row").first
+            assert first.evaluate("r => r.querySelector('.rp-port-meta').innerText") == "→ use-a +1"
+            assert "out/" in page.locator("#repro-detail .rp-port-note").first.inner_text()
+
+            # Open from the reader shows the file; Filter adds the file chip.
+            first.hover()
+            first.locator('[data-rp-action="file-open"]').click()
+            page.wait_for_selector(".repro-file-detail")
+            assert page.inner_text(".repro-file-detail .repro-detail-name") == "out/a.parquet"
+            page.click('.repro-file-detail [data-rp-action="file-close"]')
+            page.wait_for_selector("#repro-detail .repro-file-rows")
+            first = page.locator("#repro-detail .rp-port-row").first
+            first.hover()
+            first.locator('[data-rp-action="file-filter"]').click()
+            page.wait_for_selector(".wf-chip")
+            assert "a.parquet" in page.inner_text(".wf-chip")
+            browser.close()
+
+    def test_header_search_finds_an_input_file_and_filters_to_it(self, tmp_path):
+        """The search palette lists external inputs as File results, each with
+        the file filter."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        steps = "() => [...document.querySelectorAll('.repro-node')].map(n => n.dataset.step).sort()"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export))
+            page.wait_for_selector(".repro-node")
+            page.evaluate("openSearchPalette()")
+            page.fill("#search-palette-input", "in.csv")
+            result = page.locator(".search-result", has_text="raw/in.csv")
+            result.wait_for()
+            assert "File" in result.locator(".search-result-path").inner_text()
+            result.locator(".search-result-filter").dispatch_event("mousedown")
+            page.wait_for_selector(".wf-chip")
+            assert "in.csv" in page.inner_text(".wf-chip")
+            assert page.evaluate(steps) == ["make-data"]
+            browser.close()
+
+    def test_the_open_file_is_part_of_the_url(self, tmp_path):
+        """A reload or a shared link reopens the file shown in the details pane;
+        Back to step drops it from the URL."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, "make-data"))
+            page.wait_for_selector(".rp-ports-out .rp-port")
+            row = page.locator(".rp-ports-out .rp-port-row").first
+            row.hover()
+            row.locator('[data-rp-action="file-open"]').click()
+            page.wait_for_selector(".repro-file-detail")
+            url = page.evaluate("location.href")
+            assert '"file":"out/a.parquet"' in unquote(url)
+
+            again = browser.new_page(viewport={"width": 1400, "height": 900})
+            again.goto(url)
+            again.wait_for_selector(".repro-file-detail")
+            assert again.inner_text(".repro-file-detail .repro-detail-name") == "out/a.parquet"
+            again.click('.repro-file-detail [data-rp-action="file-close"]')
+            again.wait_for_selector("#repro-detail .repro-file-rows")
+            assert '"file"' not in unquote(again.evaluate("location.href"))
+            browser.close()

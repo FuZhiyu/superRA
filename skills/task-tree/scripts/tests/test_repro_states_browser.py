@@ -190,16 +190,17 @@ def test_panel_names_the_own_evidence_the_origin_and_each_online_only_file(brows
     assert own.locator('[data-rp-action=related]').inner_text() == 'clean'
     summary = page.locator('#repro-detail .repro-online-summary').inner_text()
     assert '1 file online-only here (2.3 MiB).' in summary
-    online = page.locator('#repro-detail li.is-online-only')
-    assert online.count() == 1 and '2.3 MiB' in online.inner_text()
+    online = page.locator('#repro-detail .rp-port-row.is-online-only')
+    assert online.count() == 1
+    assert '2.3 MiB' in page.locator('#repro-detail .rp-port-note .repro-cloud-tag').inner_text()
     # Settle before hovering: the worktree selector's reveal shifts the panel
     # under a still pointer, and the scroll that brings the link into view
     # closes the peek when its event fires after the hover.
     page.evaluate('fetchWorktrees()')
     page.evaluate('document.fonts.ready')
-    online.locator('a').scroll_into_view_if_needed()
+    online.locator('.rp-port').scroll_into_view_if_needed()
     page.evaluate('new Promise(requestAnimationFrame)')
-    online.locator('a').hover()
+    online.locator('.rp-port').hover()
     page.wait_for_selector('#file-peek :text("Online-only here (2.3 MiB)")')
     page.mouse.move(2, 2)
     page.evaluate("revealReproStep('merge')")
