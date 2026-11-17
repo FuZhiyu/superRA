@@ -2766,6 +2766,15 @@ html[data-doc-mode] .task-row-more { display:none !important; }
 .rp-port-fold { flex:none;width:22px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--text-mute);font:inherit;cursor:pointer; }
 .rp-port-fold:hover,.rp-port-fold:focus-visible { background:var(--bg-hover);color:var(--text); }
 .rp-port-members { margin:0 0 4px 9px;padding-left:6px;border-left:1px solid var(--border); }
+.repro-file-rows { margin:10px 0 0;font:var(--fs-meta) var(--font-mono); }
+.repro-file-rows .rp-port-row .rp-port-meta,.repro-file-rows .rp-port-row:hover .rp-port-meta,.repro-file-rows .rp-port-row:focus-within .rp-port-meta,.repro-file-rows .rp-port-row.is-pinned .rp-port-meta { display:flex;flex:none;align-items:center;gap:4px;max-width:60%;margin-left:8px;padding-right:6px;white-space:nowrap; }
+.repro-file-rows .rp-port-meta .hc-btn { height:auto;padding:1px 4px;border:0;background:transparent;color:var(--accent);font:inherit;white-space:nowrap; }
+.repro-file-rows .rp-port-meta .hc-btn:hover,.repro-file-rows .rp-port-meta .hc-btn:focus-visible { background:var(--bg-hover);text-decoration:underline; }
+.repro-file-rows .rp-port-meta .repro-hint { margin:0; }
+.rp-port-more-steps { padding:1px 5px;border:0;border-radius:4px;background:transparent;color:var(--accent);font:inherit;cursor:pointer; }
+.rp-port-more-steps:hover,.rp-port-more-steps:focus-visible { background:var(--bg-hover); }
+.search-palette-foot { padding:6px 12px;border-top:1px solid var(--border-lt);color:var(--text-mute);font:var(--fs-micro) var(--font-mono); }
+.rp-port-note { padding:0 6px 6px 20px;color:var(--text-mute);font-size:var(--fs-micro);overflow-wrap:anywhere; }
 .rp-port { display:flex;align-items:baseline;width:100%;box-sizing:border-box;padding:4px 6px;border:0;border-radius:4px;background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer; }
 .rp-port:hover,.rp-port:focus-visible { background:var(--bg-hover); }
 .rp-port-name { flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
