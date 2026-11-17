@@ -1245,12 +1245,51 @@ class TestFileTracingBrowser:
             assert page.locator(".is-file-end").count() == 3
             assert "read by 2 steps" in page.inner_text("#repro-connection-label")
 
+            # A click pins the highlight and filters nothing.
+            first.click()
+            page.mouse.move(5, 5)
+            page.wait_for_selector(".rp-ports-out .rp-port-row.is-pinned")
+            assert page.locator(".rp-wire.is-file-lit").count() == 2
+            assert page.locator(".wf-chip").count() == 0
+            assert page.locator(".repro-node").count() == 8
+
             page.click(".rp-ports-out .rp-port-more")
             assert page.locator(".rp-ports-out .rp-port").count() == 7
             browser.close()
 
+    def test_open_shows_the_file_in_the_details_pane(self, tmp_path):
+        """Open replaces the step's details with the file: its full path, the
+        steps that write and read it, and a way back to the step."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, "make-data"))
+            page.wait_for_selector(".rp-ports-out .rp-port")
+            row = page.locator(".rp-ports-out .rp-port-row").first
+            row.hover()
+            row.locator('[data-rp-action="file-open"]').click()
+            page.wait_for_selector(".repro-file-detail")
+            assert page.inner_text(".repro-file-detail .repro-detail-name") == "out/a.parquet"
+            sections = page.locator(".repro-file-detail .repro-detail-section").all_inner_texts()
+            assert any("Written by" in s and "make-data" in s for s in sections)
+            assert any("Read by" in s and "use-a" in s and "use-b" in s for s in sections)
+            assert page.locator(".wf-chip").count() == 0
+
+            # The pane follows the pinned file, and Back returns to the step.
+            page.locator('.rp-ports-out .rp-port[data-value="out/b.csv"]').click()
+            page.wait_for_function(
+                "() => document.querySelector('.repro-file-detail .repro-detail-name').innerText === 'out/b.csv'"
+            )
+            page.click('.repro-file-detail [data-rp-action="file-close"]')
+            page.wait_for_selector(".repro-detail:not(.repro-file-detail)")
+            assert "make-data" in page.inner_text(".repro-detail .repro-detail-name")
+            browser.close()
+
     def test_file_filter_keeps_the_writer_readers_and_their_wires(self, tmp_path):
-        """Clicking a file adds a filter chip; the map keeps the file's writer,
+        """A file's Filter button adds a filter chip; the map keeps the file's writer,
         its readers, and only the wires that carry it, and the URL restores it."""
         from playwright.sync_api import sync_playwright
 
@@ -1262,7 +1301,9 @@ class TestFileTracingBrowser:
             page = browser.new_page(viewport={"width": 1400, "height": 900})
             page.goto(_graph_url(export, "make-data"))
             page.wait_for_selector(".rp-ports-out .rp-port")
-            page.locator(".rp-ports-out .rp-port").first.click()
+            row = page.locator(".rp-ports-out .rp-port-row").first
+            row.hover()
+            row.locator('[data-rp-action="file-filter"]').click()
             page.wait_for_selector(".wf-chip")
             assert "a.parquet" in page.inner_text(".wf-chip")
             assert page.evaluate(steps) == ["make-data", "use-a", "use-b"]

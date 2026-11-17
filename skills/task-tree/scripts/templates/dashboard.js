@@ -1587,6 +1587,7 @@ function reproChannels(entry) {
 
 var _reproData = null, _reproPending = null, _reproLoadSeq = 0;
 var _reproSelected = '', _reproLinkOwner = null;
+var _reproFile = ''; /* the file the details pane shows in place of the step */
 var _reproNav = { selected: '', expanded: [] };
 var _reproEntered = false, _reproReaderFull = false, _reproReaderClosed = false, _reproLegacyReveal = false;
 var _reproNotice = '', _reproLayoutCache = null;
@@ -1727,7 +1728,7 @@ function reproReadHash() {
     _reproHiddenTypes=workspaceStrings(n.types,REPRO_FILE_TYPES.map(function(t){return t.key;}));
     _reproNav={expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
       selected:step||(typeof n.selected==='string'?n.selected:'')};
-    _reproSelected=_reproNav.selected;_reproNotice='';
+    _reproSelected=_reproNav.selected;_reproNotice='';_reproFile='';
     _reproLinkOwner=step?parseHash():null;
     _reproInspectorClosed=false;_reproEntered=true;
     _reproLegacyReveal=!!step||!!(n.roots||n.mode||n.tier)||!Array.isArray(n.expanded);
@@ -2216,12 +2217,13 @@ function reproStepCode(step){return (step.deps||[]).filter(function(d){return re
 var REPRO_PORT_CAP=5,REPRO_PORT_GROUP=12,_reproPortsOpen={step:''};
 function reproPortHTML(f,side,nested){
   var meta=side==='in'?(f.producers.length>1?f.producers.length+' steps':f.producers[0]||'external'):(f.readers.length?'→ '+f.readers.length:'final');
-  var open=!!(_reproPortsOpen.folders||{})[f.logical];
-  if(f.members.length&&!nested)return '<div class="rp-port-row">'+reproPortHTML(f,side,true)
-    +'<button type="button" class="rp-port-fold" data-rp-action="port-fold" data-value="'+escapeAttr(f.logical)+'" aria-expanded="'+open+'" aria-label="'+escapeAttr((open?'Hide the ':'Show the ')+f.members.length+' declared files in '+f.logical)+'" title="'+f.members.length+' declared files">'+(open?'▾':'▸')+'</button></div>'
+  var open=!nested&&!!(_reproPortsOpen.folders||{})[f.logical],pinned=_reproPortsOpen.pinned===f.logical,value=escapeAttr(f.logical);
+  return '<div class="rp-port-row'+(pinned?' is-pinned':'')+'"><button type="button" class="rp-port" data-rp-action="file-pin" data-value="'+value+'" aria-pressed="'+pinned+'" aria-label="'+escapeAttr(reproFileSummary(f))+'">'
+    +reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span><span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>'
+    +'<span class="rp-port-acts"><button type="button" class="rp-port-act" data-rp-action="file-filter" data-value="'+value+'" title="Show only the steps that write or read this file">Filter</button>'
+    +'<button type="button" class="rp-port-act" data-rp-action="file-open" data-value="'+value+'" title="Show this file in the details pane">Open</button></span>'
+    +(f.members.length&&!nested?'<button type="button" class="rp-port-fold" data-rp-action="port-fold" data-value="'+value+'" aria-expanded="'+open+'" aria-label="'+escapeAttr((open?'Hide the ':'Show the ')+f.members.length+' declared files in '+f.logical)+'" title="'+f.members.length+' declared files">'+(open?'▾':'▸')+'</button>':'')+'</div>'
     +(open?'<div class="rp-port-members">'+f.members.map(function(p){return reproPortHTML(reproFiles()[p],side,true);}).join('')+'</div>':'');
-  return '<button type="button" class="rp-port" data-rp-action="file" data-value="'+escapeAttr(f.logical)+'"'+(!window.STANDALONE?' data-peek="'+escapeAttr(f.resolved)+'"':'')
-    +' aria-label="'+escapeAttr('Filter to '+reproFileSummary(f))+'">'+reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span><span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>';
 }
 function reproFileSummary(f){
   return f.logical+' · '+(f.producers.length>1?'written by '+f.producers.length+' steps':f.producers.length?'written by '+f.producers[0]:'external input')+' · '+(f.readers.length?'read by '+f.readers.length+' step'+(f.readers.length===1?'':'s'):'no step reads it');
@@ -2252,6 +2254,7 @@ function reproDrawPorts(container){
   var step=_reproSelected&&_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===_reproSelected;});
   if(!plot||!pos||!step||!document.getElementById(reproNodeId(_reproSelected)))return;
   plot.insertAdjacentHTML('beforeend',reproPortsHTML(step,'in',pos)+reproPortsHTML(step,'out',pos));
+  reproHighlightFile(container,_reproPortsOpen.pinned||null);
 }
 /* Light the wires that carry *path* and the cards of its writer and readers. */
 function reproHighlightFile(container,path){
@@ -2272,8 +2275,8 @@ function reproTypeMenuHTML(graph){
   }).join('');
 }
 function reproBindEdges(container){
-  container.onpointerover=function(e){var wire=e.target.closest('.rp-wire');if(wire)reproHighlightEdge(container,wire);var port=e.target.closest('.rp-port');if(port)reproHighlightFile(container,port.dataset.value);};
-  container.onpointerout=function(e){if(e.target.closest('.rp-wire'))reproHighlightEdge(container,container.querySelector('.rp-wire:focus'));if(e.target.closest('.rp-port')&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.rp-port')===e.target.closest('.rp-port')))reproHighlightFile(container,null);};
+  container.onpointerover=function(e){var wire=e.target.closest('.rp-wire');if(wire)reproHighlightEdge(container,wire);var row=e.target.closest('.rp-port-row');if(row)reproHighlightFile(container,row.firstChild.dataset.value);};
+  container.onpointerout=function(e){if(e.target.closest('.rp-wire'))reproHighlightEdge(container,container.querySelector('.rp-wire:focus'));var row=e.target.closest('.rp-port-row');if(row&&!(e.relatedTarget&&row.contains(e.relatedTarget)))reproHighlightFile(container,_reproPortsOpen.pinned||null);};
   container.onchange=function(e){
     var box=e.target.closest('[data-rp-type]');if(!box)return;
     _reproHiddenTypes=REPRO_FILE_TYPES.map(function(t){return t.key;}).filter(function(k){return k===box.dataset.rpType?!box.checked:_reproHiddenTypes.indexOf(k)>=0;});
@@ -2281,7 +2284,7 @@ function reproBindEdges(container){
   };
   ['focusin','focusout'].forEach(function(type){container.removeEventListener(type,reproEdgeFocus);container.addEventListener(type,reproEdgeFocus);});
 }
-function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);var port=event.target.closest('.rp-port');if(port)reproHighlightFile(event.currentTarget,event.type==='focusin'?port.dataset.value:null);}
+function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);var row=event.target.closest('.rp-port-row');if(row)reproHighlightFile(event.currentTarget,event.type==='focusin'?row.firstChild.dataset.value:_reproPortsOpen.pinned||null);}
 function reproGraphHTML(lay,statuses) {
   var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
   html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
@@ -2409,7 +2412,7 @@ function reproRevealOwner(path){
   var expanded=new Set(_reproNav.expanded||[]);var p=path;expanded.add(p);while(p){p=parentPath(p);expanded.add(p);}_reproNav.expanded=Array.from(expanded);
 }
 function reproSelectTask(path){
-  _reproNav.selected='';_reproSelected='';_reproInspectorClosed=false;
+  _reproNav.selected='';_reproSelected='';_reproFile='';_reproInspectorClosed=false;
   setActive(path);renderReproDetail('');reproReaderControls();
   var notice=document.getElementById('repro-notice');if(notice)notice.textContent='';
   document.querySelectorAll('.rp-task').forEach(function(n){
@@ -2664,7 +2667,17 @@ function onReproClick(event) {
     else if(action==='open'||action==='related')revealReproStep(value);
     else if(action==='select')selectReproStep(value);
     else if(action==='lineage-step')addLineageAnchor({step:value});
-    else if(action==='file')addLineageAnchor({file:value});
+    else if(action==='file-filter')addLineageAnchor({file:value});
+    else if(action==='file-pin'||action==='file-open'){
+      /* A click pins the file's highlight; Open also shows it in the details pane, which then follows the pin. */
+      var view=document.getElementById('view-reproduction'),inPane=!!control.closest('#repro-detail');
+      if(action==='file-open'){_reproPortsOpen.pinned=value;_reproFile=value;_reproInspectorClosed=false;if(_reproReaderClosed)reproSetReader(true);}
+      else{_reproPortsOpen.pinned=_reproPortsOpen.pinned===value?'':value;if(_reproFile)_reproFile=_reproPortsOpen.pinned||_reproFile;}
+      reproDrawPorts(view);renderReproDetail(_reproSelected);
+      var again=inPane?document.querySelector('.repro-file-detail .repro-detail-title'):Array.from(view.querySelectorAll('.rp-port-row [data-rp-action='+action+']')).find(function(b){return b.dataset.value===value;});
+      if(again)again.focus({preventScroll:true});
+    }
+    else if(action==='file-close'){_reproFile='';renderReproDetail(_reproSelected);}
     else if(action==='port-fold'){
       var folds=_reproPortsOpen.folders||(_reproPortsOpen.folders={});folds[value]=!folds[value];
       reproDrawPorts(document.getElementById('view-reproduction'));
@@ -2729,6 +2742,7 @@ function reproScopeHTML(drawn,anchor,set) {
 }
 function selectReproStep(name) {
   var step=(_reproData.graph.steps||[]).find(function(s){return s.name===name;});if(!step)return;
+  _reproFile='';
   _reproSelected = name;
   _reproNav.selected = name;
   var oldRestoring=restoring;restoring=true;setActive(step.task);restoring=oldRestoring;reproReaderControls();
@@ -2760,14 +2774,39 @@ function reproOnlineSummary(files) {
     + (sizes.length ? ' (' + formatArtifactBytes(total) + (sizes.length < online.length ? ' known' : '') + ')' : '')
     + '. Before downloading, read <code>references/online-only-files.md</code> in the superRA:reproducibility skill.</p>';
 }
+/* Where a declared file's link leads: the repository, the local editor, or the dashboard's file page. */
+function reproFileLinkAttrs(resolved, task) {
+  return REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
+    :(window.LOCAL_OPEN||window.STANDALONE)?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank"'+(window.LOCAL_OPEN?' data-open-path="'+escapeAttr(resolved)+'"':'')
+    :projectFileLinkAttrs(task||'',resolved);
+}
+/* The details pane on one file: its path, a preview, the steps that write and read it. */
+function renderReproFile(host) {
+  var f=reproFiles()[_reproFile],step=(_reproData.graph.steps||[]).find(function(s){return s.name===_reproSelected;});
+  function stepsHTML(names,empty){return names.length?names.map(function(n){return '<div class="repro-related">'+reproButton(n,'related',n)+'</div>';}).join(''):'<p class="repro-hint">'+empty+'</p>';}
+  document.getElementById('task-preview').classList.add('step-reading');
+  host.dataset.step='';host.dataset.file=f.logical;
+  host.innerHTML='<article class="repro-detail repro-file-detail"><div class="repro-detail-context">'+reproButton(step?'← Back to step':'← Back to task','file-close')+'<span>'+REPRO_TYPE_LABEL[f.type]+(f.type==='folder'?'':' file')+'</span></div>'
+    +'<header class="repro-detail-head"><h2 class="repro-detail-title" tabindex="-1">'+reproFileTypeTag(f.type)+escapeHtml(reproLeaf(f.logical))+'</h2><code class="repro-detail-name">'+escapeHtml(f.logical)+'</code></header>'
+    +'<div class="repro-detail-actions">'+reproButton('Filter to file','file-filter',f.logical)+'<a class="hc-btn"'+reproFileLinkAttrs(f.resolved,step?step.task:activePath)+'>Open file</a></div>'
+    +'<section class="repro-detail-section"><h3>Preview</h3><div class="repro-file-preview"><div class="file-peek-body"><p class="repro-hint">'+(window.STANDALONE?'No preview in the offline export.':'Loading…')+'</p></div></div></section>'
+    +'<section class="repro-detail-section"><h3>Written by <span>'+f.producers.length+'</span></h3>'+stepsHTML(f.producers,'No step writes it: an external input.')+'</section>'
+    +'<section class="repro-detail-section"><h3>Read by <span>'+f.readers.length+'</span></h3>'+stepsHTML(f.readers,'No step reads it.')+'</section>'
+    +(f.members.length?'<section class="repro-detail-section"><h3>Declared files inside <span>'+f.members.length+'</span></h3>'+f.members.map(function(p){return '<div class="repro-related">'+reproButton(reproLeaf(p),'file-open',p,'Show '+p)+'</div>';}).join('')+'</section>':'')+'</article>';
+  if(window.STANDALONE)return;
+  var card=host.querySelector('.repro-file-preview'),token=_filePeekToken,path=f.resolved;
+  fetch(wtUrl('/api/file-peek?path='+encodeURIComponent(path))).then(function(resp){
+    if(!resp.ok)throw new Error(resp.status===403?'Outside the project — no preview.':'Preview unavailable ('+resp.status+').');
+    return resp.json();
+  }).then(function(peek){if(host.dataset.file===f.logical&&card.isConnected)filePeekRender(card,path,peek,token);
+  }).catch(function(e){if(card.isConnected)card.lastChild.firstChild.textContent=e.message;});
+}
 function reproFileList(files, task) {
   if (!files.length) return '<p class="repro-hint">No files declared.</p>';
   return '<ul class="repro-files">' + files.map(function(file) {
     var ref=file.path||file, logical=ref.logical||'', resolved=ref.resolved||logical;
     var slash=logical.lastIndexOf('/'), leaf=logical.slice(slash+1), dir=logical.slice(0,slash+1);
-    var attrs=REPO_FILE_BASE?' href="'+escapeAttr(repoFileHref(resolved))+'" target="_blank"'
-      :(window.LOCAL_OPEN||window.STANDALONE)?' href="'+escapeAttr(vscodeFileUri(resolved.startsWith('/')?resolved:PROJECT_ROOT+'/'+resolved))+'" target="_blank"'+(window.LOCAL_OPEN?' data-open-path="'+escapeAttr(resolved)+'"':'')
-      :projectFileLinkAttrs(task||'',resolved);
+    var attrs=reproFileLinkAttrs(resolved,task);
     var link='<a'+attrs+(!window.STANDALONE?' data-peek="'+escapeAttr(resolved)+'"':'')+'>'+escapeHtml(leaf||logical)+'</a>';
     var cloud=file.online?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only'+(file.online.size!=null?' · '+formatArtifactBytes(file.online.size):'')+'</span>':'';
     return '<li'+(file.online?' class="is-online-only"':'')+'><div class="repro-file-name">'+link+cloud+'</div>'+(dir?'<div class="repro-file-dir">'+escapeHtml(dir)+'</div>':'')
@@ -2964,6 +3003,9 @@ function reproDisclosure(key, label, content, open) {
 function renderReproDetail(name) {
   var host=document.getElementById('repro-detail');
   if(!host)return;
+  var files=_reproFile&&!_reproInspectorClosed&&reproFiles();
+  if(files&&files[_reproFile]){renderReproFile(host);return;}
+  host.removeAttribute('data-file');
   var step=_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===name;});
   var visible=!!step&&!_reproInspectorClosed;
   document.getElementById('task-preview').classList.toggle('step-reading',visible);
@@ -3515,7 +3557,7 @@ function parseArtifactHash() {
    restoring), then refreshes every derived region. */
 function setActive(path, artifactPath) {
   path = path || '';
-  if(!restoring){_reproSelected='';_reproNav.selected='';renderReproDetail('');}
+  if(!restoring){_reproSelected='';_reproNav.selected='';_reproFile='';renderReproDetail('');}
   activePath = path;
   activeArtifactPath = artifactPath || '';
 

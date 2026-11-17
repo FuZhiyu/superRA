@@ -2748,8 +2748,19 @@ html[data-doc-mode] .task-row-more { display:none !important; }
 .rp-ports-in { transform:translateX(calc(-100% - 20px)); }
 .rp-ports-head { padding:2px 6px 5px;color:var(--text-mute);font-size:var(--fs-micro);text-transform:uppercase;letter-spacing:.06em; }
 .rp-ports.is-open .rp-ports-list { max-height:340px;overflow:auto;overscroll-behavior:contain; }
-.rp-port-row { display:flex;align-items:stretch; }
+.rp-port-row { display:flex;align-items:stretch;border-radius:4px; }
 .rp-port-row .rp-port { flex:1 1 auto;min-width:0; }
+.rp-port-row:hover,.rp-port-row:focus-within,.rp-port-row.is-pinned { background:var(--bg-hover); }
+.rp-port-row.is-pinned { box-shadow:inset 2px 0 0 var(--accent); }
+.rp-port-acts { display:none;flex:none;align-items:center;gap:2px;padding-right:2px; }
+.rp-port-row:hover .rp-port-acts,.rp-port-row:focus-within .rp-port-acts,.rp-port-row.is-pinned .rp-port-acts { display:flex; }
+.rp-port-row:hover .rp-port-meta,.rp-port-row:focus-within .rp-port-meta,.rp-port-row.is-pinned .rp-port-meta { display:none; }
+.rp-port-act { padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-card);color:var(--text-mid);font:var(--fs-micro) var(--font-mono);cursor:pointer; }
+.rp-port-act:hover,.rp-port-act:focus-visible { color:var(--accent);border-color:var(--accent); }
+.repro-file-detail .repro-detail-title .rp-ft { width:11px;height:11px;margin-right:10px; }
+.repro-file-preview .file-peek-body img { max-height:none;width:100%;margin:8px 0 0;border:1px solid var(--border-lt); }
+.repro-file-preview .file-peek-text { max-height:420px;overflow:auto; }
+.repro-file-detail a.hc-btn { display:inline-flex;align-items:center;text-decoration:none; }
 .rp-port-fold { flex:none;width:22px;padding:0;border:0;border-radius:4px;background:transparent;color:var(--text-mute);font:inherit;cursor:pointer; }
 .rp-port-fold:hover,.rp-port-fold:focus-visible { background:var(--bg-hover);color:var(--text); }
 .rp-port-members { margin:0 0 4px 9px;padding-left:6px;border-left:1px solid var(--border); }
