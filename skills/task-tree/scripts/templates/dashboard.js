@@ -542,8 +542,9 @@ function normalizeWorkspaceFilters(value) {
   out.lineage=normalizeLineageFilter(value.lineage);
   return out;
 }
-function workspaceAnchorKey(a) { return a.step?'step:'+a.step:'task:'+a.task; }
-/* Dependency anchors, each {task} or {step} with its direction. A legacy
+function workspaceAnchorKey(a) { return a.file?'file:'+a.file:a.step?'step:'+a.step:'task:'+a.task; }
+/* Dependency anchors, each {task}, {step}, or {file} with its direction. A file
+   anchor covers the step that writes it (up) and the steps that read it (down). A legacy
    {anchors, direction} object gives every anchor the shared direction. */
 function normalizeLineageFilter(value) {
   var legacy=!!value&&!Array.isArray(value)&&Array.isArray(value.anchors),shared=legacy&&['up','down'].includes(value.direction)?value.direction:'both';
@@ -551,7 +552,7 @@ function normalizeLineageFilter(value) {
   return (Array.isArray(value)?value:legacy?value.anchors:[]).map(function(a){
     if(!a)return null;
     var direction=legacy?shared:['up','down'].includes(a.direction)?a.direction:'both';
-    return typeof a.step==='string'&&a.step?{step:a.step,direction:direction}:typeof a.task==='string'&&a.task?{task:a.task,direction:direction}:null;
+    return typeof a.file==='string'&&a.file?{file:a.file,direction:direction}:typeof a.step==='string'&&a.step?{step:a.step,direction:direction}:typeof a.task==='string'&&a.task?{task:a.task,direction:direction}:null;
   }).filter(function(a){if(!a||seen.has(workspaceAnchorKey(a)))return false;seen.add(workspaceAnchorKey(a));return true;});
 }
 function workspaceFilterCount(f) {
@@ -577,12 +578,19 @@ function workspaceLineage() {
   var key=JSON.stringify(anchors),memo=_workspaceLineageMemo;
   if(!memo||memo.data!==_reproData||memo.key!==key){
     var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
-    var kept=anchors.filter(function(a){return a.step?steps.has(a.step):tasks.has(a.task);});
+    var files=reproFiles(),owner={};(graph.steps||[]).forEach(function(s){owner[s.name]=s.task;});
+    var kept=anchors.filter(function(a){return a.file?!!files[a.file]:a.step?steps.has(a.step):tasks.has(a.task);});
     if(kept.length!==anchors.length)_workspaceFilters.lineage=kept;
     if(!kept.length)return null;
-    var set={steps:new Set(),tasks:new Set()};
+    /* `files` is set when every anchor is a file: then only their wires stay. */
+    var set={steps:new Set(),tasks:new Set(),files:kept.every(function(a){return a.file;})?new Set(kept.map(function(a){return a.file;})):null};
+    kept.forEach(function(a){
+      if(!a.file)return;
+      var f=files[a.file];
+      (a.direction==='down'?[]:f.producers).concat(a.direction==='up'?[]:f.readers).forEach(function(n){set.steps.add(n);set.tasks.add(owner[n]);});
+    });
     ['up','down','both'].forEach(function(direction){
-      var group=kept.filter(function(a){return a.direction===direction;});
+      var group=kept.filter(function(a){return !a.file&&a.direction===direction;});
       if(!group.length)return;
       var found=reproLineage(graph,group,direction);
       found.steps.forEach(function(n){set.steps.add(n);});found.tasks.forEach(function(p){set.tasks.add(p);});
@@ -602,7 +610,9 @@ function workspaceStepIndex() {
   }
   return _workspaceStepMemo;
 }
-function lineageAnchorLabel(anchor) { return anchor.step?anchor.step:workspaceTaskTitle(anchor.task); }
+var FILE_DIRECTIONS={both:'File',up:'Writer of',down:'Readers of'};
+function lineageAnchorLabel(anchor) { return anchor.file?reproLeaf(anchor.file):anchor.step?anchor.step:workspaceTaskTitle(anchor.task); }
+function lineageAnchorLead(anchor) { return (anchor.file?FILE_DIRECTIONS:LINEAGE_DIRECTIONS)[anchor.direction]; }
 function workspaceTaskTitle(path) {
   var task=(SEARCH_INDEX||[]).find(function(t){return t.path===path;});
   return task&&task.title||reproTaskTitle(path);
@@ -684,7 +694,7 @@ function workspaceGraph(graph) {
   var dependencies=Object.assign({},graph.dependencies);
   dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
   dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
-  return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to);})});
+  return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to)&&(!lineage||!lineage.files||Array.from(lineage.files).some(function(p){return reproEdgeCarries(e,p);}));})});
 }
 function workspaceWriteHistory() {
   if(restoring)return;
@@ -730,8 +740,8 @@ function renderWorkspaceFilterBar(visibility) {
     chips+=workspaceChipHTML('scope-'+list[0],'<span class="wf-k">'+list[1]+'</span><span class="wf-v">'+escapeHtml(titles)+'</span>',list[1]+' '+titles);
   });
   f.lineage.forEach(function(a,i){
-    var label=LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),index=a.step&&workspaceStepIndex(),glyph=a.step?workspaceGlyphHTML(index&&index.state[a.step]||'unknown'):'';
-    chips+=workspaceChipHTML('lineage:'+i,'<span class="wf-k">'+LINEAGE_DIRECTIONS[a.direction]+'</span><span class="wf-v'+(a.step?' is-step':'')+'">'+glyph+escapeHtml(lineageAnchorLabel(a))+'</span>',label,
+    var label=lineageAnchorLead(a)+' '+lineageAnchorLabel(a),index=a.step&&workspaceStepIndex(),glyph=a.file?reproFileTypeTag(reproFileType(a.file)):a.step?workspaceGlyphHTML(index&&index.state[a.step]||'unknown'):'';
+    chips+=workspaceChipHTML('lineage:'+i,'<span class="wf-k">'+lineageAnchorLead(a)+'</span><span class="wf-v'+(a.step||a.file?' is-step':'')+'"'+(a.file?' title="'+escapeAttr(a.file)+'"':'')+'>'+glyph+escapeHtml(lineageAnchorLabel(a))+'</span>',label,
       '<button type="button" class="wf-chip-dir" data-wf-dir="'+i+'" data-wf-key="dir:'+i+'" title="Change direction" aria-label="'+escapeAttr(label)+'. Change direction">'+LINEAGE_ARROWS[a.direction]+'</button>');
   });
   host.hidden=!count;
@@ -865,8 +875,8 @@ function workspaceDepsView(q) {
 }
 function workspaceAnchorView(i) {
   var a=_workspaceFilters.lineage[i];if(!a)return null;
-  return {label:LINEAGE_DIRECTIONS[a.direction]+' '+lineageAnchorLabel(a),head:'<strong>'+escapeHtml(lineageAnchorLabel(a))+'</strong>',
-    body:'<div class="wf-pad"><p>Show '+(a.step?'this step':'this task’s steps')+' and what they connect to:</p>'+workspaceSegHTML('data-wf-setdir',[['up','⇡ Upstream'],['down','⇣ Downstream'],['both','⇅ Both']],a.direction)
+  return {label:lineageAnchorLead(a)+' '+lineageAnchorLabel(a),head:'<strong>'+escapeHtml(lineageAnchorLabel(a))+'</strong>'+(a.file?'<small class="wf-path">'+escapeHtml(a.file)+'</small>':''),
+    body:'<div class="wf-pad"><p>Show '+(a.file?'the steps that touch this file':(a.step?'this step':'this task’s steps')+' and what they connect to')+':</p>'+workspaceSegHTML('data-wf-setdir',a.file?[['up','⇡ Writer'],['down','⇣ Readers'],['both','⇅ Both']]:[['up','⇡ Upstream'],['down','⇣ Downstream'],['both','⇅ Both']],a.direction)
       +'<p class="wf-note">Several dependency chips combine as a union: a task shows if it connects to any of them.</p></div>',
     foot:'<button type="button" class="wf-link" data-wf-another data-wf-key="another">+ Add another task or step</button>'};
 }
@@ -1044,7 +1054,7 @@ function workspaceSearchRecords() {
   var records=(SEARCH_INDEX||[]).slice();
   if(_reproData)(_reproData.graph.steps||[]).forEach(function(s){
     records.push({kind:'Step',step:s.name,path:s.task,title:s.name,slug:s.name,text:reproTaskTitle(s.task)});
-    (s.outs||[]).forEach(function(out){var file=reproOutLabel(out);records.push({kind:'File',step:s.name,path:s.task,title:file,slug:file,text:s.name+' '+reproTaskTitle(s.task)});});
+    (s.outs||[]).forEach(function(out){var file=reproOutLabel(out);records.push({kind:'File',step:s.name,file:out.path.logical,path:s.task,title:file,slug:file,text:s.name+' '+reproTaskTitle(s.task)});});
   });
   return records;
 }
@@ -1202,6 +1212,7 @@ function renderSearchResults(query) {
       + '<span class="search-result-title">' + escapeHtml(rec.title || pathLabel) + '</span>'
       + '<span class="search-result-path">' + escapeHtml(pathLabel) + '</span>'
       + (snippet ? '<span class="search-result-snippet">' + snippet + '</span>' : '')
+      + (rec.file ? '<button type="button" class="search-result-filter" tabindex="-1" onmousedown="onSearchFilterClick(event, ' + idx + ')">Filter to file</button>' : '')
       + '</li>';
   }).join('');
   input.setAttribute('aria-expanded', 'true');
@@ -1228,6 +1239,15 @@ function chooseSearchResult(idx) {
   closeSearchPalette();
   if(rec.step)revealReproStep(rec.step);
   else {reproSelectTask(rec.path||'');if(currentView==='reproduction'){reproRevealOwner(parentPath(rec.path||''));drawReproView(document.getElementById('view-reproduction'),_reproData);reproCenter();}}
+}
+
+/* A File result's button: filter the map to the file's writer and readers. */
+function onSearchFilterClick(event, idx) {
+  event.preventDefault();event.stopPropagation();
+  var rec = _searchResults[idx];
+  if (!rec || !rec.file) return;
+  closeSearchPalette();
+  addLineageAnchor({ file: rec.file });
 }
 
 function onSearchResultClick(event, idx) {
@@ -1574,6 +1594,64 @@ var _reproViewport = { x: 0, y: 0, zoom: 1 }, _reproWorktrees = {};
 /* How the next draw places the viewport: 'open' (readable scale on the selection), 'fit', or '' (keep). */
 var _reproInspectorClosed = false, _reproViewNext = 'open';
 
+/* ── Files in the graph ──
+   A file's type comes from its extension alone; a name without one is a folder. */
+var REPRO_FILE_TYPES=[
+  {key:'data',label:'Data',ext:['parquet','pkl','csv','json','npz','dta','feather','arrow','jld2']},
+  {key:'figure',label:'Figure',ext:['pdf','png','svg','jpg']},
+  {key:'text',label:'Text',ext:['tex','md','txt','html']},
+  {key:'code',label:'Code',ext:['py','jl','r','ipynb','do','sh']},
+  {key:'folder',label:'Folder',ext:[]},
+  {key:'other',label:'Other',ext:[]}
+];
+var REPRO_TYPE_OF={},REPRO_TYPE_LABEL={},REPRO_TYPE_RANK={};
+REPRO_FILE_TYPES.forEach(function(t,i){REPRO_TYPE_LABEL[t.key]=t.label;REPRO_TYPE_RANK[t.key]=i;t.ext.forEach(function(e){REPRO_TYPE_OF[e]=t.key;});});
+function reproLeaf(path){return path.slice(path.lastIndexOf('/')+1);}
+function reproFileType(path){
+  var leaf=reproLeaf(path),dot=leaf.lastIndexOf('.');
+  return dot<0?'folder':REPRO_TYPE_OF[leaf.slice(dot+1).toLowerCase()]||'other';
+}
+/* Every declared file by logical path: its type, the steps that write it, and
+   the steps that read it. A folder a step reads takes the declared outputs
+   inside it as `members`: their writers write the folder, and the folder's
+   readers read them. Null before the graph loads. */
+var _reproFilesMemo=null;
+function reproFiles(){
+  if(!_reproData)return null;
+  if(_reproFilesMemo&&_reproFilesMemo.data===_reproData)return _reproFilesMemo.files;
+  var files={};
+  function file(ref){var k=ref.logical;return files[k]||(files[k]={logical:k,resolved:ref.resolved||k,type:reproFileType(k),producers:[],readers:[],members:[]});}
+  function add(list,name){if(list.indexOf(name)<0)list.push(name);}
+  var outs=[];
+  (_reproData.graph.steps||[]).forEach(function(s){
+    (s.outs||[]).forEach(function(o){add(file(o.path).producers,s.name);add(outs,o.path.logical);});
+    (s.deps||[]).forEach(function(d){add(file(d).readers,s.name);});
+  });
+  (_reproData.graph.step_edges||[]).forEach(function(e){var f=file({logical:e.via});add(f.producers,e.from);add(f.readers,e.to);});
+  outs.forEach(function(p){
+    for(var d=p,i;(i=d.lastIndexOf('/'))>0;){
+      d=d.slice(0,i);var folder=files[d];if(!folder||!folder.readers.length)continue;
+      folder.members.push(p);folder.readers.forEach(function(r){add(files[p].readers,r);});files[p].producers.forEach(function(w){add(folder.producers,w);});
+    }
+  });
+  Object.keys(files).forEach(function(k){files[k].members.sort();});
+  _reproFilesMemo={data:_reproData,files:files};
+  return files;
+}
+/* A file edge carries *path* when it names it, or names a folder around it and
+   starts at one of its writers. */
+function reproEdgeCarries(e,path){
+  if(e.via===path)return true;
+  var f=path.indexOf(e.via+'/')===0&&reproFiles()[path];
+  return !!f&&f.producers.indexOf(e.from)>=0;
+}
+function reproFileTypeTag(type){return '<span class="rp-ft rp-ft-'+type+'" title="'+REPRO_TYPE_LABEL[type]+'" aria-hidden="true"></span>';}
+/* The graph without the file edges whose type is unticked in the Files menu. */
+var _reproHiddenTypes=[];
+function reproTypeFilter(graph){
+  if(!_reproHiddenTypes.length)return graph;
+  return Object.assign({},graph,{step_edges:(graph.step_edges||[]).filter(function(e){return _reproHiddenTypes.indexOf(reproFileType(e.via))<0;})});
+}
 function reproWithin(path, root) { return root === '' || path === root || path.indexOf(root + '/') === 0; }
 /* Step lookup plus each step's incoming and outgoing edges. */
 function reproProject(graph) {
@@ -1633,18 +1711,20 @@ function reproLineage(graph, anchors, direction) {
 }
 function reproHash() {
   var state={expanded:_reproNav.expanded||[],selected:_reproSelected||'',layout:currentView==='reproduction'?'graph':'tree',filters:workspaceFiltersForHash(_workspaceFilters)};
+  if(_reproHiddenTypes.length)state.types=_reproHiddenTypes;
   /* Default tree state stays out of the URL; reproReadHash reads its absence as that default. */
-  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!state.filters;
+  var plain=state.layout==='tree'&&!state.expanded.length&&!state.selected&&!state.filters&&!state.types;
   var query=(activeArtifactPath?[activeArtifactPath.charAt(0)==='/'?'file='+encodeURIComponent(activeArtifactPath.slice(1)):'attachment='+encodeURIComponent(activeArtifactPath)]:[]).concat(plain?[]:['repro='+encodeURIComponent(JSON.stringify(state))]);
   return '#/'+activePath+(query.length?'?'+query.join('&'):'');
 }
 function reproReadHash() {
   var params=new URLSearchParams((location.hash||'').split('?').slice(1).join('?'));
   var raw=params.get('repro'), step=params.get('step');
-  if(!raw&&!step){_workspaceFilters=emptyWorkspaceFilters();_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
+  if(!raw&&!step){_workspaceFilters=emptyWorkspaceFilters();_reproHiddenTypes=[];_reproSelected='';_reproNav.selected='';var previous=restoring;restoring=true;showView('workspace');restoring=previous;applyWorkspaceFilters(false);return false;}
   try {
     var n=raw?JSON.parse(raw):{};
     _workspaceFilters=normalizeWorkspaceFilters(n.filters);
+    _reproHiddenTypes=workspaceStrings(n.types,REPRO_FILE_TYPES.map(function(t){return t.key;}));
     _reproNav={expanded:Array.isArray(n.expanded)?n.expanded.filter(function(p){return typeof p==='string';}):[],
       selected:step||(typeof n.selected==='string'?n.selected:'')};
     _reproSelected=_reproNav.selected;_reproNotice='';
@@ -2128,19 +2208,87 @@ function reproHighlightEdge(container,wire){
   if(!wire)return;wire.classList.add('is-edge-active');
   container.querySelectorAll('[data-node-id]').forEach(function(node){if(node.dataset.nodeId===wire.dataset.from||node.dataset.nodeId===wire.dataset.to)node.classList.add('is-edge-endpoint');});
 }
+/* A step's Code inputs, in declared order. */
+function reproStepCode(step){return (step.deps||[]).filter(function(d){return reproFileType(d.logical)==='code';});}
+/* The selected step's files as ports beside its card: inputs on the left,
+   outputs on the right. REPRO_PORT_CAP show per side; the full list groups by
+   folder once it passes REPRO_PORT_GROUP. */
+var REPRO_PORT_CAP=5,REPRO_PORT_GROUP=12,_reproPortsOpen={step:''};
+function reproPortHTML(f,side,nested){
+  var meta=side==='in'?(f.producers.length>1?f.producers.length+' steps':f.producers[0]||'external'):(f.readers.length?'→ '+f.readers.length:'final');
+  var open=!!(_reproPortsOpen.folders||{})[f.logical];
+  if(f.members.length&&!nested)return '<div class="rp-port-row">'+reproPortHTML(f,side,true)
+    +'<button type="button" class="rp-port-fold" data-rp-action="port-fold" data-value="'+escapeAttr(f.logical)+'" aria-expanded="'+open+'" aria-label="'+escapeAttr((open?'Hide the ':'Show the ')+f.members.length+' declared files in '+f.logical)+'" title="'+f.members.length+' declared files">'+(open?'▾':'▸')+'</button></div>'
+    +(open?'<div class="rp-port-members">'+f.members.map(function(p){return reproPortHTML(reproFiles()[p],side,true);}).join('')+'</div>':'');
+  return '<button type="button" class="rp-port" data-rp-action="file" data-value="'+escapeAttr(f.logical)+'"'+(!window.STANDALONE?' data-peek="'+escapeAttr(f.resolved)+'"':'')
+    +' aria-label="'+escapeAttr('Filter to '+reproFileSummary(f))+'">'+reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span><span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>';
+}
+function reproFileSummary(f){
+  return f.logical+' · '+(f.producers.length>1?'written by '+f.producers.length+' steps':f.producers.length?'written by '+f.producers[0]:'external input')+' · '+(f.readers.length?'read by '+f.readers.length+' step'+(f.readers.length===1?'':'s'):'no step reads it');
+}
+function reproPortsHTML(step,side,pos){
+  var files=reproFiles(),refs=side==='in'?(step.deps||[]):(step.outs||[]).map(function(o){return o.path;});
+  var list=refs.map(function(r,i){return [files[r.logical],i];}).filter(function(p){return p[0];}).sort(function(a,b){
+    var x=a[0],y=b[0];
+    return (side==='in'?(!x.producers.length)-(!y.producers.length):y.readers.length-x.readers.length)||REPRO_TYPE_RANK[x.type]-REPRO_TYPE_RANK[y.type]||a[1]-b[1];
+  }).map(function(p){return p[0];});
+  if(!list.length)return '';
+  var open=!!_reproPortsOpen[side],shown=open?list:list.slice(0,REPRO_PORT_CAP),body;
+  if(open&&list.length>REPRO_PORT_GROUP){
+    var groups={},order=[];
+    shown.forEach(function(f){var dir=f.logical.slice(0,Math.max(0,f.logical.lastIndexOf('/')))||'.';if(!groups[dir]){groups[dir]=[];order.push(dir);}groups[dir].push(f);});
+    body=order.map(function(dir){return '<div class="rp-port-dir" title="'+escapeAttr(dir)+'"><span>'+escapeHtml(dir)+'</span><b>'+groups[dir].length+'</b></div>'+groups[dir].map(function(f){return reproPortHTML(f,side);}).join('');}).join('');
+  } else body=shown.map(function(f){return reproPortHTML(f,side);}).join('');
+  var unfolded=list.some(function(f){return (_reproPortsOpen.folders||{})[f.logical];});
+  return '<div class="rp-ports rp-ports-'+side+(open||unfolded?' is-open':'')+'" style="left:'+(side==='in'?pos.x:pos.x+pos.width)+'px;top:'+pos.y+'px" role="group" aria-label="'+escapeAttr((side==='in'?'Inputs of ':'Outputs of ')+step.name)+'">'
+    +'<div class="rp-ports-head">'+(side==='in'?'Reads ':'Writes ')+list.length+'</div><div class="rp-ports-list">'+body+'</div>'
+    +(list.length>REPRO_PORT_CAP?'<button type="button" class="rp-port-more" data-rp-action="ports-more" data-value="'+side+'" aria-expanded="'+open+'">'+(open?'Show fewer':'+'+(list.length-REPRO_PORT_CAP)+' more')+'</button>':'')+'</div>';
+}
+function reproDrawPorts(container){
+  container.querySelectorAll('.rp-ports').forEach(function(el){el.remove();});
+  reproHighlightFile(container,null);
+  if(_reproPortsOpen.step!==_reproSelected)_reproPortsOpen={step:_reproSelected};
+  var lay=_reproLayoutCache&&_reproLayoutCache.layout,plot=container.querySelector('.repro-plot'),pos=lay&&lay.pos[_reproSelected];
+  var step=_reproSelected&&_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===_reproSelected;});
+  if(!plot||!pos||!step||!document.getElementById(reproNodeId(_reproSelected)))return;
+  plot.insertAdjacentHTML('beforeend',reproPortsHTML(step,'in',pos)+reproPortsHTML(step,'out',pos));
+}
+/* Light the wires that carry *path* and the cards of its writer and readers. */
+function reproHighlightFile(container,path){
+  var plot=container.querySelector('.repro-plot'),f=path&&reproFiles()[path],lay=_reproLayoutCache&&_reproLayoutCache.layout;
+  container.querySelectorAll('.is-file-lit,.is-file-end').forEach(function(el){el.classList.remove('is-file-lit','is-file-end');});
+  if(plot)plot.classList.toggle('has-file-focus',!!f);
+  var label=container.querySelector('#repro-connection-label');if(label&&(f||!container.querySelector('.is-edge-active')))label.textContent=f?reproFileSummary(f):'';
+  if(!f||!lay)return;
+  var ends={};f.producers.concat(f.readers).forEach(function(n){ends[lay.model.reps[n]]=true;});
+  container.querySelectorAll('.repro-edges .rp-wire').forEach(function(w){var e=lay.edges[Number(w.dataset.value)];if(e&&e.evidence.some(function(r){return r.kind!=='logical'&&reproEdgeCarries(r,path);}))w.classList.add('is-file-lit');});
+  container.querySelectorAll('[data-node-id]').forEach(function(n){if(ends[n.dataset.nodeId])n.classList.add('is-file-end');});
+}
+/* The Files menu: one checkbox per file type the visible wires carry. */
+function reproTypeMenuHTML(graph){
+  var counts={};(graph.step_edges||[]).forEach(function(e){var t=reproFileType(e.via);counts[t]=(counts[t]||0)+1;});
+  return '<p>Show the wires that carry:</p>'+REPRO_FILE_TYPES.filter(function(t){return counts[t.key]||_reproHiddenTypes.indexOf(t.key)>=0;}).map(function(t){
+    return '<label class="rp-type-row"><input type="checkbox" id="rp-type-'+t.key+'" data-rp-type="'+t.key+'"'+(_reproHiddenTypes.indexOf(t.key)<0?' checked':'')+'>'+reproFileTypeTag(t.key)+'<span>'+t.label+'</span><b>'+(counts[t.key]||0)+'</b></label>';
+  }).join('');
+}
 function reproBindEdges(container){
-  container.onpointerover=function(e){var wire=e.target.closest('.rp-wire');if(wire)reproHighlightEdge(container,wire);};
-  container.onpointerout=function(e){if(e.target.closest('.rp-wire'))reproHighlightEdge(container,container.querySelector('.rp-wire:focus'));};
+  container.onpointerover=function(e){var wire=e.target.closest('.rp-wire');if(wire)reproHighlightEdge(container,wire);var port=e.target.closest('.rp-port');if(port)reproHighlightFile(container,port.dataset.value);};
+  container.onpointerout=function(e){if(e.target.closest('.rp-wire'))reproHighlightEdge(container,container.querySelector('.rp-wire:focus'));if(e.target.closest('.rp-port')&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.rp-port')===e.target.closest('.rp-port')))reproHighlightFile(container,null);};
+  container.onchange=function(e){
+    var box=e.target.closest('[data-rp-type]');if(!box)return;
+    _reproHiddenTypes=REPRO_FILE_TYPES.map(function(t){return t.key;}).filter(function(k){return k===box.dataset.rpType?!box.checked:_reproHiddenTypes.indexOf(k)>=0;});
+    workspaceWriteHistory();drawReproView(container,_reproData);
+  };
   ['focusin','focusout'].forEach(function(type){container.removeEventListener(type,reproEdgeFocus);container.addEventListener(type,reproEdgeFocus);});
 }
-function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);}
+function reproEdgeFocus(event){reproHighlightEdge(event.currentTarget,event.type==='focusin'?event.target.closest('.rp-wire'):null);var port=event.target.closest('.rp-port');if(port)reproHighlightFile(event.currentTarget,event.type==='focusin'?port.dataset.value:null);}
 function reproGraphHTML(lay,statuses) {
   var html='<svg class="repro-edges" width="'+lay.width+'" height="'+lay.height+'"><defs><marker id="rp-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker><marker id="rp-arrow-cycle" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker><marker id="rp-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs>';
   html+=lay.edges.map(function(e,i){return '<path class="rp-wire-halo" d="'+e.d+'"/><path class="rp-wire'+(reproLogicalOnly(e)?' is-logical':'')+(e.cycle?' is-cycle':'')+'" id="rp-edge-'+escapeAttr(encodeURIComponent(JSON.stringify([e.from,e.to])))+'" tabindex="0" role="button" aria-label="'+escapeAttr(reproEdgeLabel(lay,e))+'" data-rp-action="edge" data-value="'+i+'" data-from="'+escapeAttr(e.from)+'" data-to="'+escapeAttr(e.to)+'" d="'+e.d+'" marker-end="url(#rp-arrow)"><title>'+escapeHtml(reproEdgeLabel(lay,e)+' · '+e.evidence.length+' connections')+'</title></path>';}).join('')+'</svg>';
   html+=lay.bands.filter(function(b){return b.label;}).map(function(b){return '<div class="rp-component-label" role="heading" aria-level="3" data-component-parent="'+escapeAttr(b.parent||'')+'" data-component-kind="'+(b.isolated?'isolated':'connected')+'" style="left:'+b.x+'px;top:'+b.y+'px;width:'+b.width+'px">'+escapeHtml(b.label)+'</div>';}).join('');
   html+=lay.model.nodes.map(function(n){var p=lay.pos[n.id],style='left:'+p.x+'px;top:'+p.y+'px;width:'+p.width+'px;height:'+p.height+'px';
-    if(n.type==='step') {var entry=statuses[n.id],ch=reproChannels(entry),st=ch.state,base=ch.label+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
-      return '<button class="repro-node '+ch.cls+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span><span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
+    if(n.type==='step') {var entry=statuses[n.id],ch=reproChannels(entry),st=ch.state,code=reproStepCode(n.step),base=ch.label+(n.cycle?' · '+n.cycleKind:'')+(n.step.kind==='check'?' · check':''),target=reproStepTarget(n.step);
+      return '<button class="repro-node '+ch.cls+(code.length?' has-code':'')+(n.step.kind==='check'?' is-check':'')+(n.cycle?' is-cycle':'')+(reproIsRunning(n.id,entry)?' is-running':'')+'" data-rp-action="select" data-value="'+escapeAttr(n.id)+'" data-node-id="'+escapeAttr(n.id)+'" data-step="'+escapeAttr(n.id)+'"'+(reproExplainable(st)?' data-rp-explain="'+escapeAttr(target)+'"':'')+' id="'+reproNodeId(n.id)+'" style="'+style+'"><span class="repro-node-name">'+escapeHtml(n.id)+(ch.cloud?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only</span>':'')+'</span>'+(code.length?'<span class="repro-node-code" title="'+escapeAttr(code.map(function(d){return d.logical;}).join('\n'))+'">'+reproFileTypeTag('code')+escapeHtml(reproLeaf(code[0].logical))+(code.length>1?' +'+(code.length-1):'')+'</span>':'')+'<span class="repro-node-state"><span class="repro-glyph">'+ch.glyph+'</span> <span class="repro-node-label" data-base="'+escapeAttr(base)+'">'+escapeHtml(base+reproNodeMeta(n.id,entry))+'</span></span></button>'
         +reproChipHTML(target,'▶','rp-build-chip-step',n.id,'left:'+(p.x+p.width-26)+'px;top:'+(p.y+4)+'px');}
     var total=0,explain=false;n.steps.forEach(function(s){var e=statuses[s.name];if(e&&e.duration!=null)total+=e.duration;if(reproExplainable(reproStateOf(e)))explain=true;});
     var containsSelected=!n.expanded&&n.steps.some(function(s){return s.name===_reproSelected;}),rollup=reproRollup(n.steps,statuses);
@@ -2161,7 +2309,7 @@ function drawReproView(container,data) {
   var focused=document.activeElement,focusId=focused&&focused.id;
   var openMenu=container.querySelector('.rp-menu[open]');
   var menuKey=openMenu&&openMenu.dataset.rpMenu;
-  var visibleGraph=workspaceGraph(data.graph),project=reproProject(visibleGraph),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
+  var filteredGraph=workspaceGraph(data.graph),visibleGraph=reproTypeFilter(filteredGraph),project=reproProject(visibleGraph),statuses=reproStatusIndex(data),paths=reproTasks(data.graph);
   if(_reproSelected&&!(data.graph.steps||[]).some(function(s){return s.name===_reproSelected;})){_reproNotice='The selected step was removed. Select another step.';_reproSelected='';_reproNav.selected='';}
   var model=reproHierarchy(visibleGraph,_reproNav,project);
   var signature=JSON.stringify([model.nodes.map(function(n){return [n.id,n.parent,n.expanded];}),model.edges]);
@@ -2179,6 +2327,7 @@ function drawReproView(container,data) {
   var diagnosticLabel=(errors?errors+' error'+(errors===1?'':'s'):'')+(errors&&findings.length>errors?' · ':'')+(findings.length>errors?(findings.length-errors)+' warning'+(findings.length-errors===1?'':'s'):'');
   container.innerHTML=reproHeadHTML()+reproControlsHTML(data,project)
     +'<div class="repro-summary"><span id="repro-step-count">'+scope.count+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+scope.legend+'</div></details>'
+    +((filteredGraph.step_edges||[]).length?'<details class="rp-menu rp-files-menu" data-rp-menu="files"><summary>Files'+(_reproHiddenTypes.length?' · '+_reproHiddenTypes.length+' hidden':'')+'</summary><div class="rp-menu-body">'+reproTypeMenuHTML(filteredGraph)+'</div></details>':'')
     +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
     +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
@@ -2385,6 +2534,9 @@ function reproBindViewport(container) {
       y:Number.isFinite(e.clientY)?e.clientY-rect.top:canvas.clientHeight/2};
   }
   canvas.addEventListener('wheel',function(e){
+    /* An open port list scrolls itself; the canvas pans everywhere else. */
+    var list=!e.ctrlKey&&e.target.closest&&e.target.closest('.rp-ports.is-open .rp-ports-list');
+    if(list&&list.scrollHeight>list.clientHeight)return;
     e.preventDefault();
     if(gesture)return;
     var unit=e.deltaMode===1?16:e.deltaMode===2?canvas.clientHeight:1;
@@ -2512,6 +2664,13 @@ function onReproClick(event) {
     else if(action==='open'||action==='related')revealReproStep(value);
     else if(action==='select')selectReproStep(value);
     else if(action==='lineage-step')addLineageAnchor({step:value});
+    else if(action==='file')addLineageAnchor({file:value});
+    else if(action==='port-fold'){
+      var folds=_reproPortsOpen.folders||(_reproPortsOpen.folders={});folds[value]=!folds[value];
+      reproDrawPorts(document.getElementById('view-reproduction'));
+      var fold=Array.from(document.querySelectorAll('.rp-port-fold')).find(function(b){return b.dataset.value===value;});if(fold)fold.focus({preventScroll:true});
+    }
+    else if(action==='ports-more'){_reproPortsOpen[value]=!_reproPortsOpen[value];reproDrawPorts(document.getElementById('view-reproduction'));var more=document.querySelector('.rp-ports-'+value+' .rp-port-more');if(more)more.focus({preventScroll:true});}
     else if (action === 'fit') reproFit();
     else if (action === 'zoom-in' || action === 'zoom-out') {
       var canvas = document.querySelector('#view-reproduction .repro-canvas');
@@ -2559,6 +2718,7 @@ function reproApplySelection() {
     w.classList.toggle('in-lineage',!!set&&e.evidence.some(function(r){return set.edges.has(reproLineageKey(r));}));});
   var scope=reproScopeHTML(drawn,anchor,set),count=document.getElementById('repro-step-count'),legend=container.querySelector('.rp-legend-menu .rp-menu-body');
   if(count)count.innerHTML=scope.count;if(legend)legend.innerHTML=scope.legend;
+  reproDrawPorts(container);
 }
 /* The summary count and Status key body over the visible steps in *set*, or over every visible step without one. */
 function reproScopeHTML(drawn,anchor,set) {

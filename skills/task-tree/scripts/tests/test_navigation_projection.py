@@ -140,7 +140,9 @@ FILTER_DEFS = ['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', '
     'workspaceStrings', 'workspaceScopeRoots', 'workspaceScopeFromSelection', 'normalizeWorkspaceFilters', 'workspaceAnchorKey',
     'normalizeLineageFilter', 'workspaceFilterCount', 'workspaceFiltersForHash', 'workspaceLineage', 'workspaceStepIndex',
     'lineageAnchorLabel', 'workspaceTaskTitle', 'workspaceScopeAdd', 'workspaceTasks', 'workspaceStepMatches',
-    'workspaceTaskMatches', 'workspaceVisibility', 'workspaceFacetCounts', 'workspaceResultCount', 'workspaceGraph']
+    'workspaceTaskMatches', 'workspaceVisibility', 'workspaceFacetCounts', 'workspaceResultCount', 'workspaceGraph',
+    'REPRO_FILE_TYPES', 'REPRO_TYPE_OF', 'reproLeaf', 'reproFileType', '_reproFilesMemo', 'reproFiles', 'reproEdgeCarries',
+    'FILE_DIRECTIONS', 'lineageAnchorLead', 'reproFileTypeTag']
 
 # Statuses and reported step states over the LINEAGE graph. `fit` and `report`
 # are stale only through `tidy`; their own state is fresh.
@@ -209,6 +211,38 @@ use({lineage:[{step:'fit',direction:'down'},{task:'docs',direction:'both'}]});
 assert.deepEqual(sorted(workspaceLineage().steps),['docs-build','fit','note','report']);
 assert.deepEqual(matched({lineage:[{step:'gone'}]}).length,9);
 assert.deepEqual(_workspaceFilters.lineage,[],'an anchor the graph no longer has is dropped');
+""")
+
+
+def test_file_anchor_keeps_writers_readers_and_the_wires_that_carry_it():
+    filter_run("""
+use({lineage:[{file:'tidy.csv',direction:'both'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['fit','tidy'],'a file anchor stops at its own steps');
+assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.via),['tidy.csv']);
+use({lineage:[{file:'tidy.csv',direction:'up'}]});assert.deepEqual(sorted(workspaceLineage().steps),['tidy']);
+use({lineage:[{file:'tidy.csv',direction:'down'}]});assert.deepEqual(sorted(workspaceLineage().steps),['fit']);
+use({lineage:[{file:'tidy.csv'},{step:'note',direction:'down'}]});
+assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.via).sort(),['note.csv','tidy.csv'],'beside a step anchor every wire between kept steps stays');
+assert.deepEqual(matched({lineage:[{file:'gone.csv'}]}).length,9);
+assert.deepEqual(_workspaceFilters.lineage,[],'a file the graph no longer has is dropped');
+""")
+
+
+def test_a_folder_reader_reads_the_declared_files_inside_it():
+    filter_run("""
+steps.find(s=>s.name==='raw').outs=[{path:{logical:'figs/a.pdf'}}];steps.find(s=>s.name==='tidy').outs=[{path:{logical:'figs/b.pdf'}}];
+edges.push({from:'raw',to:'report',via:'figs'},{from:'tidy',to:'report',via:'figs'});
+_reproData={graph,status:{steps:stepStatus}};
+var files=reproFiles();
+assert.deepEqual(files['figs'].members,['figs/a.pdf','figs/b.pdf']);
+assert.deepEqual(files['figs'].producers.slice().sort(),['raw','tidy']);
+assert.deepEqual(files['figs/a.pdf'].readers,['report']);
+assert.equal(files['figs'].type,'folder');assert.equal(files['figs/a.pdf'].type,'figure');
+use({lineage:[{file:'figs/a.pdf'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['raw','report']);
+assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.from+'>'+e.to+' '+e.via),['raw>report figs'],'only the folder wire from the file writer stays');
+use({lineage:[{file:'figs'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['raw','report','tidy']);
 """)
 
 

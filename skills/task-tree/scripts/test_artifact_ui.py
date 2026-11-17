@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 import pytest
 
@@ -1156,4 +1157,184 @@ class TestSidebarResizeBrowser:
             assert abs(restored - 400) < 1.5, f"width after widening {restored}px"
             # The pinned cap leaves 360px of task content: 1024 - 360.
             assert page.get_attribute("#sidebar-resizer", "aria-valuemax") == "664"
+            browser.close()
+
+
+FILE_TRACING_STEPS = """
+steps:
+  - name: make-data
+    cmd: sh code/make.sh
+    deps: [code/make.sh, raw/in.csv]
+    outs: [out/a.parquet, out/b.csv, out/f1.pdf, out/f2.pdf, out/f3.pdf, out/f4.pdf, out/notes.md]
+  - name: use-a
+    cmd: python code/use.py
+    deps: [code/use.py, out/a.parquet]
+    outs: [out/table.tex]
+  - name: use-b
+    cmd: sh code/use_b.sh
+    deps: [code/use_b.sh, out/a.parquet, out/b.csv]
+    outs: [out/b_summary.csv]
+  - name: gen-code
+    cmd: sh code/gen.sh
+    deps: [code/gen.sh]
+    outs: [code/generated.py]
+  - name: run-generated
+    cmd: python code/generated.py
+    deps: [code/generated.py]
+    outs: [out/final.csv]
+  - name: plot-a
+    cmd: sh code/plot_a.sh
+    deps: [code/plot_a.sh]
+    outs: [figs/a.pdf]
+  - name: plot-b
+    cmd: sh code/plot_b.sh
+    deps: [code/plot_b.sh]
+    outs: [figs/b.pdf]
+  - name: compile
+    cmd: sh code/compile.sh
+    deps: [code/compile.sh, figs]
+    outs: [paper.pdf]
+"""
+
+
+def _file_tracing_export(tmp_path: Path) -> Path:
+    root = tmp_path / "superRA"
+    root.mkdir(parents=True)
+    _write_task_md(root / "task.md", "File tracing project", "in-progress")
+    task = root / "01-build"
+    task.mkdir()
+    _write_task_md(
+        task / "task.md", "Build", "in-progress",
+        objective="Build the outputs.", reproduction=FILE_TRACING_STEPS,
+    )
+    export = tmp_path / "dashboard.html"
+    export.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
+    return export
+
+
+def _graph_url(export: Path, selected: str = "") -> str:
+    state = {"expanded": ["01-build"], "selected": selected, "layout": "graph", "filters": None}
+    return f"{export.as_uri()}#/01-build?repro={quote(json.dumps(state))}"
+
+
+@pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
+class TestFileTracingBrowser:
+    def test_selected_step_shows_capped_ports_and_hover_lights_one_file(self, tmp_path):
+        """The selected step lists its inputs and outputs beside its card, five
+        per side until expanded; hovering a file lights only its wires and the
+        cards of its writer and readers. Runs on the offline export."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, "make-data"))
+            page.wait_for_selector(".rp-ports-out .rp-port")
+            assert "make.sh" in page.inner_text('.repro-node[data-step="make-data"] .repro-node-code')
+            assert page.locator(".rp-ports-in .rp-port").count() == 2
+            assert page.locator(".rp-ports-out .rp-port").count() == 5
+            first = page.locator(".rp-ports-out .rp-port").first
+            assert first.get_attribute("data-value") == "out/a.parquet"
+            assert "→ 2" in first.inner_text()
+            assert page.inner_text(".rp-ports-out .rp-port-more") == "+2 more"
+
+            first.hover()
+            page.wait_for_selector(".rp-wire.is-file-lit")
+            assert page.locator(".rp-wire.is-file-lit").count() == 2
+            assert page.locator(".is-file-end").count() == 3
+            assert "read by 2 steps" in page.inner_text("#repro-connection-label")
+
+            page.click(".rp-ports-out .rp-port-more")
+            assert page.locator(".rp-ports-out .rp-port").count() == 7
+            browser.close()
+
+    def test_file_filter_keeps_the_writer_readers_and_their_wires(self, tmp_path):
+        """Clicking a file adds a filter chip; the map keeps the file's writer,
+        its readers, and only the wires that carry it, and the URL restores it."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        carried = "() => _reproLayoutCache.layout.edges.flatMap(e => e.evidence.map(r => r.via))"
+        steps = "() => [...document.querySelectorAll('.repro-node')].map(n => n.dataset.step).sort()"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, "make-data"))
+            page.wait_for_selector(".rp-ports-out .rp-port")
+            page.locator(".rp-ports-out .rp-port").first.click()
+            page.wait_for_selector(".wf-chip")
+            assert "a.parquet" in page.inner_text(".wf-chip")
+            assert page.evaluate(steps) == ["make-data", "use-a", "use-b"]
+            assert page.evaluate(carried) == ["out/a.parquet", "out/a.parquet"]
+            url = page.evaluate("location.href")
+            assert '"file":"out/a.parquet"' in unquote(url)
+
+            again = browser.new_page(viewport={"width": 1400, "height": 900})
+            again.goto(url)
+            again.wait_for_selector(".wf-chip")
+            assert again.evaluate(steps) == ["make-data", "use-a", "use-b"]
+            assert again.evaluate(carried) == ["out/a.parquet", "out/a.parquet"]
+
+            # The direction control narrows a file anchor to its writer.
+            again.click(".wf-chip-dir")
+            again.wait_for_function("() => document.querySelectorAll('.repro-node').length === 1")
+            assert again.evaluate(steps) == ["make-data"]
+            browser.close()
+
+    def test_a_file_inside_a_read_folder_traces_to_the_folder_reader(self, tmp_path):
+        """A step that reads a folder reads the declared files inside it: the
+        writer's port names the reader, and the reader's folder port unfolds
+        into those files with their writers."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export, "plot-a"))
+            page.wait_for_selector(".rp-ports-out .rp-port")
+            port = page.locator(".rp-ports-out .rp-port").first
+            assert port.get_attribute("data-value") == "figs/a.pdf"
+            assert "→ 1" in port.inner_text()
+            port.hover()
+            page.wait_for_selector(".rp-wire.is-file-lit")
+            assert page.locator(".rp-wire.is-file-lit").count() == 1
+            assert "read by 1 step" in page.inner_text("#repro-connection-label")
+            assert page.evaluate(
+                "() => [...document.querySelectorAll('.is-file-end')].map(n => n.dataset.step).sort()"
+            ) == ["compile", "plot-a"]
+
+            page.goto(_graph_url(export, "compile"))
+            page.reload()
+            page.wait_for_selector(".rp-ports-in .rp-port-fold")
+            folder = page.locator('.rp-ports-in .rp-port[data-value="figs"]')
+            assert "2 steps" in folder.inner_text()
+            assert page.locator(".rp-port-members").count() == 0
+            page.click(".rp-ports-in .rp-port-fold")
+            assert page.locator(".rp-port-members .rp-port").evaluate_all(
+                "ports => ports.map(p => p.dataset.value + ' ' + p.querySelector('.rp-port-meta').innerText)"
+            ) == ["figs/a.pdf plot-a", "figs/b.pdf plot-b"]
+            browser.close()
+
+    def test_type_filter_hides_wires_that_carry_only_unticked_types(self, tmp_path):
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        pairs = "() => _reproLayoutCache.layout.edges.map(e => e.from + '>' + e.to).sort()"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export))
+            page.wait_for_selector(".rp-files-menu")
+            assert page.evaluate(pairs) == [
+                "gen-code>run-generated", "make-data>use-a", "make-data>use-b",
+                "plot-a>compile", "plot-b>compile",
+            ]
+            page.click(".rp-files-menu > summary")
+            page.click("#rp-type-code")
+            page.wait_for_function("() => _reproLayoutCache.layout.edges.length === 4")
+            assert "gen-code>run-generated" not in page.evaluate(pairs)
+            assert page.evaluate("document.querySelector('.rp-files-menu').open")
+            assert '"types":["code"]' in unquote(page.evaluate("location.href"))
             browser.close()
