@@ -422,6 +422,7 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     artifact_changed_paths: set[str] = set()
     repro_lock_changed = False
     repro_graph_changed = False
+    _invalidate_repro_status(state.wt_id)
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
@@ -644,6 +645,7 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
                     # The first build just wrote the lock. Its write is not in
                     # this watch set, so announce it here rather than waiting
                     # for the second build.
+                    _invalidate_repro_status(state.wt_id)
                     await _broadcast("repro-updated", "{}", state.wt_id)
                     rearm = True
                     break
@@ -1430,6 +1432,50 @@ REPRO_GRAPH_TTL = 2.0
 # worktree id -> (built at, tree signature, Graph)
 _repro_graph_cache: dict[str, tuple[float, tuple, object]] = {}
 
+# How long a status request waits for the computation it joined. A computation
+# that has changed files to read can run for minutes; past the budget the
+# request answers with the previous result, and the finished one is announced.
+REPRO_STATUS_BUDGET = 1.0
+
+# How long a result that outlasted the budget answers later requests outright,
+# so the refetch its announcement causes cannot start another long computation.
+REPRO_STATUS_LATE_TTL = 5.0
+
+
+@dataclass
+class _StatusRun:
+    """One status computation; *waited_out* once a request answered without it."""
+
+    generation: int
+    task: asyncio.Task | None = None
+    waited_out: bool = False
+
+
+@dataclass
+class _StatusSlot:
+    """One worktree's status computation in flight and its last result.
+
+    *generation* counts the times the watcher or a build route said runner
+    state moved: a request joins a computation only of the current generation,
+    since an older one may have read the state before the change.
+    """
+
+    generation: int = 0
+    run: _StatusRun | None = None
+    payload: dict | None = None
+    payload_generation: int = -1
+    late_until: float = 0.0
+
+
+_repro_status_slots: dict[str, _StatusSlot] = {}
+
+
+def _invalidate_repro_status(wt_id: str) -> None:
+    """Runner state moved: the next status request starts its own computation."""
+    slot = _repro_status_slots.get(wt_id)
+    if slot is not None:
+        slot.generation += 1
+
 
 def _declares_reproduction(task: Task | None) -> bool:
     """True when *task*'s body carries a ``## Reproduction`` section."""
@@ -1479,6 +1525,68 @@ def _repro_graph_payload(state: WorktreeState) -> dict:
     return graph_to_dict(_repro_graph(state))
 
 
+def _empty_status_payload(state: WorktreeState) -> dict:
+    """The status payload's shape with no step entries; the view then reads
+    every step as ``unknown`` off the graph."""
+    summary = {name: 0 for name in STATUSES}
+    summary["total"] = 0
+    return {
+        "root": str(state.project_root),
+        "ok": False,
+        "summary": summary,
+        "steps": [],
+        "external_inputs": [],
+    }
+
+
+async def _run_repro_status(state: WorktreeState, slot: _StatusSlot, run: _StatusRun) -> dict:
+    """Compute the status off the event loop; announce it if a request gave up waiting."""
+    try:
+        payload = await asyncio.to_thread(_repro_status_payload, state)
+        if run.generation >= slot.payload_generation:  # an older run may end after a newer one
+            slot.payload, slot.payload_generation = payload, run.generation
+            slot.late_until = time.monotonic() + REPRO_STATUS_LATE_TTL if run.waited_out else 0.0
+        return payload
+    finally:
+        if slot.run is run:
+            slot.run = None
+        if run.waited_out:
+            await _broadcast("repro-updated", "{}", state.wt_id)
+
+
+async def _repro_status_within_budget(state: WorktreeState) -> dict:
+    """The worktree's status, or its previous one marked ``refreshing``.
+
+    Concurrent requests share one computation. A request that outlasts
+    `REPRO_STATUS_BUDGET` answers with the last result (an empty step list when
+    there is none) and ``refreshing: true``; the computation carries on and
+    announces itself with ``repro-updated`` when it ends.
+    """
+    slot = _repro_status_slots.setdefault(state.wt_id, _StatusSlot())
+    if (
+        slot.payload is not None
+        and slot.payload_generation == slot.generation
+        and time.monotonic() < slot.late_until
+    ):
+        return slot.payload
+    run = slot.run
+    if (
+        run is None
+        or run.generation != slot.generation
+        or run.task.get_loop() is not asyncio.get_running_loop()
+    ):
+        run = slot.run = _StatusRun(slot.generation)
+        run.task = asyncio.create_task(_run_repro_status(state, slot, run))
+        # A request that gave up never reads the outcome; keep a failure from
+        # being reported as a task exception nobody retrieved.
+        run.task.add_done_callback(lambda task: task.cancelled() or task.exception())
+    done, _ = await asyncio.wait({run.task}, timeout=REPRO_STATUS_BUDGET)
+    if done:
+        return run.task.result()
+    run.waited_out = True
+    return {**(slot.payload or _empty_status_payload(state)), "refreshing": True}
+
+
 def _repro_status_payload(state: WorktreeState) -> dict:
     """Runner state for every declared step, each with its log tail.
 
@@ -1494,16 +1602,7 @@ def _repro_status_payload(state: WorktreeState) -> dict:
         report = compute_status(graph, paths, upstream=True, live_build=lock_holder(paths))
         report.selected = {e.step.name for e in report.entries}
     except ReproStateError as exc:
-        summary = {name: 0 for name in STATUSES}
-        summary["total"] = 0
-        return {
-            "root": str(project_root),
-            "ok": False,
-            "summary": summary,
-            "steps": [],
-            "external_inputs": [],
-            "unavailable": str(exc),
-        }
+        return {**_empty_status_payload(state), "unavailable": str(exc)}
     payload = report.to_dict()
     del payload["findings"]  # the graph payload carries them
     for entry in payload["steps"]:
@@ -1530,7 +1629,7 @@ async def repro_status(request: Request):
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    return await asyncio.to_thread(_repro_status_payload, state)
+    return await _repro_status_within_budget(state)
 
 
 # --- Route: GET /files/{path} ----------------------------------------------
@@ -2094,6 +2193,7 @@ async def repro_build(request: Request):
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     graph = await asyncio.to_thread(_repro_graph, state)
     target = _validate_build_target(graph, body.get("target"))
+    _invalidate_repro_status(state.wt_id)
     try:
         return await asyncio.to_thread(
             _start_build_sync, state, target, body.get("only") is True, body.get("force") is True)
@@ -2108,6 +2208,7 @@ async def repro_build_stop(request: Request):
         raise HTTPException(status_code=403, detail="Builds are disabled on this server")
     await _same_origin_json(request, _is_trusted_authority)
     state = await resolve_worktree(request)
+    _invalidate_repro_status(state.wt_id)
     return await asyncio.to_thread(_stop_build_sync, state)
 
 

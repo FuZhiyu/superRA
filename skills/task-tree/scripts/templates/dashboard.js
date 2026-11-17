@@ -1756,8 +1756,8 @@ async function loadReproData(force) {
   if (_reproPending && !force) return _reproPending;
   var seq = ++_reproLoadSeq;
   var pending = (async function() {
-    var g = await fetch(wtUrl('/api/repro/graph'));
-    var s = await fetch(wtUrl('/api/repro/status'));
+    var both = await Promise.all([fetch(wtUrl('/api/repro/graph')), fetch(wtUrl('/api/repro/status'))]);
+    var g = both[0], s = both[1];
     if (!g.ok || !s.ok) throw new Error('reproduction data unavailable');
     var loaded = { graph: await g.json(), status: await s.json() };
     if (seq === _reproLoadSeq) _reproData = loaded;
@@ -2358,7 +2358,7 @@ function drawReproView(container,data) {
     +'<div class="repro-summary"><span id="repro-step-count">'+scope.count+'</span><details class="rp-menu rp-legend-menu" data-rp-menu="legend"><summary>Status key</summary><div class="rp-menu-body">'+scope.legend+'</div></details>'
     +((filteredGraph.step_edges||[]).length?'<details class="rp-menu rp-files-menu" data-rp-menu="files"><summary>Files'+(_reproHiddenTypes.length?' · '+_reproHiddenTypes.length+' hidden':'')+'</summary><div class="rp-menu-body">'+reproTypeMenuHTML(filteredGraph)+'</div></details>':'')
     +(findings.length?'<details class="rp-menu rp-diagnostics" data-rp-menu="diagnostics"><summary>'+escapeHtml(diagnosticLabel)+(errors?' · graph blocked':'')+'</summary><div class="rp-menu-body">'+reproFindingsHTML(findings)+'</div></details>':'')
-    +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
+    +(data.status.unavailable?'<span class="repro-hint">State unavailable</span>':'')+(data.status.refreshing?'<span class="repro-hint rp-refreshing" role="status">Checking changed files…</span>':'')+(reproActionsOn()?'<span id="repro-build-status" class="rp-build-status" role="status">'+reproBuildStatusHTML()+'</span>':'')+'</div>'
     +'<p id="repro-notice" role="status">'+escapeHtml(_reproNotice||notice)+'</p>'
     +'<div class="repro-stage"><div class="repro-canvas" tabindex="0" aria-label="Dependency graph. Scroll or drag to pan; pinch to zoom. Arrow keys pan, plus and minus zoom, zero fits."><div class="repro-plot" style="width:'+lay.width+'px;height:'+lay.height+'px">'+reproGraphHTML(lay,statuses)+'</div></div>'
     +(!model.nodes.length?'<p class="repro-empty">'+(workspaceFilterCount()?'No tasks match these filters. Clear the filter bar to restore all tasks.':paths.length?'No active tasks are available in the project graph.':'No active tasks in this tree.')+'</p>':'')

@@ -19,6 +19,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from io import StringIO
 from pathlib import Path
@@ -7163,6 +7164,115 @@ def _run_repro_render_node(harness_body):
 
 
 @pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestReproStatusBudget:
+    """`/api/repro/status` shares one computation per worktree and answers
+    within a time budget, since a computation with changed files to hash can
+    run for minutes."""
+
+    @pytest.fixture
+    def status(self, tmp_path, monkeypatch):
+        """A worktree state, the queue of one connected page, and a stand-in
+        computation that counts its calls and waits while `hold` is set."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        state = plan_dashboard._build_worktree_state("wt-status", root)
+        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=16)
+        monkeypatch.setitem(plan_dashboard._worktree_clients, "wt-status", {queue})
+        monkeypatch.setattr(plan_dashboard, "_repro_status_slots", {})
+        monkeypatch.setattr(plan_dashboard, "REPRO_STATUS_BUDGET", 0.05)
+        calls, release = [], threading.Event()
+        release.set()
+
+        def compute(_state):
+            calls.append(len(calls) + 1)
+            number = calls[-1]
+            assert release.wait(5)
+            return {"steps": [{"name": f"run-{number}"}], "ok": True}
+
+        monkeypatch.setattr(plan_dashboard, "_repro_status_payload", compute)
+        return state, queue, calls, release
+
+    def _run(self, coroutine):
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(coroutine)
+        finally:
+            loop.close()
+
+    def test_concurrent_requests_share_one_computation(self, status):
+        state, _queue, calls, _release = status
+
+        async def scenario():
+            return await asyncio.gather(*(plan_dashboard._repro_status_within_budget(state) for _ in range(3)))
+
+        answers = self._run(scenario())
+        assert calls == [1]
+        assert all(a == {"steps": [{"name": "run-1"}], "ok": True} for a in answers)
+
+    def test_a_slow_computation_answers_empty_then_announces_its_result(self, status):
+        state, queue, calls, release = status
+
+        async def scenario():
+            release.clear()
+            early = await plan_dashboard._repro_status_within_budget(state)
+            assert early["refreshing"] is True and early["steps"] == []
+            assert queue.empty()
+            release.set()
+            announced = await asyncio.wait_for(queue.get(), 5)
+            assert "event: repro-updated" in announced
+            # The refetch that announcement causes is answered without a new computation.
+            return await plan_dashboard._repro_status_within_budget(state)
+
+        late = self._run(scenario())
+        assert late == {"steps": [{"name": "run-1"}], "ok": True}
+        assert calls == [1]
+
+    def test_a_slow_computation_answers_with_the_previous_result(self, status):
+        state, queue, calls, release = status
+
+        async def scenario():
+            first = await plan_dashboard._repro_status_within_budget(state)
+            assert "refreshing" not in first
+            release.clear()
+            stale = await plan_dashboard._repro_status_within_budget(state)
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            return stale
+
+        stale = self._run(scenario())
+        assert stale == {"steps": [{"name": "run-1"}], "ok": True, "refreshing": True}
+        assert calls == [1, 2]
+
+    def test_a_request_after_a_state_change_does_not_join_an_older_computation(self, status):
+        state, queue, calls, release = status
+
+        async def scenario():
+            release.clear()
+            await plan_dashboard._repro_status_within_budget(state)  # run 1 is in flight
+            plan_dashboard._invalidate_repro_status("wt-status")
+            await plan_dashboard._repro_status_within_budget(state)  # starts run 2
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            await asyncio.wait_for(queue.get(), 5)
+            return await plan_dashboard._repro_status_within_budget(state)
+
+        answer = self._run(scenario())
+        assert calls == [1, 2]
+        assert answer == {"steps": [{"name": "run-2"}], "ok": True}
+
+    def test_a_failed_computation_fails_the_request_that_waited(self, status, monkeypatch):
+        state, _queue, _calls, _release = status
+
+        def boom(_state):
+            raise RuntimeError("status failed")
+
+        monkeypatch.setattr(plan_dashboard, "_repro_status_payload", boom)
+        with pytest.raises(RuntimeError, match="status failed"):
+            self._run(plan_dashboard._repro_status_within_budget(state))
+        assert plan_dashboard._repro_status_slots["wt-status"].run is None
+
+
 class TestReproStateChannels:
     def test_cards_split_reported_and_own_state_and_the_legend_explains_both(self):
         """Border and label carry the reported state, the fill the step's own:
