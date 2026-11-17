@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
+import gzip
 import hashlib
 import importlib.resources as resources
 import ipaddress
@@ -1614,13 +1615,29 @@ def _repro_status_payload(state: WorktreeState) -> dict:
     return payload
 
 
+def _repro_json_response(request: Request, payload: dict) -> Response:
+    """*payload* as JSON, gzip-compressed for a client that accepts it.
+
+    The graph and status of a large project run to several hundred kilobytes
+    of repeated paths, which compress about eightfold in a few milliseconds.
+    Both payloads are plain JSON values already, as `--json` prints them.
+    """
+    body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    headers = {"Vary": "Accept-Encoding"}
+    accepted = {token.split(";")[0].strip() for token in request.headers.get("accept-encoding", "").lower().split(",")}
+    if "gzip" in accepted:
+        body = gzip.compress(body, compresslevel=1)
+        headers["Content-Encoding"] = "gzip"
+    return Response(body, media_type="application/json", headers=headers)
+
+
 @app.get("/api/repro/graph")
 async def repro_graph(request: Request):
     """The reproduction graph the tree's `## Reproduction` sections declare."""
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    return await asyncio.to_thread(_repro_graph_payload, state)
+    return _repro_json_response(request, await asyncio.to_thread(_repro_graph_payload, state))
 
 
 @app.get("/api/repro/status")
@@ -1629,7 +1646,7 @@ async def repro_status(request: Request):
     state = await resolve_worktree(request)
     if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    return await _repro_status_within_budget(state)
+    return _repro_json_response(request, await _repro_status_within_budget(state))
 
 
 # --- Route: GET /files/{path} ----------------------------------------------

@@ -6743,6 +6743,16 @@ class TestReproRoutes:
         for key in ("task", "kind", "cmd", "deps", "outs", "duration"):
             assert key in entry
 
+    @pytest.mark.parametrize("route", ["/api/repro/graph", "/api/repro/status"])
+    def test_payload_is_compressed_only_for_a_client_that_accepts_gzip(self, repro_plan, route):
+        with _repro_client(repro_plan) as c:
+            packed = c.get(route, headers={"Accept-Encoding": "gzip, br"})
+            plain = c.get(route, headers={"Accept-Encoding": "identity"})
+        assert packed.headers["content-encoding"] == "gzip"
+        assert "content-encoding" not in plain.headers
+        assert packed.headers["vary"] == plain.headers["vary"] == "Accept-Encoding"
+        assert packed.json() == plain.json() and packed.json()["steps"]
+
     def test_status_route_degrades_when_the_lock_cannot_be_read(
         self, repro_plan, monkeypatch
     ):
