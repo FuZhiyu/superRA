@@ -1382,6 +1382,18 @@ class TestWatcherLifecycle:
             self._reset()
             loop.close()
 
+    def test_replacing_the_tree_drops_the_graph_built_from_it(self, tmp_path):
+        """The refetch after a reload must not get a graph of the old tree,
+        which the cache would serve: task.md mtimes match the edit already."""
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        state = plan_dashboard._worktree_cache["wt-a"]
+        plan_dashboard._repro_graph(state)
+        assert "wt-a" in plan_dashboard._repro_graph_cache
+        plan_dashboard.rebuild_worktree_state("wt-a")
+        assert "wt-a" not in plan_dashboard._repro_graph_cache
+        self._reset()
+
     def test_watcher_start_reloads_after_unwatched_new_task(self, tmp_path):
         loop = asyncio.new_event_loop()
         self._reset()

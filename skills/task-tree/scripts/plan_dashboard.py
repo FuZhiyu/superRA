@@ -557,6 +557,8 @@ def rebuild_worktree_state(wt_id: str, refreshed: WorktreeState | None = None) -
         return None
     if refreshed is None:
         refreshed = _build_worktree_state(wt_id, existing.plan_root)
+    # A graph built from the replaced tree must not answer the refetch.
+    _repro_graph_cache.pop(wt_id, None)
     # Refresh in place so any handler/watcher holding the same object sees it.
     existing.root_task = refreshed.root_task
     existing.task_index = refreshed.task_index
