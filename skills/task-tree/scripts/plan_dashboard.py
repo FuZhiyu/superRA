@@ -1478,6 +1478,18 @@ def _invalidate_repro_status(wt_id: str) -> None:
         slot.generation += 1
 
 
+# worktree id -> whether its last build-state poll saw a build running
+_repro_build_running: dict[str, bool] = {}
+
+
+def _note_build_state(wt_id: str, running: bool) -> None:
+    """A poll that sees a build end moves runner state: the page refetches the
+    status at once, before the watcher has seen the lock change."""
+    if _repro_build_running.get(wt_id) and not running:
+        _invalidate_repro_status(wt_id)
+    _repro_build_running[wt_id] = running
+
+
 def _declares_reproduction(task: Task | None) -> bool:
     """True when *task*'s body carries a ``## Reproduction`` section."""
     if task is None or not task.body:
@@ -1543,7 +1555,15 @@ def _empty_status_payload(state: WorktreeState) -> dict:
 async def _run_repro_status(state: WorktreeState, slot: _StatusSlot, run: _StatusRun) -> dict:
     """Compute the status off the event loop; announce it if a request gave up waiting."""
     try:
-        payload = await asyncio.to_thread(_repro_status_payload, state)
+        try:
+            payload = await asyncio.to_thread(_repro_status_payload, state)
+        except Exception as exc:
+            if not run.waited_out:
+                raise
+            # The request that would have carried this failure has answered
+            # already. Keep it as the result, so the refetch the announcement
+            # causes reports it and does not start the computation over.
+            payload = {**_empty_status_payload(state), "unavailable": f"status could not be computed: {exc}"}
         if run.generation >= slot.payload_generation:  # an older run may end after a newer one
             slot.payload, slot.payload_generation = payload, run.generation
             slot.late_until = time.monotonic() + REPRO_STATUS_LATE_TTL if run.waited_out else 0.0
@@ -2191,7 +2211,9 @@ def _stop_build_sync(state: WorktreeState) -> dict:
 async def repro_build_state(request: Request):
     """The worktree's running build, if any, and the page's last build."""
     state = await resolve_worktree(request)
-    return await asyncio.to_thread(_build_state_sync, state)
+    result = await asyncio.to_thread(_build_state_sync, state)
+    _note_build_state(state.wt_id, bool(result.get("running")))
+    return result
 
 
 @app.post("/api/repro/build")

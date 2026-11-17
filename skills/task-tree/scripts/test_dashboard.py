@@ -7271,6 +7271,46 @@ class TestReproStatusBudget:
         assert calls == [1, 2]
         assert answer == {"steps": [{"name": "run-2"}], "ok": True}
 
+    def test_a_slow_failure_is_reported_once_and_not_recomputed(self, status, monkeypatch):
+        state, queue, _calls, release = status
+        failures = []
+
+        def boom(_state):
+            failures.append(1)
+            assert release.wait(5)
+            raise RuntimeError("lock unreadable")
+
+        monkeypatch.setattr(plan_dashboard, "_repro_status_payload", boom)
+
+        async def scenario():
+            release.clear()
+            early = await plan_dashboard._repro_status_within_budget(state)
+            assert early["refreshing"] is True
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            return [await plan_dashboard._repro_status_within_budget(state) for _ in range(3)]
+
+        answers = self._run(scenario())
+        assert failures == [1]
+        assert all("lock unreadable" in a["unavailable"] and "refreshing" not in a for a in answers)
+
+    def test_a_poll_that_sees_a_build_end_starts_a_new_computation(self, status):
+        state, _queue, calls, _release = status
+
+        async def scenario():
+            await plan_dashboard._repro_status_within_budget(state)
+            slot = plan_dashboard._repro_status_slots["wt-status"]
+            before = slot.generation
+            plan_dashboard._note_build_state("wt-status", True)
+            assert slot.generation == before
+            plan_dashboard._note_build_state("wt-status", False)
+            assert slot.generation == before + 1
+            plan_dashboard._note_build_state("wt-status", False)
+            assert slot.generation == before + 1
+
+        self._run(scenario())
+        assert calls == [1]
+
     def test_a_failed_computation_fails_the_request_that_waited(self, status, monkeypatch):
         state, _queue, _calls, _release = status
 

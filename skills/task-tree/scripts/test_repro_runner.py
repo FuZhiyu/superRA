@@ -915,30 +915,35 @@ def test_a_flush_drops_the_entries_of_deleted_files(tmp_path):
 
 
 def test_a_flush_keeps_entries_whose_file_may_only_be_out_of_reach(tmp_path):
+    """Only a file that really lies inside the project is dropped: a missing
+    file elsewhere may be on a drive that is not mounted now."""
     root, cache_file = _cache_project(tmp_path)
-    target, outside = tmp_path / "drive", tmp_path / "elsewhere"
-    target.mkdir()
-    outside.mkdir()
-    (root / "data").symlink_to(target)
-    (target / "linked.txt").write_text("linked")
-    (outside / "far.txt").write_text("far")
-    (tmp_path / "near.txt").write_text("near")
+    broken, mounted, outside = tmp_path / "gone-drive", tmp_path / "drive", tmp_path / "elsewhere"
+    for folder in (broken, mounted, outside, root / "locked"):
+        folder.mkdir()
+    (root / "old").symlink_to(broken)
+    (root / "data").symlink_to(mounted)
+    files = [root / "old/a.txt", root / "data/b.txt", outside / "c.txt", root / "locked/d.txt"]
+    for path in files:
+        path.write_text(path.name)
     cache = HashCache(cache_file)
-    for path in (root / "data/linked.txt", outside / "far.txt", tmp_path / "near.txt"):
+    for path in files:
         cache.file_hash(path)
     cache.flush()
 
-    shutil.rmtree(target)  # the link inside the project now points nowhere
-    shutil.rmtree(outside)  # a folder outside the project is missing: an unmounted drive looks the same
-    (tmp_path / "near.txt").unlink()  # its folder is still there, so this file is gone
-    (root / "new.txt").write_text("new")
-    later = HashCache(cache_file)
-    later.file_hash(root / "new.txt")
-    later.flush()
+    shutil.rmtree(broken)  # the link inside the project now points nowhere
+    (mounted / "b.txt").unlink()  # the linked folder is there, as an empty mount point is
+    (outside / "c.txt").unlink()  # outside the project
+    (root / "locked").chmod(0o600)  # its files can no longer be examined
+    try:
+        (root / "new.txt").write_text("new")
+        later = HashCache(cache_file)
+        later.file_hash(root / "new.txt")
+        later.flush()
+    finally:
+        (root / "locked").chmod(0o700)
 
-    assert _saved_keys(cache_file) == {
-        str(root / "data/linked.txt"), str(outside / "far.txt"), str(root / "new.txt"),
-    }
+    assert _saved_keys(cache_file) == {str(path) for path in files} | {str(root / "new.txt")}
 
 
 def test_a_flush_keeps_what_another_process_saved_meanwhile(tmp_path):
@@ -975,7 +980,7 @@ def test_a_failed_flush_leaves_the_saved_cache_whole(tmp_path, monkeypatch):
     assert [p.name for p in cache_file.parent.iterdir()] == ["hashes.json"]
 
 
-def test_an_oversized_cache_is_swept_without_anything_new_to_save(tmp_path, monkeypatch):
+def test_a_flush_with_nothing_new_leaves_the_cache_file_alone(tmp_path):
     root, cache_file = _cache_project(tmp_path)
     for name in ("a.txt", "b.txt"):
         (root / name).write_text(name)
@@ -984,17 +989,14 @@ def test_an_oversized_cache_is_swept_without_anything_new_to_save(tmp_path, monk
     cache.file_hash(root / "b.txt")
     cache.flush()
     (root / "a.txt").unlink()
-
-    HashCache(cache_file).flush()  # nothing new and a small file: left alone
-    assert len(_saved_keys(cache_file)) == 2
-
-    monkeypatch.setattr(_repro_state, "SWEEP_BYTES", 0)
-    HashCache(cache_file).flush()
-    assert _saved_keys(cache_file) == {str(root / "b.txt")}
-
     written = cache_file.stat().st_mtime_ns
-    HashCache(cache_file).flush()  # nothing left to drop: no rewrite
+
+    reader = HashCache(cache_file)
+    reader.file_hash(root / "b.txt")
+    reader.flush()
+
     assert cache_file.stat().st_mtime_ns == written
+    assert len(_saved_keys(cache_file)) == 2
 
 
 @pytest.mark.parametrize("broken", ["section", "step"])
