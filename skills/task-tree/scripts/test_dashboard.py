@@ -2382,6 +2382,13 @@ class TestFrontendPolishRendered:
                 assert "Renamed Parent" in pg.inner_text("#crumbs")
 
                 # Rename again while the crumb is on screen; it must update live.
+                # htmx listens for the swapped-in row only once the first swap
+                # settles, so an event sent before that is dropped.
+                pg.wait_for_function(
+                    "!!((document.getElementById('task-01-parent') || {})"
+                    "['htmx-internal-data'] || {}).sseEventListener",
+                    timeout=5000,
+                )
                 self._broadcast_title_edit(loop, "01-parent", "Renamed Again")
                 pg.wait_for_function(
                     "document.getElementById('crumbs').textContent"
