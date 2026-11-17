@@ -13,6 +13,7 @@ legacy ``pytask.lock`` (with ``repro-builds.json``) converted in memory.
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -580,9 +581,9 @@ def _save_lock(path: Path):
             try:
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 held = True
-            except OSError:
-                if time.monotonic() >= deadline:
-                    break
+            except OSError as exc:
+                if exc.errno not in (errno.EWOULDBLOCK, errno.EAGAIN) or time.monotonic() >= deadline:
+                    break  # a filesystem without locks saves at once
                 time.sleep(0.01)
         try:
             yield

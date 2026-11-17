@@ -1005,7 +1005,9 @@ sweep = cache._sweep
 cache._sweep = lambda: (time.sleep(0.5), sweep())[1]  # widen the window between merge and rename
 start = float(sys.argv[3])
 time.sleep(max(0.0, start - time.time()))
+began = time.time()
 cache.flush()
+print(began, time.time())
 """
 
 
@@ -1020,12 +1022,37 @@ def test_two_processes_saving_at_once_both_keep_their_hashes(tmp_path):
     start = time.time() + 1.0
     scripts = str(Path(_repro_state.__file__).parent)
     savers = [
-        subprocess.Popen([sys.executable, "-c", _SAVER, scripts, str(cache_file), str(start), *map(str, group)])
+        subprocess.Popen(
+            [sys.executable, "-c", _SAVER, scripts, str(cache_file), str(start), *map(str, group)],
+            stdout=subprocess.PIPE, text=True,
+        )
         for group in groups
     ]
-    assert [saver.wait(30) for saver in savers] == [0, 0]
+    (a_began, a_ended), (b_began, b_ended) = (map(float, saver.communicate(timeout=30)[0].split()) for saver in savers)
+    assert [saver.returncode for saver in savers] == [0, 0]
+    assert a_began < b_ended and b_began < a_ended  # the two saves overlapped
 
     assert _saved_keys(cache_file) == {str(path) for path in groups[0] + groups[1]}
+
+
+def test_a_filesystem_without_locks_saves_at_once(tmp_path, monkeypatch):
+    import errno
+    import fcntl
+
+    root, cache_file = _cache_project(tmp_path)
+    (root / "a.txt").write_text("a")
+
+    def unsupported(*_args):
+        raise OSError(errno.ENOTSUP, "locks not supported")
+
+    monkeypatch.setattr(fcntl, "flock", unsupported)
+    cache = HashCache(cache_file)
+    cache.file_hash(root / "a.txt")
+    started = time.monotonic()
+    cache.flush()
+
+    assert time.monotonic() - started < _repro_state.SAVE_LOCK_WAIT / 2
+    assert _saved_keys(cache_file) == {str(root / "a.txt")}
 
 
 def test_a_flush_saves_when_another_holder_keeps_the_lock(tmp_path, monkeypatch):
