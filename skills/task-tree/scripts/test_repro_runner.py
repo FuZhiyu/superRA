@@ -990,7 +990,87 @@ def test_a_failed_flush_leaves_the_saved_cache_whole(tmp_path, monkeypatch):
     cache.flush()
 
     assert cache_file.read_text() == before
-    assert [p.name for p in cache_file.parent.iterdir()] == ["hashes.json"]
+    assert sorted(p.name for p in cache_file.parent.iterdir()) == ["hashes.json", "hashes.json.lock"]
+
+
+_SAVER = """
+import sys, time
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import _repro_state
+cache = _repro_state.HashCache(Path(sys.argv[2]))
+for name in sys.argv[4:]:
+    cache.file_hash(Path(name))
+sweep = cache._sweep
+cache._sweep = lambda: (time.sleep(0.5), sweep())[1]  # widen the window between merge and rename
+start = float(sys.argv[3])
+time.sleep(max(0.0, start - time.time()))
+began = time.time()
+cache.flush()
+print(began, time.time())
+"""
+
+
+def test_two_processes_saving_at_once_both_keep_their_hashes(tmp_path):
+    import subprocess
+    import sys
+
+    root, cache_file = _cache_project(tmp_path)
+    groups = [[root / f"{side}{i}.txt" for i in range(20)] for side in "ab"]
+    for path in groups[0] + groups[1]:
+        path.write_text(path.name)
+    start = time.time() + 1.0
+    scripts = str(Path(_repro_state.__file__).parent)
+    savers = [
+        subprocess.Popen(
+            [sys.executable, "-c", _SAVER, scripts, str(cache_file), str(start), *map(str, group)],
+            stdout=subprocess.PIPE, text=True,
+        )
+        for group in groups
+    ]
+    (a_began, a_ended), (b_began, b_ended) = (map(float, saver.communicate(timeout=30)[0].split()) for saver in savers)
+    assert [saver.returncode for saver in savers] == [0, 0]
+    assert a_began < b_ended and b_began < a_ended  # the two saves overlapped
+
+    assert _saved_keys(cache_file) == {str(path) for path in groups[0] + groups[1]}
+
+
+def test_a_filesystem_without_locks_saves_at_once(tmp_path, monkeypatch):
+    import errno
+    import fcntl
+
+    root, cache_file = _cache_project(tmp_path)
+    (root / "a.txt").write_text("a")
+
+    def unsupported(*_args):
+        raise OSError(errno.ENOTSUP, "locks not supported")
+
+    monkeypatch.setattr(fcntl, "flock", unsupported)
+    cache = HashCache(cache_file)
+    cache.file_hash(root / "a.txt")
+    started = time.monotonic()
+    cache.flush()
+
+    assert time.monotonic() - started < _repro_state.SAVE_LOCK_WAIT / 2
+    assert _saved_keys(cache_file) == {str(root / "a.txt")}
+
+
+def test_a_flush_saves_when_another_holder_keeps_the_lock(tmp_path, monkeypatch):
+    import fcntl
+
+    root, cache_file = _cache_project(tmp_path)
+    (root / "a.txt").write_text("a")
+    monkeypatch.setattr(_repro_state, "SAVE_LOCK_WAIT", 0.2)
+    cache = HashCache(cache_file)
+    cache.file_hash(root / "a.txt")
+    with open(cache_file.with_name("hashes.json.lock"), "a") as holder:
+        fcntl.flock(holder, fcntl.LOCK_EX)
+        started = time.monotonic()
+        cache.flush()
+        waited = time.monotonic() - started
+
+    assert waited >= 0.2
+    assert _saved_keys(cache_file) == {str(root / "a.txt")}
 
 
 def test_a_flush_with_nothing_new_leaves_the_cache_file_alone(tmp_path):

@@ -1468,6 +1468,27 @@ class _StatusSlot:
     late: dict | None = None  # what a run that outlasted the budget ended with: a result or its failure
     late_generation: int = -1
     late_until: float = 0.0
+    reading: asyncio.Future | None = None  # the one computation reading runner state and file content
+
+
+async def _status_after_reading(state: WorktreeState, slot: _StatusSlot, run: _StatusRun) -> dict:
+    """Compute once no other computation of the worktree is reading.
+
+    A run superseded while it waited never reads: it answers with the newer
+    run's result.
+    """
+    loop = asyncio.get_running_loop()
+    while slot.reading is not None and not slot.reading.done() and slot.reading.get_loop() is loop:
+        await asyncio.wait({slot.reading})
+    newer = slot.run
+    if newer is not None and newer is not run and newer.generation > run.generation and newer.task is not None:
+        return await asyncio.shield(newer.task)
+    reading = slot.reading = asyncio.ensure_future(asyncio.to_thread(_repro_status_payload, state))
+    try:
+        return await asyncio.shield(reading)
+    finally:
+        if slot.reading is reading and reading.done():
+            slot.reading = None
 
 
 _repro_status_slots: dict[str, _StatusSlot] = {}
@@ -1559,7 +1580,7 @@ async def _run_repro_status(state: WorktreeState, slot: _StatusSlot, run: _Statu
     try:
         failed = False
         try:
-            payload = await asyncio.to_thread(_repro_status_payload, state)
+            payload = await _status_after_reading(state, slot, run)
         except Exception as exc:
             if not run.waited_out:
                 raise
@@ -1588,7 +1609,8 @@ async def _repro_status_within_budget(state: WorktreeState) -> dict:
     Concurrent requests share one computation. A request that outlasts
     `REPRO_STATUS_BUDGET` answers with the last result (an empty step list when
     there is none) and ``refreshing: true``; the computation carries on and
-    announces itself with ``repro-updated`` when it ends.
+    announces itself with ``repro-updated`` when it ends. A computation of a
+    newer generation starts reading once the older one ends.
     """
     slot = _repro_status_slots.setdefault(state.wt_id, _StatusSlot())
     if (
