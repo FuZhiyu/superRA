@@ -7198,7 +7198,7 @@ def _run_repro_render_node(harness_body):
         "_reproBuild", "reproActionsOn", "reproExplainable", "reproStepTarget", "reproTaskTarget",
         "reproIsRunning", "reproNodeMeta", "reproChipHTML", "reproBuildStatusHTML",
         "REPRO_FILE_TYPES", "REPRO_TYPE_OF", "reproLeaf", "reproFileType", "reproFileTypeTag",
-        "_reproFilesMemo", "reproFiles", "reproEdgeCarries", "_reproHiddenTypes", "reproEdgeTypes", "reproTypeFilter", "reproTypeMenuHTML", "reproStepCode",
+        "_reproFilesMemo", "reproGlobRe", "reproFiles", "reproEdgeCarries", "_reproHiddenTypes", "reproEdgeTypes", "reproTypeFilter", "reproTypeMenuHTML", "reproStepCode",
         "escapeHtml", "escapeAttr",
     ])
     # drawReproView writes into a container and rebinds handlers; the harness

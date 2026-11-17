@@ -141,7 +141,7 @@ FILTER_DEFS = ['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', '
     'normalizeLineageFilter', 'workspaceFilterCount', 'workspaceFiltersForHash', 'workspaceLineage', 'workspaceStepIndex',
     'lineageAnchorLabel', 'workspaceTaskTitle', 'workspaceScopeAdd', 'workspaceTasks', 'workspaceStepMatches',
     'workspaceTaskMatches', 'workspaceVisibility', 'workspaceFacetCounts', 'workspaceResultCount', 'workspaceGraph',
-    'REPRO_FILE_TYPES', 'REPRO_TYPE_OF', 'reproLeaf', 'reproFileType', '_reproFilesMemo', 'reproFiles', 'reproEdgeCarries',
+    'REPRO_FILE_TYPES', 'REPRO_TYPE_OF', 'reproLeaf', 'reproFileType', '_reproFilesMemo', 'reproGlobRe', 'reproFiles', 'reproEdgeCarries',
     'FILE_DIRECTIONS', 'lineageAnchorLead', 'reproFileTypeTag']
 
 # Statuses and reported step states over the LINEAGE graph. `fit` and `report`
@@ -243,6 +243,19 @@ assert.deepEqual(sorted(workspaceLineage().steps),['raw','report']);
 assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.from+'>'+e.to+' '+e.via),['raw>report figs'],'only the folder wire from the file writer stays');
 use({lineage:[{file:'figs'}]});
 assert.deepEqual(sorted(workspaceLineage().steps),['raw','report','tidy']);
+""")
+
+
+def test_a_glob_reader_reads_the_declared_files_it_matches():
+    filter_run("""
+steps.find(s=>s.name==='raw').outs=[{path:{logical:'figs/a.pdf'}}];steps.find(s=>s.name==='tidy').outs=[{path:{logical:'figs/b.png'}},{path:{logical:'figs/.c.pdf'}}];
+edges.push({from:'raw',to:'report',via:'figs/*.pdf'});
+_reproData={graph,status:{steps:stepStatus}};
+var files=reproFiles();
+assert.deepEqual(files['figs/*.pdf'].members,['figs/a.pdf'],'only matching, non-hidden outputs are members');
+assert.deepEqual(files['figs/*.pdf'].producers,['raw']);
+assert.deepEqual(files['figs/a.pdf'].readers,['report']);
+assert.equal(files['figs/*.pdf'].type,'figure');
 """)
 
 
