@@ -11,6 +11,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from _repro import is_glob
 from _repro_state import (
     BLOCKING, RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state,
     directory_dep_nodes, dropbox_ignore, is_online_only,
@@ -252,7 +253,8 @@ def current_state(graph, step, paths, cache=None, *, recorded=True):
     state = {
         'deps': {node[0]: dependency_state(cache, paths.project_root, node, prior.get(node[0])) for node in deps},
         'products': {node[0]: node_state(cache, paths.project_root, node) for node in products},
-        'outputs': {out.path.logical: cache.path_state(absolute(paths.project_root, out.path.resolved)) for out in step.outs},
+        'outputs': {out.path.logical: cache.path_state(absolute(paths.project_root, out.path.resolved), glob=False)
+                    for out in step.outs},
     }
     state['deps'][spec_node_id(step.name)] = spec_hash(step)
     if step.kind == 'check':
@@ -362,7 +364,8 @@ def validate_record(graph, step, paths, record, locks, cache=None, unknown=None)
     current_paths = {dep.logical: dep.resolved for dep in step.deps}
     for item in record.get('boundary_inputs', []):
         resolved = current_paths.get(item['logical'])
-        current = cache.path_state(absolute(paths.project_root, resolved)) if resolved else None
+        current = (cache.path_state(absolute(paths.project_root, resolved), glob=is_glob(item['logical']))
+                   if resolved else None)
         if unread(current):
             unknown.append((item['logical'], unread_phrase(current)))
         elif resolved is None or current != item['digest']:

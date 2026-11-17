@@ -43,6 +43,7 @@ from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
 from _repro_normalize import CleanerFailed, Outcome, clean, out_files, step_cleaners, step_env  # noqa: E402
 from _repro_state import (  # noqa: E402
+    node_glob,
     BLOCKING,
     LOCK_FILENAME,
     OUTPUT_CAP,
@@ -156,7 +157,7 @@ def _unreadable_inputs(build: Build, step: Step) -> list[tuple[str, str, int | N
     externals = {e.path.logical for e in build.graph.external_inputs}
     rows = []
     for node in deps:
-        online, size = build.cache.probe(absolute(root, node[2] or node[1]), walk=True)
+        online, size = build.cache.probe(absolute(root, node[2] or node[1]), walk=True, glob=node_glob(node))
         value = Unread("online-only") if online else dependency_state(build.cache, root, node)
         if value is None:
             rows.append((node[0], "missing" if node[0] not in externals else unread_phrase(value), size))
@@ -329,7 +330,7 @@ def skip_lines(outcome: Outcome, command: str) -> list[str]:
 
 def _write_sidecar(project_root: Path, out: Out, sidecar: Path, cache: HashCache) -> None:
     """Record the out's content hash so later runs never read the large file."""
-    digest = cache.path_state(absolute(project_root, out.path.resolved))
+    digest = cache.path_state(absolute(project_root, out.path.resolved), glob=False)
     if digest is None or unread(digest):
         return
     sidecar.write_text(f"{digest}  {out.path.logical}\n", encoding="utf-8")

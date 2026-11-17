@@ -1636,13 +1636,18 @@ def check_reproduction(plan_root: Path, root: Task | None = None) -> list[Findin
 
 
 def _glob_has_match(path: Path) -> bool:
-    from _repro_state import glob_filters, glob_split
+    """Whether a glob matches a file; True when an online-only folder would have to be listed to tell."""
+    from _repro_state import glob_filters, glob_split, path_online_only
     split = glob_split(path)
     if split is None or not split[0].is_dir():
         return path.exists()
+    if path_online_only(str(split[0])):
+        return True
     enter, keep = glob_filters(str(split[0]), split[1])
     for parent, dirnames, filenames in os.walk(split[0]):
         if any(keep(parent, name) for name in filenames):
             return True
         dirnames[:] = [d for d in dirnames if enter(parent, d)]
+        if any(path_online_only(os.path.join(parent, d)) for d in dirnames):
+            return True
     return False

@@ -373,7 +373,7 @@ class HashCache:
                 continue
         self.warm(files)
 
-    def tree_hash(self, path: Path, glob: str | None = None) -> str | Unread:
+    def tree_hash(self, path: Path, glob: str | None = None) -> str | Unread | None:
         """One hash over every file under a directory, by relative path.
 
         Symlinked files and subdirectories are followed, each real directory
@@ -381,7 +381,8 @@ class HashCache:
         listing an online-only directory downloads its entries. A broken link,
         an unreadable file, or uncached online-only content makes the whole
         directory `Unread` rather than silently leaving it out. With *glob*, a
-        pattern relative to *path*, only the files it matches count.
+        pattern relative to *path*, only the files it matches count, and no
+        match reads as absent.
         """
         key = f"{path}/{glob}" if glob else str(path)
         digest = hashlib.sha256()
@@ -418,16 +419,20 @@ class HashCache:
         self._online[key] = online
         if unreadable:
             return Unread("unreadable")
+        if glob and not entries:
+            return None  # a glob that matches nothing is absent, like a missing file
         for name, value in sorted(entries):
             digest.update(f"{name}\0{value}\n".encode())
         return f"{'glob' if glob else 'dir'}:{digest.hexdigest()}"
 
-    def path_state(self, path: Path) -> str | Unread | None:
+    def path_state(self, path: Path, glob: bool | None = None) -> str | Unread | None:
         """State of a file, directory, or glob: its content hash, `Unread`, or None if absent.
 
         One ``stat`` decides both the branch and, for a file, the cache key.
+        *glob* is the declared path's glob-ness; None judges a missing path by
+        its own characters.
         """
-        split = glob_split(path)
+        split = glob_split(path) if glob is not False else None
         if split:
             return self.tree_hash(*split) if split[0].is_dir() else None
         try:
@@ -440,15 +445,15 @@ class HashCache:
             return self.tree_hash(path)
         return self._hashed(path, info)
 
-    def probe(self, path: Path, *, walk: bool = False) -> tuple[bool, int | None]:
+    def probe(self, path: Path, *, walk: bool = False, glob: bool | None = None) -> tuple[bool, int | None]:
         """(online-only, size) from metadata alone; never reads content.
 
         A directory has no size. It is online-only when its own flag says so or
         its last hash walk found online-only content; *walk* stats everything
         under a directory that has not been walked. A legacy placeholder's size
-        is unknown.
+        is unknown. *glob* as in `path_state`.
         """
-        split = glob_split(path)
+        split = glob_split(path) if glob is not False else None
         if split:
             key = f"{split[0]}/{split[1]}"
             if walk and key not in self._online and split[0].is_dir():
@@ -798,7 +803,7 @@ def node_state(
     _, hashed, must_exist = node
     if must_exist is not None and not absolute(project_root, must_exist).exists():
         return None
-    value = path_state(cache, project_root, hashed)
+    value = path_state(cache, project_root, hashed, glob=must_exist is None and is_glob(node[0]))
     if unread(value) and value.size is not None and must_exist is not None:
         value = Unread(value.why, read_size(cache, project_root, node))
     return value
@@ -806,14 +811,14 @@ def node_state(
 
 def read_size(cache: HashCache, project_root: Path, node: Node) -> int | None:
     """Size of the file a node's readers read: the out itself, never its sidecar."""
-    return cache.probe(absolute(project_root, node[2] or node[1]))[1]
+    return cache.probe(absolute(project_root, node[2] or node[1]), glob=node_glob(node))[1]
 
 
 def dependency_state(cache: HashCache, project_root: Path, node: Node, recorded: str | None = None) -> str | Unread | None:
     """A saved artifact remains usable when its producer's sidecar is absent."""
     value = None if recorded and recorded.startswith('saved-input:') else node_state(cache, project_root, node)
     if value is None and node[2] is not None:
-        digest = cache.path_state(absolute(project_root, node[2]))
+        digest = cache.path_state(absolute(project_root, node[2]), glob=False)
         if unread(digest):
             return digest
         if digest is not None:
@@ -821,8 +826,13 @@ def dependency_state(cache: HashCache, project_root: Path, node: Node, recorded:
     return value
 
 
-def path_state(cache: HashCache, project_root: Path, resolved: str) -> str | Unread | None:
-    return cache.path_state(absolute(project_root, resolved))
+def path_state(cache: HashCache, project_root: Path, resolved: str, glob: bool | None = None) -> str | Unread | None:
+    return cache.path_state(absolute(project_root, resolved), glob=glob)
+
+
+def node_glob(node: Node) -> bool:
+    """Whether the path a node's readers read is a glob: never a sidecar-tracked out."""
+    return node[2] is None and is_glob(node[0])
 
 
 def outcome(current, recorded: str | None, recorded_size: int | None = None, *, produced: bool = True) -> str:
@@ -1590,9 +1600,9 @@ def _file_rows(
     for role, nodes in (("dependency", deps), ("output", products)):
         for node in nodes:
             path = absolute(paths.project_root, node[2] or node[1])
-            online, size = cache.probe(path)
+            online, size = cache.probe(path, glob=node_glob(node))
             if node[2] is not None:  # a sidecar-tracked out: never walk the out itself
-                online = online or cache.probe(absolute(paths.project_root, node[1]))[0]
+                online = online or cache.probe(absolute(paths.project_root, node[1]), glob=False)[0]
             result = outcomes.get(node[0])
             if result is None:
                 if online:
@@ -1956,6 +1966,7 @@ __all__ = [
     "outcome",
     "glob_filters",
     "glob_split",
+    "node_glob",
     "path_state",
     "lock_entry",
     "prune_lock",

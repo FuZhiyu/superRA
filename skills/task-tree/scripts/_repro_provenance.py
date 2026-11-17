@@ -19,6 +19,7 @@ import shlex
 import subprocess
 from pathlib import Path
 
+from _repro import is_glob
 from _repro_state import (
     LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, LOCK_FILENAME, STATE_DIRNAME, ReproStateError,
     absolute, convert_legacy, dependency_state, directory_dep_nodes, node_state, output_nodes,
@@ -543,7 +544,7 @@ class Resolver:
                                  if item['logical'] == node), None)
                 dep = next((d for d in step.deps if d.logical == node), None)
                 resolved = dep and dep.resolved
-                current = self.cache.path_state(absolute(root, resolved)) if dep else None
+                current = self.cache.path_state(absolute(root, resolved), glob=dep.glob) if dep else None
             elif kind == 'dependency':
                 spec = dep_nodes.get(node)
                 recorded = lock.depends_on.get(node) if lock else None
@@ -896,7 +897,7 @@ def explain(report, paths, cache, kind, value, *, full_diff=False, plan_name='su
 
 def _explain_path(resolver, target) -> dict:
     node, resolved = target['node'], target['resolved']
-    current = resolver.cache.path_state(absolute(resolver.paths.project_root, resolved))
+    current = resolver.cache.path_state(absolute(resolver.paths.project_root, resolved), glob=is_glob(node))
     here = None
     if unread(current):
         here, current = unread_phrase(current), None

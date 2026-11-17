@@ -188,6 +188,17 @@ def test_a_directory_is_checked_before_it_is_listed(tmp_path, monkeypatch):
     assert entry.files[0]["online_only"] is True and entry.files[0]["size"] is None
 
 
+def test_the_no_match_check_never_lists_an_online_only_folder(tmp_path, monkeypatch):
+    from _repro import check_reproduction
+    proj = Project(tmp_path / "glob")
+    proj.write("superRA/01-agg/task.md", DIR_TASK.replace("      - Data/panel\n", '      - "Data/panel/*/*.csv"\n'))
+    proj.write("Data/panel/y2020/p.csv", "1\n")
+    offline = Offline(monkeypatch, proj.root)
+    offline.evict("Data/panel")
+    assert not any("matches no file" in f.message for f in check_reproduction(proj.plan_root))
+    assert os.path.realpath(proj.root / "Data/panel") not in offline.listed
+
+
 def test_a_directory_reports_the_first_problem_its_walk_meets(tmp_path, monkeypatch, reads):
     tree = tmp_path / "tree"
     for name in ("a/1.txt", "a/2.txt", "b/3.txt"):

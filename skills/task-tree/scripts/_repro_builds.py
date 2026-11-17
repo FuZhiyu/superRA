@@ -34,7 +34,7 @@ def env_here(graph, paths, cache, record) -> dict:
     for node in record.get('env', {}).get('deps', {}):
         dep = next((d for s in graph.steps for d in s.deps if d.logical == node), None)
         if dep is not None:
-            here['env']['deps'][node] = cache.path_state(absolute(paths.project_root, dep.resolved))
+            here['env']['deps'][node] = cache.path_state(absolute(paths.project_root, dep.resolved), glob=dep.glob)
     return here
 
 

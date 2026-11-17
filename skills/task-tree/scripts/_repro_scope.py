@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import threading
 
-from _repro import build_graph, overlaps
+from _repro import build_graph, is_glob, overlaps
 from _repro_state import (
     Change, HashCache, ReproStateError, absolute, directory_dep_nodes, is_online_only,
     output_nodes, read_lock, read_run_record, spec_hash, step_nodes, unread, unread_phrase,
@@ -55,7 +55,7 @@ def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):
 
 def _boundary_row(dep, producer, outs, paths, cache, lock, baselines, baseline):
     """A saved input read from *producer*: its bytes here against that producer's successful build."""
-    digest = cache.path_state(absolute(paths.project_root, dep.resolved))
+    digest = cache.path_state(absolute(paths.project_root, dep.resolved), glob=dep.glob)
     if producer.name not in baselines:
         try:
             baselines[producer.name] = baseline(producer, paths, lock.get(producer.name))
@@ -63,7 +63,7 @@ def _boundary_row(dep, producer, outs, paths, cache, lock, baselines, baseline):
             baselines[producer.name] = {}
     evidence = baselines[producer.name]
     recorded = [evidence.get('outputs', {}).get(out.path.logical) for out in outs]
-    actual = [cache.path_state(absolute(paths.project_root, out.path.resolved)) if r else None
+    actual = [cache.path_state(absolute(paths.project_root, out.path.resolved), glob=False) if r else None
               for out, r in zip(outs, recorded)]
     here = unread_phrase(digest) if unread(digest) else None
     provenance = (here if here else 'missing' if digest is None else
@@ -140,7 +140,7 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=(), ledger
         resolved = current_paths.get(item['logical'])
         if resolved is None:
             continue  # Removing a declared dependency already changes the spec.
-        current = cache.path_state(absolute(paths.project_root, resolved))
+        current = cache.path_state(absolute(paths.project_root, resolved), glob=is_glob(item['logical']))
         if current == item['digest']:
             continue
         if unread(current):

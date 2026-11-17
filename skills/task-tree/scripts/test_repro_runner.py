@@ -411,9 +411,9 @@ def test_scoped_status_hashes_only_selected_ancestors(project, targets):
             super().__init__()
             self.visited = set()
 
-        def path_state(self, path):
+        def path_state(self, path, glob=None):
             self.visited.add(path.relative_to(project.root).as_posix())
-            return super().path_state(path)
+            return super().path_state(path, glob)
 
     cache = RecordingCache()
     report = compute_status(project.graph(), project.paths, targets=targets, cache=cache, upstream=True)
@@ -1249,6 +1249,15 @@ def test_a_glob_dep_is_a_boundary_input_and_an_impact_reader(dir_project):
     from _repro_provenance import path_target
     target = path_target(project.graph(), "${OUT}/parts/*.txt", project.root)
     assert [step.name for step in target["writers"]] == ["z-gen"]
+
+
+def test_a_missing_out_with_a_bracket_reads_missing(project):
+    project.write("superRA/03-x/task.md", TASK_X.replace('"${OUT}/x.txt"', '"${OUT}/x[2a].txt"'))
+    project.write("Code/x.sh", "mkdir -p output\necho x > 'output/x[2a].txt'\n")
+    assert project.run("build", "03-x") == 0
+    assert project.states("03-x") == {"build-x": "fresh"}
+    (project.root / "output" / "x[2a].txt").unlink()
+    assert project.states("03-x") == {"build-x": "missing"}
 
 
 def test_a_glob_dep_orders_and_stales_on_its_matches_alone(dir_project):
