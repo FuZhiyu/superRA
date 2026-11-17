@@ -2464,6 +2464,8 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 #repro-edge-detail .repro-hint { margin:10px 0; }
 #repro-edge-detail .hc-btn { white-space:normal;height:auto;min-height:28px; }
 #repro-edge-detail h3 { margin:8px 0;font-size:var(--fs-body); }
+#repro-edge-detail .rp-edge-files { min-width:300px;font:var(--fs-meta) var(--font-mono); }
+#repro-edge-detail .rp-port-act { white-space:nowrap; }
 .rp-task { position:absolute;border:1px solid var(--border);border-radius:7px;background:var(--bg-card);box-shadow:var(--shadow-sm);box-sizing:border-box;pointer-events:none; }
 .rp-task.rp-hatched:not(.rp-expanded), .rp-task.rp-hatched > .rp-task-head { background:var(--rp-hatch); }
 .rp-task.rp-expanded { background:transparent;border:1px solid var(--border);box-shadow:none; }

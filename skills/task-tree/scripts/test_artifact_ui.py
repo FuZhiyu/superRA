@@ -1358,6 +1358,50 @@ class TestFileTracingBrowser:
             ) == ["figs/a.pdf plot-a", "figs/b.pdf plot-b"]
             browser.close()
 
+    def test_a_wire_lists_the_files_it_carries(self, tmp_path):
+        """Clicking a wire lists its files as rows with Filter and Open; a wire
+        that names a folder lists the files its writer puts there."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        click = "el => el.dispatchEvent(new MouseEvent('click', {bubbles: true}))"
+        rows = "rows => rows.map(r => r.firstChild.dataset.value + ' ' + r.querySelectorAll('.rp-port-act').length)"
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(_graph_url(export))
+            page.wait_for_selector(".rp-wire")
+            page.eval_on_selector('.rp-wire[data-from="make-data"][data-to="use-b"]', click)
+            assert page.locator("#repro-edge-detail .rp-port-row").evaluate_all(rows) == [
+                "out/a.parquet 2", "out/b.csv 2",
+            ]
+            page.eval_on_selector('.rp-wire[data-from="plot-a"][data-to="compile"]', click)
+            assert page.locator("#repro-edge-detail .rp-port-row").evaluate_all(rows) == ["figs/a.pdf 2"]
+            browser.close()
+
+    def test_a_selected_task_shows_the_files_crossing_its_boundary(self, tmp_path):
+        """A task's inputs are the files no step inside it writes; its outputs
+        are the files no step inside it is the only reader of."""
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path)
+        state = {"expanded": [], "selected": "", "layout": "graph", "filters": None}
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(f"{export.as_uri()}#/01-build?repro={quote(json.dumps(state))}")
+            page.wait_for_selector(".rp-ports-out .rp-port")
+            assert page.inner_text(".rp-ports-in .rp-ports-head").strip().upper() == "READS 8"
+            assert page.inner_text(".rp-ports-out .rp-ports-head").strip().upper() == "WRITES 9"
+            for side in ("in", "out"):
+                page.eval_on_selector(f".rp-ports-{side} .rp-port-more", "el => el.click()")
+            values = "ports => ports.map(p => p.dataset.value)"
+            reads = page.locator(".rp-ports-in .rp-port").evaluate_all(values)
+            writes = page.locator(".rp-ports-out .rp-port").evaluate_all(values)
+            assert "raw/in.csv" in reads and "code/generated.py" not in reads and "figs" not in reads
+            assert "paper.pdf" in writes and "out/a.parquet" not in writes
+            browser.close()
+
     def test_type_filter_hides_wires_that_carry_only_unticked_types(self, tmp_path):
         from playwright.sync_api import sync_playwright
 

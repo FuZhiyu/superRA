@@ -2228,9 +2228,26 @@ function reproPortHTML(f,side,nested){
 function reproFileSummary(f){
   return f.logical+' · '+(f.producers.length>1?'written by '+f.producers.length+' steps':f.producers.length?'written by '+f.producers[0]:'external input')+' · '+(f.readers.length?'read by '+f.readers.length+' step'+(f.readers.length===1?'':'s'):'no step reads it');
 }
-function reproPortsHTML(step,side,pos){
-  var files=reproFiles(),refs=side==='in'?(step.deps||[]):(step.outs||[]).map(function(o){return o.path;});
-  var list=refs.map(function(r,i){return [files[r.logical],i];}).filter(function(p){return p[0];}).sort(function(a,b){
+/* The files the selection reads and writes. A step has its declared inputs
+   and outputs. A task has its subtree's: an input is a file no step inside
+   writes; an output is a file some step outside reads, or no step reads. */
+function reproPortOwner(){
+  var graph=_reproData&&_reproData.graph,steps=graph&&graph.steps||[];
+  var step=_reproSelected&&steps.find(function(s){return s.name===_reproSelected;});
+  if(step)return {id:step.name,name:step.name,ins:(step.deps||[]).map(function(d){return d.logical;}),outs:(step.outs||[]).map(function(o){return o.path.logical;})};
+  if(_reproSelected||!activePath||!graph)return null;
+  var files=reproFiles(),inside={},ins=[],outs=[];
+  steps.forEach(function(s){if(reproWithin(s.task,activePath))inside[s.name]=true;});
+  steps.forEach(function(s){
+    if(!inside[s.name])return;
+    (s.deps||[]).forEach(function(d){var f=files[d.logical];if(f&&ins.indexOf(d.logical)<0&&!f.producers.some(function(n){return inside[n];}))ins.push(d.logical);});
+    (s.outs||[]).forEach(function(o){var f=files[o.path.logical];if(f&&(!f.readers.length||f.readers.some(function(n){return !inside[n];})))outs.push(o.path.logical);});
+  });
+  return {id:'task:'+activePath,name:reproTaskTitle(activePath),ins:ins,outs:outs};
+}
+function reproPortsHTML(owner,side,pos){
+  var files=reproFiles();
+  var list=(side==='in'?owner.ins:owner.outs).map(function(p,i){return [files[p],i];}).filter(function(p){return p[0];}).sort(function(a,b){
     var x=a[0],y=b[0];
     return (side==='in'?(!x.producers.length)-(!y.producers.length):y.readers.length-x.readers.length)||REPRO_TYPE_RANK[x.type]-REPRO_TYPE_RANK[y.type]||a[1]-b[1];
   }).map(function(p){return p[0];});
@@ -2242,19 +2259,28 @@ function reproPortsHTML(step,side,pos){
     body=order.map(function(dir){return '<div class="rp-port-dir" title="'+escapeAttr(dir)+'"><span>'+escapeHtml(dir)+'</span><b>'+groups[dir].length+'</b></div>'+groups[dir].map(function(f){return reproPortHTML(f,side);}).join('');}).join('');
   } else body=shown.map(function(f){return reproPortHTML(f,side);}).join('');
   var unfolded=list.some(function(f){return (_reproPortsOpen.folders||{})[f.logical];});
-  return '<div class="rp-ports rp-ports-'+side+(open||unfolded?' is-open':'')+'" style="left:'+(side==='in'?pos.x:pos.x+pos.width)+'px;top:'+pos.y+'px" role="group" aria-label="'+escapeAttr((side==='in'?'Inputs of ':'Outputs of ')+step.name)+'">'
+  return '<div class="rp-ports rp-ports-'+side+(open||unfolded?' is-open':'')+'" style="left:'+(side==='in'?pos.x:pos.x+pos.width)+'px;top:'+pos.y+'px" role="group" aria-label="'+escapeAttr((side==='in'?'Inputs of ':'Outputs of ')+owner.name)+'">'
     +'<div class="rp-ports-head">'+(side==='in'?'Reads ':'Writes ')+list.length+'</div><div class="rp-ports-list">'+body+'</div>'
     +(list.length>REPRO_PORT_CAP?'<button type="button" class="rp-port-more" data-rp-action="ports-more" data-value="'+side+'" aria-expanded="'+open+'">'+(open?'Show fewer':'+'+(list.length-REPRO_PORT_CAP)+' more')+'</button>':'')+'</div>';
 }
 function reproDrawPorts(container){
   container.querySelectorAll('.rp-ports').forEach(function(el){el.remove();});
   reproHighlightFile(container,null);
-  if(_reproPortsOpen.step!==_reproSelected)_reproPortsOpen={step:_reproSelected};
-  var lay=_reproLayoutCache&&_reproLayoutCache.layout,plot=container.querySelector('.repro-plot'),pos=lay&&lay.pos[_reproSelected];
-  var step=_reproSelected&&_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===_reproSelected;});
-  if(!plot||!pos||!step||!document.getElementById(reproNodeId(_reproSelected)))return;
-  plot.insertAdjacentHTML('beforeend',reproPortsHTML(step,'in',pos)+reproPortsHTML(step,'out',pos));
+  var owner=reproPortOwner(),id=owner?owner.id:'';
+  if(_reproPortsOpen.step!==id)_reproPortsOpen={step:id};
+  var lay=_reproLayoutCache&&_reproLayoutCache.layout,plot=container.querySelector('.repro-plot'),pos=owner&&lay&&lay.pos[id];
+  if(!plot||!pos||!Array.from(plot.querySelectorAll('[data-node-id]')).some(function(n){return n.dataset.nodeId===id;}))return;
+  plot.insertAdjacentHTML('beforeend',reproPortsHTML(owner,'in',pos)+reproPortsHTML(owner,'out',pos));
   reproHighlightFile(container,_reproPortsOpen.pinned||null);
+  reproRevealPorts(container);
+}
+/* Pan sideways so a port panel the canvas edge cuts off comes into view, as far as the other panel allows. */
+function reproRevealPorts(container){
+  var canvas=container.querySelector('.repro-canvas'),a=container.querySelector('.rp-ports-in'),b=container.querySelector('.rp-ports-out');
+  if(!canvas||(!a&&!b))return;
+  var c=canvas.getBoundingClientRect(),left=a?a.getBoundingClientRect().left:c.left+8,right=b?b.getBoundingClientRect().right:c.right-8;
+  var dx=left<c.left+8?Math.min(c.left+8-left,Math.max(0,c.right-8-right)):right>c.right-8?-Math.min(right-c.right+8,Math.max(0,left-c.left-8)):0;
+  if(dx){_reproViewport.x+=dx;reproTransform();}
 }
 /* Light the wires that carry *path* and the cards of its writer and readers. */
 function reproHighlightFile(container,path){
@@ -2349,11 +2375,26 @@ function drawReproView(container,data) {
   if(menuKey){var menu=container.querySelector('[data-rp-menu="'+menuKey+'"]');if(menu)menu.open=true;}
   var place=_reproViewNext;_reproViewNext='';
   if(place==='fit')reproFit();else if(place==='open')reproOpen();else reproTransform();
+  reproRevealPorts(container);
   if(focusId){var target=document.getElementById(focusId);if(target)target.focus({preventScroll:true});}
 }
 var _reproPreserve='', _reproDrawn=null;
 function reproEvidenceHTML(evidence){
   return '<ul>'+evidence.map(function(e){return '<li>'+escapeHtml(e.kind==='logical'?'Logical prerequisite · '+e.declaration:(e.producer||e.from)+' → '+(e.consumer||e.to)+' via '+e.via)+'</li>';}).join('')+'</ul>';
+}
+/* A wire's files as rows, each with its writer; a folder a wire names shows
+   the declared files its writer puts there. `depends_on` evidence stays text. */
+function reproEdgeFilesHTML(evidence){
+  var files=reproFiles(),seen={},list=[],logical='';
+  evidence.forEach(function(r){
+    if(r.kind==='logical'){logical+='<li>'+escapeHtml('Logical prerequisite · '+r.declaration)+'</li>';return;}
+    var f=files[r.via];if(!f)return;
+    var carried=f.members.filter(function(p){return files[p].producers.indexOf(r.from)>=0;});
+    (carried.length?carried:[r.via]).forEach(function(p){if(!seen[p]){seen[p]=true;list.push(files[p]);}});
+  });
+  list.sort(function(a,b){return REPRO_TYPE_RANK[a.type]-REPRO_TYPE_RANK[b.type]||a.logical.localeCompare(b.logical);});
+  return (list.length?'<p class="repro-hint">'+list.length+' file'+(list.length===1?'':'s')+'</p><div class="rp-edge-files">'+list.map(function(f){return reproPortHTML(f,'in',true);}).join('')+'</div>':'')
+    +(logical?'<ul>'+logical+'</ul>':'');
 }
 function reproReaderControls(){
   var toggle=document.getElementById('navigation-toggle');if(toggle){toggle.setAttribute('aria-expanded',String(!_reproReaderClosed));toggle.classList.toggle('active',!_reproReaderClosed);toggle.textContent=_reproReaderClosed?'Show details':'Hide details';toggle.title=_reproReaderClosed?'Show details':'Hide details';}
@@ -2660,7 +2701,7 @@ function onReproClick(event) {
     }
     else if(action==='edge'){
       var edge=_reproLayoutCache.layout.edges[Number(value)],host=document.getElementById('repro-edge-detail');
-      host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(reproEdgeLabel(_reproLayoutCache.layout,edge))+'</h3>'+reproEvidenceHTML(edge.evidence);
+      host.innerHTML=reproButton('Close','close-edge')+'<h3>'+escapeHtml(reproEdgeLabel(_reproLayoutCache.layout,edge))+'</h3>'+reproEdgeFilesHTML(edge.evidence);
     }
     else if(action==='close-edge')reproCloseGraphDetail();
     else if(action==='finding')reproShowFinding(value);
@@ -2674,6 +2715,7 @@ function onReproClick(event) {
       if(action==='file-open'){_reproPortsOpen.pinned=value;_reproFile=value;_reproInspectorClosed=false;if(_reproReaderClosed)reproSetReader(true);}
       else{_reproPortsOpen.pinned=_reproPortsOpen.pinned===value?'':value;if(_reproFile)_reproFile=_reproPortsOpen.pinned||_reproFile;}
       reproDrawPorts(view);renderReproDetail(_reproSelected);
+      view.querySelectorAll('.rp-port-row').forEach(function(row){row.classList.toggle('is-pinned',row.firstChild.dataset.value===_reproPortsOpen.pinned);});
       var again=inPane?document.querySelector('.repro-file-detail .repro-detail-title'):Array.from(view.querySelectorAll('.rp-port-row [data-rp-action='+action+']')).find(function(b){return b.dataset.value===value;});
       if(again)again.focus({preventScroll:true});
     }

@@ -7140,6 +7140,7 @@ def _run_repro_render_node(harness_body):
         "function reproFit(){}\n"
         "function reproOpen(){}\n"
         "function reproTransform(){}\n"
+        "function reproRevealPorts(){}\n"
         "function reproBindHead(){}\n"
         "function reproBindExplain(){}\n"
         "function renderReproDetail(){}\n"
