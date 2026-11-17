@@ -430,3 +430,76 @@ class TestBaseline:
         (repo / ".git").mkdir(parents=True)
         (repo / "src").mkdir()
         assert _edit_detect.plan_roots(repo / "src", [], "") == []
+
+
+class TestSlowCallGuard:
+    """A slow call logs its phase timings; a call over budget skips the
+    advisory phases and still rolls up and absorbs its own writes."""
+
+    @staticmethod
+    def _run(project: Path, monkeypatch, capsys, command: str = HEREDOC) -> str:
+        import io
+        import task_hook
+        monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(project))
+        monkeypatch.chdir(project)
+        monkeypatch.setattr(task_hook, "_RECONCILED", False)
+        payload = {"session_id": "s1", "cwd": str(project), "hook_event_name": "PostToolUse",
+                   "tool_name": "Bash", "tool_input": {"command": command}}
+        monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+        with pytest.raises(SystemExit):
+            task_hook.main()
+        out = capsys.readouterr().out
+        return json.loads(out)["hookSpecificOutput"]["additionalContext"] if out.strip() else ""
+
+    def test_slow_call_writes_one_log_line(self, project, monkeypatch, capsys):
+        import task_hook
+        assert _bash(project) == ""
+        _rewrite(project / "superRA" / "01-first" / "task.md", "in-progress", "approved")
+        monkeypatch.setattr(task_hook, "SLOW_CALL_SECONDS", 0.0)
+        self._run(project, monkeypatch, capsys)
+
+        log = project / _edit_detect.STATE_DIRNAME / task_hook.SLOW_CALL_LOG
+        (line,) = log.read_text(encoding="utf-8").splitlines()
+        entry = json.loads(line)
+        assert {entry["event"], entry["tool"], entry["changed"]} == {"PostToolUse", "Bash", 1}
+        assert {"detect", "rollup", "validate", "markers", "repro", "redetect"} <= set(entry["ms"])
+        assert entry["skipped"] == [] and entry["total_ms"] >= 0 and entry["time"]
+        assert "Do First" not in line
+
+    def test_over_budget_call_skips_advisories_and_still_rolls_up(
+        self, repro_project, monkeypatch, capsys
+    ):
+        import task_hook
+        assert _bash(repro_project) == ""
+        first = repro_project / "superRA" / "01-first" / "task.md"
+        _rewrite(first, "depends_on: []", "depends_on: [missing]")
+        _rewrite(first, "in-progress", "approved")
+        _rewrite(repro_project / "superRA" / "03-pipeline" / "task.md", "in-progress", "approved")
+        (repro_project / "Code" / "build.jl").write_text("# build v2\n", encoding="utf-8")
+        monkeypatch.setattr(task_hook, "TIME_BUDGET_SECONDS", -1.0)
+        context = self._run(repro_project, monkeypatch, capsys)
+
+        (note,) = [line for line in context.splitlines() if "budget" in line]
+        for name in ("validation", "implemented-coverage reminders", "reproduction reminders",
+                     "`superra task check`", "`superra repro status .`"):
+            assert name in note
+        assert "Validation warning" not in context and "build.jl changed" not in context
+        root = (repro_project / "superRA" / "task.md").read_text(encoding="utf-8")
+        assert "status: approved" in root  # rolled up
+        assert _bash(repro_project) == ""  # the rollup write was absorbed
+
+    def test_environment_folders_in_a_directory_dep_are_not_walked(self, var_project):
+        lib = var_project / "Code" / "lib"
+        for env in ("venv", "site-packages", ".venv"):
+            (lib / env).mkdir()
+            (lib / env / "pkg.jl").write_text("# pkg\n", encoding="utf-8")
+        assert _bash(var_project) == ""
+        for env in ("venv", "site-packages", ".venv"):
+            (lib / env / "pkg.jl").write_text("# pkg v2\n", encoding="utf-8")
+            (lib / env / "new.jl").write_text("# new\n", encoding="utf-8")
+        assert _bash(var_project) == ""
+        baseline_dir = var_project / _edit_detect.STATE_DIRNAME / _edit_detect.BASELINE_SUBDIR
+        (state_file,) = baseline_dir.glob("*.json")
+        files = json.loads(state_file.read_text(encoding="utf-8"))["files"]
+        assert any(path.endswith("helper.jl") for path in files)
+        assert not [path for path in files if "pkg.jl" in path]

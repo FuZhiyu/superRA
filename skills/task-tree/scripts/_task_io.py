@@ -10,7 +10,9 @@ import heapq
 import os
 import re
 import stat
+import threading
 import warnings
+from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,6 +26,8 @@ TASK_ROOT_DIRNAME = "superRA"
 LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 ATTACHMENTS_DIRNAME = "attachments"
+# Folders no walk enters, besides hidden ones: caches and installed environments.
+SKIP_DIRS = frozenset({"__pycache__", "node_modules", "venv", "site-packages"})
 
 
 def is_opaque_task_path(path: Path, plan_root: Path) -> bool:
@@ -323,6 +327,17 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
 _SECTION_ALIASES = {"Planner Guidance": "Details"}
 
 
+# Parse memo: one entry per task.md path, holding the text it was parsed from,
+# so a long-lived process keeps one version of each file and a rewritten file
+# misses on its new text. Capped above `_edit_detect.MAX_TREE_FILES` so one walk
+# of a large tree never evicts itself. `_SECTIONS` serves `parse_body_sections`
+# for the bodies of memoized tasks only.
+_PARSE_CACHE_SIZE = 8192
+_PARSED: OrderedDict[str, tuple[str, dict, str, dict]] = OrderedDict()
+_SECTIONS: dict[str, dict[str, str]] = {}
+_PARSE_LOCK = threading.Lock()
+
+
 def parse_body_sections(body: str) -> dict[str, str]:
     """Split a task body on ``## `` headers into {section_name: content} pairs.
 
@@ -336,6 +351,11 @@ def parse_body_sections(body: str) -> dict[str, str]:
     a legacy heading and its current name both appear, their bodies merge with a
     blank line between rather than the later one overwriting the earlier.
     """
+    sections = _SECTIONS.get(body)
+    return dict(sections if sections is not None else _parse_body_sections(body))
+
+
+def _parse_body_sections(body: str) -> dict[str, str]:
     sections: dict[str, str] = {}
     current_name: str | None = None
     current_lines: list[str] = []
@@ -469,7 +489,7 @@ def parse_task(
 
     if text is None:
         text = task_md_path.read_text(encoding="utf-8")
-    fm, body = parse_frontmatter(text)
+    fm, body, sections = _parse_task_text(os.path.abspath(task_md_path), text)
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
@@ -490,14 +510,12 @@ def parse_task(
         )
     # Silently ignore review_status / integration_status if present in old files
 
-    sections = parse_body_sections(body)
-
     return Task(
         path=path,
         dir_path=task_md_path.parent,
         title=title,
         status=status,
-        depends_on=_to_list(fm.get("depends_on", [])),
+        depends_on=list(_to_list(fm.get("depends_on", []))),
         body=body,
         objective=sections.get("Objective", ""),
         results=sections.get("Results", ""),
@@ -505,6 +523,36 @@ def parse_task(
         revision_notes=sections.get("Revision Notes", ""),
         review_notes=sections.get("Review Notes", ""),
     )
+
+
+def _parse_task_text(
+    key: str, text: str
+) -> tuple[dict[str, str | list[str]], str, dict[str, str]]:
+    """Frontmatter, body, and sections of the task.md text at *key*, memoized
+    per path (`_PARSED`); callers must not mutate them."""
+    with _PARSE_LOCK:
+        entry = _PARSED.get(key)
+        if entry is not None and entry[0] == text:
+            _PARSED.move_to_end(key)
+            _SECTIONS[entry[2]] = entry[3]
+            return entry[1], entry[2], entry[3]
+    fm, body = parse_frontmatter(text)
+    sections = _parse_body_sections(body)
+    with _PARSE_LOCK:
+        old = _PARSED.pop(key, None)
+        if old is not None:
+            _SECTIONS.pop(old[2], None)
+        _PARSED[key] = (text, fm, body, sections)
+        _SECTIONS[body] = sections
+        while len(_PARSED) > _PARSE_CACHE_SIZE:
+            _SECTIONS.pop(_PARSED.popitem(last=False)[1][2], None)
+    return fm, body, sections
+
+
+def _clear_parse_memo() -> None:
+    with _PARSE_LOCK:
+        _PARSED.clear()
+        _SECTIONS.clear()
 
 
 def write_task(task: Task) -> None:
@@ -788,7 +836,9 @@ def _iter_contained_markdown(root: Path, plan_root: Path):
     for directory, dirnames, filenames in os.walk(scan_root, followlinks=False):
         current = Path(directory)
         dirnames[:] = sorted(
-            name for name in dirnames if not (current / name).is_symlink()
+            name for name in dirnames
+            if not name.startswith(".") and name not in SKIP_DIRS
+            and not (current / name).is_symlink()
         )
         for name in sorted(filenames):
             candidate = current / name
@@ -1260,54 +1310,68 @@ def propagate_parent_status(
     ``[BLOCKING]``: the current status is held and a warning is appended to
     ``feedback`` when a list is passed.
 
+    Each task.md is parsed at most once: the topmost existing ancestor's subtree
+    is walked once (plus any ancestor a directory without ``task.md`` cuts off
+    from it) and every ancestor rolls up from that in-memory tree.
+
     Returns the number of ancestor tasks updated.
     """
-    updated = 0
-    # Walk up from task_path to root
     parts = task_path.strip("/").split("/") if task_path else []
+    # Ancestor paths from immediate parent to root
+    ancestors = ["/".join(parts[:i]) for i in range(len(parts) - 1, -1, -1)]
 
-    # Build list of ancestor paths from immediate parent to root
-    ancestors: list[str] = []
-    for i in range(len(parts) - 1, -1, -1):
-        ancestors.append("/".join(parts[:i]) if i > 0 else "")
-
-    for ancestor_path in ancestors:
+    walked: dict[str, Task] = {}
+    for ancestor_path in reversed(ancestors):
         ancestor_dir = plan_root / ancestor_path if ancestor_path else plan_root
         task_md = ancestor_dir / "task.md"
-        if not task_md.exists():
+        if ancestor_path in walked or not task_md.exists():
             continue
+        if ancestor_path:
+            subtree = parse_task(task_md, plan_root)
+            subtree.children = _walk_children(ancestor_dir, plan_root)
+        else:
+            subtree = walk_plan(plan_root)
+        walked[ancestor_path] = subtree
+        walked.update((t.path, t) for t in collect_all_tasks(subtree))
 
-        # Re-walk this subtree to get current children
-        ancestor_task = parse_task(task_md, plan_root)
-        ancestor_task.children = _walk_children(ancestor_dir, plan_root)
+    return sum(
+        roll_up_status(walked[path], feedback) for path in ancestors if path in walked
+    )
 
-        if ancestor_task.is_leaf:
-            continue
 
-        changed = False
-        rolled_status = compute_status(ancestor_task)
+def roll_up_status(task: Task, feedback: list[str] | None = None) -> bool:
+    """Write *task*'s status rolled up from its in-memory children if it differs.
 
-        if rolled_status == "approved" and ancestor_task.status != "approved":
-            from _task_validate import _review_notes_block_approval
+    Leaves, and a root with no regular ``task.md``, are left alone. An
+    ``approved`` rollup is never written onto a parent whose ``## Review Notes``
+    still carry ``[BLOCKING]``: the current status is held and a warning is
+    appended to ``feedback`` when a list is passed. An unreadable branch raises
+    its read error. Returns whether the file was written.
+    """
+    if task.parse_error:
+        raise OSError(task.parse_error)
+    task_md = task.dir_path / "task.md"
+    if task.is_leaf or (task.is_root and (task_md.is_symlink() or not task_md.exists())):
+        return False
 
-            if _review_notes_block_approval(rolled_status, ancestor_task.review_notes):
-                if feedback is not None:
-                    prefix = ancestor_task.path if ancestor_task.path else "(root)"
-                    feedback.append(
-                        f"{prefix}: children approved but parent Review Notes still "
-                        "carry [BLOCKING]; clear or re-review"
-                    )
-                continue
+    rolled_status = compute_status(task)
+    if rolled_status == "approved" and task.status != "approved":
+        from _task_validate import _review_notes_block_approval
 
-        if ancestor_task.status != rolled_status:
-            ancestor_task.status = rolled_status
-            changed = True
+        if _review_notes_block_approval(rolled_status, task.review_notes):
+            if feedback is not None:
+                prefix = task.path if task.path else "(root)"
+                feedback.append(
+                    f"{prefix}: children approved but parent Review Notes still "
+                    "carry [BLOCKING]; clear or re-review"
+                )
+            return False
 
-        if changed:
-            write_task(ancestor_task)
-            updated += 1
-
-    return updated
+    if task.status == rolled_status:
+        return False
+    task.status = rolled_status
+    write_task(task)
+    return True
 
 
 def collect_all_tasks(root: Task) -> list[Task]:
