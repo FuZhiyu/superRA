@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import signal
 import subprocess
 import sys
+import time
+from pathlib import Path
 
 import pytest
 
@@ -296,3 +300,126 @@ def test_a_malformed_xmp_packet_skips_one_file_not_the_batch(tmp_path):
     records = {r["path"]: r for r in json.loads(result.stdout)}
     assert records[str(bad)] == {"path": str(bad), "result": "skipped", "reason": "malformed XMP metadata"}
     assert records[str(good)]["result"] == "normalized"
+
+
+SIDECAR = task("Num", """\
+  - name: num
+    cmd: mkdir -p output && echo 123 > output/n.txt
+    outs:
+      - path: "${OUT}/n.txt"
+        sidecar: "${OUT}/n.sha256"
+  - name: copy
+    cmd: cp output/n.txt output/copy.txt
+    deps:
+      - "${OUT}/n.txt"
+    outs:
+      - "${OUT}/copy.txt\"""")
+
+
+def test_normalize_rewrites_the_sidecar_of_an_out_it_changes(tmp_path):
+    proj = Project(tmp_path / "sidecar")
+    configure(proj, '"*.pdf": off')
+    proj.write("superRA/01-num/task.md", SIDECAR)
+    assert proj.run("build", ".") == 0
+    configure(proj, '"*.pdf": off', STRIP_DIGITS)
+
+    assert proj.run("normalize", str(proj.root / "output" / "n.txt")) == 0
+    assert proj.read("output/n.txt") == "\n"
+    digest = _repro_normalize._digest(proj.root / "output" / "n.txt")
+    assert proj.read("output/n.sha256") == f"{digest}  ${{OUT}}/n.txt\n"
+    assert proj.states(".")["copy"] == "stale"
+
+
+def test_changing_a_cleaner_restales_the_steps_it_applies_to(fig_project):
+    configure(fig_project, '"*.pdf": off')
+    assert fig_project.run("build", "01-fig") == 0
+    configure(fig_project, '"*.pdf": off', '"*.csv": "true"')
+    assert fig_project.states("01-fig")["make-fig"] == "fresh"  # no out matches the new entry
+
+    configure(fig_project, '"*.pdf": off', STRIP_DIGITS)
+    entry = fig_project.status("01-fig").entry("make-fig")
+    assert (entry.status, entry.reason) == ("stale", "the output cleaners changed")
+    assert fig_project.run("build", "01-fig") == 0
+    assert fig_project.read("output/stamp.txt") == "\n"
+    assert fig_project.states("01-fig")["make-fig"] == "fresh"
+
+
+def test_the_default_cleaners_leave_existing_spec_hashes_alone(fig_project):
+    configure(fig_project)
+    plain = {s.name: _repro_normalize_spec(s) for s in fig_project.graph().steps}
+    configure(fig_project, '"*.pdf": builtin:pdf')
+    assert {s.name: _repro_normalize_spec(s) for s in fig_project.graph().steps} == plain
+    assert all(spec.count(":") == 1 for spec in plain.values())
+
+
+def _repro_normalize_spec(step) -> str:
+    from _repro_state import spec_hash
+    return spec_hash(step)
+
+
+def test_changing_a_cleaner_restales_a_directory_out(tmp_path):
+    proj = Project(tmp_path / "dirproj")
+    configure(proj)
+    proj.write("superRA/01-gen/task.md", task("Gen", """\
+  - name: gen
+    cmd: mkdir -p output/parts && date +%N > output/parts/a.txt
+    outs:
+      - "${OUT}/parts\""""))
+    assert proj.run("build", ".") == 0
+    assert proj.states(".")["gen"] == "fresh"  # the cleaners recorded after the run see the directory
+    configure(proj, STRIP_DIGITS)
+    assert proj.states(".")["gen"] == "stale"
+    assert proj.run("build", ".") == 0
+    assert proj.read("output/parts/a.txt") == "\n"
+    assert proj.states(".")["gen"] == "fresh"
+
+
+def test_an_interrupted_build_stops_a_running_cleaner(fig_project):
+    configure(fig_project, '"*.pdf": off', '"stamp.txt": "echo $$ > cleaner.pid; sleep 3; echo cleaned > {path}"')
+    scripts = Path(_repro_normalize.__file__).parent
+    process = subprocess.Popen([sys.executable, str(scripts / "repro_run.py"), "--plan-root",
+                                str(fig_project.plan_root), "build", "01-fig"],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
+    pid_file = fig_project.root / "cleaner.pid"
+    deadline = time.time() + 20
+    while not pid_file.exists() and time.time() < deadline:
+        time.sleep(0.05)
+    time.sleep(0.2)
+    os.kill(process.pid, signal.SIGTERM)  # the build alone, as a harness timeout sends it
+    process.communicate(timeout=15)
+    assert process.returncode == 1
+    with pytest.raises(ProcessLookupError):
+        os.kill(int(pid_file.read_text()), 0)
+    time.sleep(3.5)
+    assert fig_project.read("output/stamp.txt") != "cleaned\n"
+    assert fig_project.states("01-fig")["make-fig"] == "failed"
+
+
+@pytest.mark.parametrize("script, target", [
+    ('echo 999 > "$1"; exit 1\n', "output/n.txt"),  # the failing cleaner wrote first
+    ('case "$1" in *a.txt) echo 999 > "$1";; *) exit 1;; esac\n', "output/parts"),  # a later file failed
+])
+def test_a_failed_normalize_still_rewrites_the_sidecars_it_changed(tmp_path, script, target):
+    proj = Project(tmp_path / "failing")
+    configure(proj, '"*.pdf": off', '"*.txt": "sh Code/clean.sh"')
+    proj.write("Code/clean.sh", "true\n")
+    proj.write("superRA/01-num/task.md", task("Num", """\
+  - name: num
+    cmd: mkdir -p output/parts && echo 123 > output/n.txt && echo 1 > output/parts/a.txt && echo 2 > output/parts/b.txt
+    outs:
+      - path: "${OUT}/n.txt"
+        sidecar: "${OUT}/n.sha256"
+      - path: "${OUT}/parts"
+        sidecar: "${OUT}/parts.sha256"
+  - name: copy
+    cmd: cat output/n.txt output/parts/a.txt > output/copy.txt
+    deps:
+      - "${OUT}/n.txt"
+      - "${OUT}/parts"
+    outs:
+      - "${OUT}/copy.txt\""""))
+    assert proj.run("build", ".") == 0
+    proj.write("Code/clean.sh", script)  # the configuration itself is unchanged
+
+    assert proj.run("normalize", str(proj.root / target)) == 1
+    assert proj.states(".") == {"num": "stale", "copy": "stale"}
