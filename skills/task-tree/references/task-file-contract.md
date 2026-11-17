@@ -191,7 +191,7 @@ reproduction:
 
 ### What invalidates a step
 
-- **Changed content, never a timestamp.** A step reruns when the SHA-256 of a dep, an out, or its definition — `cmd` or the expanded runner, `params`, the resolved command text — differs from its lock entry. `touch` and an mtime-only change, such as a Dropbox re-sync, rehash without invalidating; restoring a file's original bytes restores freshness.
+- **Changed content, never a timestamp.** A step reruns when the SHA-256 of a dep, an out, or its definition — `cmd` or the expanded runner, `params`, the resolved command text, the `normalize` cleaners that apply to its outs — differs from its lock entry. `touch` and an mtime-only change, such as a Dropbox re-sync, rehash without invalidating; restoring a file's original bytes restores freshness.
 - **A changed root** invalidates through changed content or resolved command text; relocation to identical bytes preserves freshness.
 - **An external input** is hashed like any dep: a redelivered extract restales its consumers.
 - **An `env_deps` file** that changes invalidates every step.

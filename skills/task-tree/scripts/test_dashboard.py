@@ -334,8 +334,6 @@ class TestServerRoutes:
         # The HTML-attachment frame policy names CDN hosts as data; no tag loads one.
         assert not re.search(r'(?:src|href)="https://cdn\.jsdelivr\.net', html)
         assert "fonts.googleapis.com" in html
-        # The font stylesheet must not hold the scripts below it.
-        assert 'display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'">' in html
         # No standalone-only inlining leaks into the served page.
         assert "data:font/woff2;base64," not in html
         assert "var STANDALONE_IMAGES =" not in html

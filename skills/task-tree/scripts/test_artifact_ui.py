@@ -1072,6 +1072,13 @@ class TestAttachmentSurfaceBrowser:
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch()
                 page = browser.new_page()
+                page.add_init_script(
+                    "window.__streams = []; const Real = window.EventSource;"
+                    "window.EventSource = function(url, init) {"
+                    " const s = new Real(url, init); window.__streams.push(s); return s; };"
+                    "window.EventSource.prototype = Real.prototype;"
+                    "['CONNECTING', 'OPEN', 'CLOSED'].forEach(k => window.EventSource[k] = Real[k]);"
+                )
                 page.goto(f"http://127.0.0.1:{port}/#/01-reader")
                 branch = page.locator(
                     '.task-node[data-path="01-reader"] > .attachment-branch'
@@ -1091,6 +1098,16 @@ class TestAttachmentSurfaceBrowser:
                 assert "attachment=attachments%2Freadme.txt" in page.evaluate(
                     "location.hash"
                 )
+                # The switch closes the first worktree's event stream: left open,
+                # it would keep delivering that worktree's updates to this page.
+                page.wait_for_function(
+                    "() => window.__streams.filter(s => s.readyState !== 2).length === 1"
+                )
+                live = page.evaluate(
+                    "window.__streams.filter(s => s.readyState !== 2).map(s => s.url)"
+                )
+                assert len(live) == 1 and "wt=wt-b" in live[0]
+                assert page.evaluate("window.__streams.length") == 2
                 browser.close()
         finally:
             _stop_server(server, thread)

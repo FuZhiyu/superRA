@@ -597,6 +597,7 @@ class Step:
     outs: list[Out] = field(default_factory=list)
     params: dict = field(default_factory=dict)
     dependency_origins: dict[str, list[dict]] = field(default_factory=dict)
+    cleaners: dict[str, object] = field(default_factory=dict)  # `_repro_normalize.step_cleaners`
 
     def to_dict(self) -> dict:
         return {
@@ -1312,7 +1313,7 @@ def build_graph(
         _finding("", "error", f"{CONFIG_FILENAME}: 'normalize' must map each file glob to "
                               "builtin:pdf, a command, or off")
         normalize = {}
-    from _repro_normalize import config_errors  # deferred: it imports _repro_state, which imports this module
+    from _repro_normalize import config_errors, step_cleaners  # deferred: it imports _repro_state, which imports this module
     for message in config_errors(normalize):
         _finding("", "error", f"{CONFIG_FILENAME}: {message}")
     graph.config = ReproConfig(
@@ -1402,6 +1403,7 @@ def build_graph(
                     _unregister(graph, task.path, [o.path for o in step.outs])
                     continue
                 step_names[step.name] = task.path
+            step.cleaners = step_cleaners(step.outs, graph.config.normalize, project_root)
             graph.steps.append(step)
 
     graph.unregistered = {p: outs for p, outs in graph.unregistered.items() if p not in archived}
