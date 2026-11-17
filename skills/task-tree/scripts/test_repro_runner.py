@@ -946,6 +946,19 @@ def test_a_flush_keeps_entries_whose_file_may_only_be_out_of_reach(tmp_path):
     assert _saved_keys(cache_file) == {str(path) for path in files} | {str(root / "new.txt")}
 
 
+def test_a_flush_keeps_a_relative_key(tmp_path, monkeypatch):
+    root, cache_file = _cache_project(tmp_path)
+    (root / "a.txt").write_text("a")
+    monkeypatch.chdir(root)
+    cache = HashCache(cache_file)
+    cache.file_hash(Path("a.txt"))
+    cache.file_hash(Path("sub/never-there.txt"))
+    cache._entries["sub/never-there.txt"] = [1, 1, "0" * 64]
+    cache.flush()
+
+    assert _saved_keys(cache_file) == {"a.txt", "sub/never-there.txt"}
+
+
 def test_a_flush_keeps_what_another_process_saved_meanwhile(tmp_path):
     root, cache_file = _cache_project(tmp_path)
     for name in ("a.txt", "b.txt"):

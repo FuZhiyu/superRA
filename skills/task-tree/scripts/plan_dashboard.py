@@ -1463,8 +1463,10 @@ class _StatusSlot:
 
     generation: int = 0
     run: _StatusRun | None = None
-    payload: dict | None = None
+    payload: dict | None = None  # the last result that was computed, shown while a later one runs
     payload_generation: int = -1
+    late: dict | None = None  # what a run that outlasted the budget ended with: a result or its failure
+    late_generation: int = -1
     late_until: float = 0.0
 
 
@@ -1555,18 +1557,23 @@ def _empty_status_payload(state: WorktreeState) -> dict:
 async def _run_repro_status(state: WorktreeState, slot: _StatusSlot, run: _StatusRun) -> dict:
     """Compute the status off the event loop; announce it if a request gave up waiting."""
     try:
+        failed = False
         try:
             payload = await asyncio.to_thread(_repro_status_payload, state)
         except Exception as exc:
             if not run.waited_out:
                 raise
             # The request that would have carried this failure has answered
-            # already. Keep it as the result, so the refetch the announcement
-            # causes reports it and does not start the computation over.
+            # already. Keep it for the late window, so the refetch the
+            # announcement causes reports it and does not start the
+            # computation over; the last computed result stays as it was.
+            failed = True
             payload = {**_empty_status_payload(state), "unavailable": f"status could not be computed: {exc}"}
-        if run.generation >= slot.payload_generation:  # an older run may end after a newer one
+        if not failed and run.generation >= slot.payload_generation:  # an older run may end after a newer one
             slot.payload, slot.payload_generation = payload, run.generation
-            slot.late_until = time.monotonic() + REPRO_STATUS_LATE_TTL if run.waited_out else 0.0
+        if run.waited_out and run.generation >= slot.late_generation:
+            slot.late, slot.late_generation = payload, run.generation
+            slot.late_until = time.monotonic() + REPRO_STATUS_LATE_TTL
         return payload
     finally:
         if slot.run is run:
@@ -1585,11 +1592,11 @@ async def _repro_status_within_budget(state: WorktreeState) -> dict:
     """
     slot = _repro_status_slots.setdefault(state.wt_id, _StatusSlot())
     if (
-        slot.payload is not None
-        and slot.payload_generation == slot.generation
+        slot.late is not None
+        and slot.late_generation == slot.generation
         and time.monotonic() < slot.late_until
     ):
-        return slot.payload
+        return slot.late
     run = slot.run
     if (
         run is None

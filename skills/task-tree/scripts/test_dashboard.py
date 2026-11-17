@@ -7294,6 +7294,32 @@ class TestReproStatusBudget:
         assert failures == [1]
         assert all("lock unreadable" in a["unavailable"] and "refreshing" not in a for a in answers)
 
+    def test_a_late_failure_keeps_the_last_computed_result(self, status, monkeypatch):
+        state, queue, calls, release = status
+        good = plan_dashboard._repro_status_payload
+
+        def boom(_state):
+            assert release.wait(5)
+            raise RuntimeError("lock unreadable")
+
+        async def scenario():
+            await plan_dashboard._repro_status_within_budget(state)  # run 1 computes
+            monkeypatch.setattr(plan_dashboard, "_repro_status_payload", boom)
+            release.clear()
+            await plan_dashboard._repro_status_within_budget(state)  # fails late
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            plan_dashboard._repro_status_slots["wt-status"].late_until = 0.0  # the late window has passed
+            monkeypatch.setattr(plan_dashboard, "_repro_status_payload", good)
+            release.clear()
+            waiting = await plan_dashboard._repro_status_within_budget(state)
+            release.set()
+            await asyncio.wait_for(queue.get(), 5)
+            return waiting
+
+        waiting = self._run(scenario())
+        assert waiting == {"steps": [{"name": "run-1"}], "ok": True, "refreshing": True}
+
     def test_a_poll_that_sees_a_build_end_starts_a_new_computation(self, status):
         state, _queue, calls, _release = status
 

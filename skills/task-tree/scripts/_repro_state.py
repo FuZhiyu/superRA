@@ -509,6 +509,8 @@ class HashCache:
             return folders[folder]
 
         def gone(key: str) -> bool:
+            if not os.path.isabs(key):
+                return False  # a relative key names a file only for the process that wrote it
             folder = os.path.dirname(key)
             state = there(folder)
             if state is None:
