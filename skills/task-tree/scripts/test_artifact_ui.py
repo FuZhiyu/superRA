@@ -1311,14 +1311,15 @@ class TestFileTracingBrowser:
             assert "make-data" in page.inner_text(".repro-detail .repro-detail-name")
             browser.close()
 
-    def test_file_filter_keeps_the_writer_readers_and_their_wires(self, tmp_path):
-        """A file's Filter button adds a filter chip; the map keeps the file's writer,
-        its readers, and only the wires that carry it, and the URL restores it."""
+    def test_file_filter_walks_the_chain_and_starts_downstream(self, tmp_path):
+        """A file's Filter button adds a Downstream chip: the map keeps the file's
+        readers and every step after them, and the URL restores it. The chip's
+        arrow switches to Both and Upstream, which walks past the writer."""
         from playwright.sync_api import sync_playwright
 
-        export = _file_tracing_export(tmp_path)
-        carried = "() => _reproLayoutCache.layout.edges.flatMap(e => e.evidence.map(r => r.via))"
-        steps = "() => [...document.querySelectorAll('.repro-node')].map(n => n.dataset.step).sort()"
+        export = _file_tracing_export(tmp_path, report=True)
+        kept = "() => [...workspaceLineage().steps].sort()"
+        chip = "() => document.querySelector('.wf-chip-edit').getAttribute('aria-label')"
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
             page = browser.new_page(viewport={"width": 1400, "height": 900})
@@ -1328,22 +1329,27 @@ class TestFileTracingBrowser:
             row.hover()
             row.locator('[data-rp-action="file-filter"]').click()
             page.wait_for_selector(".wf-chip")
-            assert "a.parquet" in page.inner_text(".wf-chip")
-            assert page.evaluate(steps) == ["make-data", "use-a", "use-b"]
-            assert page.evaluate(carried) == ["out/a.parquet", "out/a.parquet"]
+            assert page.evaluate(chip) == "Edit Downstream of a.parquet"
+            # report reads use-a's table.tex: two hops past the file.
+            assert page.evaluate(kept) == ["report", "use-a", "use-b"]
             url = page.evaluate("location.href")
-            assert '"file":"out/a.parquet"' in unquote(url)
+            assert '"file":"out/a.parquet","direction":"down"' in unquote(url)
 
             again = browser.new_page(viewport={"width": 1400, "height": 900})
             again.goto(url)
             again.wait_for_selector(".wf-chip")
-            assert again.evaluate(steps) == ["make-data", "use-a", "use-b"]
-            assert again.evaluate(carried) == ["out/a.parquet", "out/a.parquet"]
+            assert again.evaluate(kept) == ["report", "use-a", "use-b"]
 
-            # The direction control narrows a file anchor to its writer.
             again.click(".wf-chip-dir")
-            again.wait_for_function("() => document.querySelectorAll('.repro-node').length === 1")
-            assert again.evaluate(steps) == ["make-data"]
+            again.wait_for_function("() => document.querySelector('.wf-chip-edit').getAttribute('aria-label').includes('Dependencies of')")
+            assert again.evaluate(kept) == ["make-data", "report", "use-a", "use-b"]
+            again.click(".wf-chip-dir")
+            again.wait_for_function("() => document.querySelector('.wf-chip-edit').getAttribute('aria-label').includes('Upstream of')")
+            assert again.evaluate(kept) == ["make-data"]
+
+            # Upstream of report's input walks past its writer to make-data.
+            again.evaluate("() => { _workspaceFilters.lineage = [{file: 'out/table.tex', direction: 'up'}]; applyWorkspaceFilters(true); }")
+            assert again.evaluate(kept) == ["make-data", "use-a"]
             browser.close()
 
     def test_filter_popover_lists_files_and_filters_to_one(self, tmp_path):
@@ -1359,7 +1365,7 @@ class TestFileTracingBrowser:
             page.goto(_graph_url(export, ""))
             page.wait_for_selector(".repro-node")
             page.click("#filter-trigger")
-            page.click('.wf-option:has-text("Writers and readers of a file")')
+            page.click('.wf-option:has-text("Dependencies of a file")')
             page.wait_for_selector('.wf-pick[data-wf-pick^="file|"]')
             assert page.get_attribute(".wf-pop-search", "placeholder") == "Find a file…"
             page.fill(".wf-pop-search", "a.parquet")
@@ -1367,7 +1373,7 @@ class TestFileTracingBrowser:
             page.click('.wf-pick[data-wf-pick="file|out/a.parquet"]')
             page.wait_for_selector(".wf-chip")
             assert "a.parquet" in page.inner_text(".wf-chip")
-            assert page.evaluate(steps) == ["make-data", "use-a", "use-b"]
+            assert page.evaluate(steps) == ["use-a", "use-b"]
 
             # Typing in the first view finds files beside tasks and steps.
             page.evaluate("() => { _workspaceFilters.lineage = []; applyWorkspaceFilters(true); }")
@@ -1574,7 +1580,7 @@ class TestFileTracingBrowser:
             result.locator(".search-result-filter").dispatch_event("mousedown")
             page.wait_for_selector(".wf-chip")
             assert "in.csv" in page.inner_text(".wf-chip")
-            assert page.evaluate(steps) == ["make-data"]
+            assert page.evaluate(steps) == ["make-data", "use-a", "use-b"]
 
             # Shift+Enter filters to the highlighted File result from the keyboard.
             page.evaluate("() => { _workspaceFilters.lineage = []; applyWorkspaceFilters(true); }")

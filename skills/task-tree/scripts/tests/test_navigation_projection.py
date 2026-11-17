@@ -142,7 +142,7 @@ FILTER_DEFS = ['reproWithin', 'reproTasks', 'reproLineageKey', 'reproLineage', '
     'lineageAnchorLabel', 'workspaceTaskTitle', 'workspaceScopeAdd', 'workspaceTasks', 'workspaceStepMatches',
     'workspaceTaskMatches', 'workspaceVisibility', 'workspaceFacetCounts', 'workspaceResultCount', 'workspaceGraph',
     'REPRO_FILE_TYPES', 'REPRO_TYPE_OF', 'reproLeaf', 'reproFileType', '_reproFilesMemo', 'reproGlobRe', 'reproFiles', 'reproEdgeCarries',
-    'FILE_DIRECTIONS', 'lineageAnchorLead', 'reproFileTypeTag']
+    'LINEAGE_DIRECTIONS', 'lineageAnchorLead', 'reproFileTypeTag']
 
 # Statuses and reported step states over the LINEAGE graph. `fit` and `report`
 # are stale only through `tidy`; their own state is fresh.
@@ -214,15 +214,18 @@ assert.deepEqual(_workspaceFilters.lineage,[],'an anchor the graph no longer has
 """)
 
 
-def test_file_anchor_keeps_writers_readers_and_the_wires_that_carry_it():
+def test_file_anchor_walks_up_from_its_writers_and_down_from_its_readers():
     filter_run("""
+use({lineage:[{file:'tidy.csv',direction:'down'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['fit','report'],'downstream walks past the readers');
+use({lineage:[{file:'tidy.csv',direction:'up'}]});
+assert.deepEqual(sorted(workspaceLineage().steps),['raw','tidy'],'upstream walks past the writer');
 use({lineage:[{file:'tidy.csv',direction:'both'}]});
-assert.deepEqual(sorted(workspaceLineage().steps),['fit','tidy'],'a file anchor stops at its own steps');
-assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.via),['tidy.csv']);
-use({lineage:[{file:'tidy.csv',direction:'up'}]});assert.deepEqual(sorted(workspaceLineage().steps),['tidy']);
-use({lineage:[{file:'tidy.csv',direction:'down'}]});assert.deepEqual(sorted(workspaceLineage().steps),['fit']);
-use({lineage:[{file:'tidy.csv'},{step:'note',direction:'down'}]});
-assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.via).sort(),['note.csv','tidy.csv'],'beside a step anchor every wire between kept steps stays');
+assert.deepEqual(sorted(workspaceLineage().steps),['fit','raw','report','tidy']);
+assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.via).sort(),['fit.csv','raw.csv','tidy.csv'],'every wire between kept steps stays');
+assert.equal(lineageAnchorLead({file:'tidy.csv',direction:'down'}),'Downstream of');
+use({lineage:[{file:'raw.csv'}]});
+assert.deepEqual(_workspaceFilters.lineage,[{file:'raw.csv',direction:'both'}],'an anchor with no direction loads as Both');
 assert.deepEqual(matched({lineage:[{file:'gone.csv'}]}).length,9);
 assert.deepEqual(_workspaceFilters.lineage,[],'a file the graph no longer has is dropped');
 """)
@@ -240,7 +243,7 @@ assert.deepEqual(files['figs/a.pdf'].readers,['report']);
 assert.equal(files['figs'].type,'folder');assert.equal(files['figs/a.pdf'].type,'figure');
 use({lineage:[{file:'figs/a.pdf'}]});
 assert.deepEqual(sorted(workspaceLineage().steps),['raw','report']);
-assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.from+'>'+e.to+' '+e.via),['raw>report figs'],'only the folder wire from the file writer stays');
+assert.deepEqual(workspaceGraph(graph).step_edges.map(e=>e.from+'>'+e.to+' '+e.via),['raw>report figs'],'the folder wire from the file writer stays');
 use({lineage:[{file:'figs'}]});
 assert.deepEqual(sorted(workspaceLineage().steps),['raw','report','tidy']);
 """)

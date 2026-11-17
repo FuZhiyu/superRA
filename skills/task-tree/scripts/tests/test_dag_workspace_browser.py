@@ -155,7 +155,7 @@ def test_selection_traces_dependencies_and_the_filter_keeps_them(browser, worksp
 
     page.locator('#active-node .lineage-btn').click()
     page.wait_for_function("!document.querySelector('.rp-task[data-task=\"analysis-0\"]')")
-    assert chips(page) == ['Dependencies of Analysis 1 with a readable research question']
+    assert chips(page) == ['Downstream of Analysis 1 with a readable research question'], 'a new anchor starts downstream'
     assert page.locator('#filter-trigger').inner_text() == 'Filter · 1'
     page.reload()
     page.wait_for_selector('#repro-node-step-1-3')
@@ -163,6 +163,8 @@ def test_selection_traces_dependencies_and_the_filter_keeps_them(browser, worksp
     page.locator('#btn-workspace').click()
     page.wait_for_function("document.querySelector('#nav-tree .task-node[data-path=analysis-2]\')")
     assert matched(page) == ['analysis-1', 'analysis-2', 'analysis-3']
+    page.locator('.wf-chip-dir').click()
+    assert chips(page) == ['Dependencies of Analysis 1 with a readable research question']
     page.locator('.wf-chip-dir').click()
     assert chips(page) == ['Upstream of Analysis 1 with a readable research question']
     assert matched(page) == ['analysis-1']
@@ -291,7 +293,7 @@ def test_filter_bar_facets_filter_tree_and_graph(browser, workspace):
 
     # Dependencies: the picker anchors a step without typing; the chip's arrow cycles its direction.
     open_add(page)
-    page.locator('#wf-pop [data-wf-item]:has-text("Dependencies of")').click()
+    page.locator('#wf-pop [data-wf-item]:has-text("Dependencies of a task or step")').click()
     page.locator('[data-wf-depdir=up]').click()
     page.locator('[data-wf-pick="step|step-1-3"]').click()
     assert chips(page) == ['Upstream of step-1-3'] and matched(page) == ['analysis-1']
@@ -306,11 +308,11 @@ def test_filter_bar_facets_filter_tree_and_graph(browser, workspace):
     open_add(page)
     page.keyboard.type('Analysis 2')
     page.keyboard.press('Shift+Enter')
-    assert chips(page) == ['Downstream of step-1-3', 'Dependencies of Analysis 2 with a readable research question']
+    assert chips(page) == ['Downstream of step-1-3', 'Downstream of Analysis 2 with a readable research question']
 
     page.reload()
     page.wait_for_function('!!_reproData')
-    assert chips(page) == ['Downstream of step-1-3', 'Dependencies of Analysis 2 with a readable research question']
+    assert chips(page) == ['Downstream of step-1-3', 'Downstream of Analysis 2 with a readable research question']
     page.locator('.wf-clear').click()
     assert page.evaluate('location.hash').find('filters') == -1
     page.close()

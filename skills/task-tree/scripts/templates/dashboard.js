@@ -578,19 +578,20 @@ function workspaceLineage() {
   var key=JSON.stringify(anchors),memo=_workspaceLineageMemo;
   if(!memo||memo.data!==_reproData||memo.key!==key){
     var graph=_reproData.graph,steps=new Set((graph.steps||[]).map(function(s){return s.name;})),tasks=new Set(workspaceTasks().map(function(t){return t.path;}));
-    var files=reproFiles(),owner={};(graph.steps||[]).forEach(function(s){owner[s.name]=s.task;});
+    var files=reproFiles();
     var kept=anchors.filter(function(a){return a.file?!!files[a.file]:a.step?steps.has(a.step):tasks.has(a.task);});
     if(kept.length!==anchors.length)_workspaceFilters.lineage=kept;
     if(!kept.length)return null;
-    /* `files` is set when every anchor is a file: then only their wires stay. */
-    var set={steps:new Set(),tasks:new Set(),files:kept.every(function(a){return a.file;})?new Set(kept.map(function(a){return a.file;})):null};
+    /* A file anchor walks up from its writers and down from its readers. */
+    var set={steps:new Set(),tasks:new Set()},groups={up:[],down:[],both:[]};
     kept.forEach(function(a){
-      if(!a.file)return;
+      if(!a.file){groups[a.direction].push(a);return;}
       var f=files[a.file];
-      (a.direction==='down'?[]:f.producers).concat(a.direction==='up'?[]:f.readers).forEach(function(n){set.steps.add(n);set.tasks.add(owner[n]);});
+      if(a.direction!=='down')f.producers.forEach(function(n){groups.up.push({step:n});});
+      if(a.direction!=='up')f.readers.forEach(function(n){groups.down.push({step:n});});
     });
     ['up','down','both'].forEach(function(direction){
-      var group=kept.filter(function(a){return !a.file&&a.direction===direction;});
+      var group=groups[direction];
       if(!group.length)return;
       var found=reproLineage(graph,group,direction);
       found.steps.forEach(function(n){set.steps.add(n);});found.tasks.forEach(function(p){set.tasks.add(p);});
@@ -610,16 +611,15 @@ function workspaceStepIndex() {
   }
   return _workspaceStepMemo;
 }
-var FILE_DIRECTIONS={both:'File',up:'Writer of',down:'Readers of'};
 function lineageAnchorLabel(anchor) { return anchor.file?reproLeaf(anchor.file):anchor.step?anchor.step:workspaceTaskTitle(anchor.task); }
-function lineageAnchorLead(anchor) { return (anchor.file?FILE_DIRECTIONS:LINEAGE_DIRECTIONS)[anchor.direction]; }
+function lineageAnchorLead(anchor) { return LINEAGE_DIRECTIONS[anchor.direction]; }
 function workspaceTaskTitle(path) {
   var task=(SEARCH_INDEX||[]).find(function(t){return t.path===path;});
   return task&&task.title||reproTaskTitle(path);
 }
 /* Adds an anchor, or sets the direction of one already present. */
 function addLineageAnchor(anchor, direction) {
-  var next=normalizeLineageFilter([Object.assign({},anchor,{direction:direction||'both'})])[0];
+  var next=normalizeLineageFilter([Object.assign({},anchor,{direction:direction||'down'})])[0];
   if(!next)return;
   var current=_workspaceFilters.lineage.find(function(a){return workspaceAnchorKey(a)===workspaceAnchorKey(next);});
   if(current)current.direction=next.direction;else _workspaceFilters.lineage.push(next);
@@ -694,7 +694,7 @@ function workspaceGraph(graph) {
   var dependencies=Object.assign({},graph.dependencies);
   dependencies.tasks=(dependencies.tasks||[]).filter(function(t){return visibility.visible.has(t.path);});
   dependencies.logical=(dependencies.logical||[]).filter(function(e){return visibility.visible.has(e.from)&&visibility.visible.has(e.to);});
-  return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to)&&(!lineage||!lineage.files||Array.from(lineage.files).some(function(p){return reproEdgeCarries(e,p);}));})});
+  return Object.assign({},graph,{dependencies:dependencies,tasks:(graph.tasks||[]).filter(function(t){return visibility.visible.has(t.path);}),steps:steps,step_edges:(graph.step_edges||[]).filter(function(e){return names.has(e.from)&&names.has(e.to);})});
 }
 function workspaceWriteHistory() {
   if(restoring)return;
@@ -761,7 +761,7 @@ function clearWorkspaceFilters() { _workspaceFilters=emptyWorkspaceFilters();wor
    One element re-anchored under the control that opened it. A refresh rewrites
    the head and body but keeps the search box, so typing survives filtering. */
 var _wfPop=null;
-var _wfDepDirection='both';
+var _wfDepDirection='down';
 var _wfScopeList='in';
 function workspacePopOpen(kind, anchor) {
   if(_wfPop&&_wfPop.kind===kind&&_wfPop.anchor===anchor){workspacePopClose(true);return;}
@@ -885,18 +885,18 @@ function workspaceFileRowHTML(f, anchors) {
   return reproFileTypeTag(f.type)+'<span class="wf-grow wf-label">'+(anchors&&anchors.has('file:'+f.logical)?'✓ ':'')+escapeHtml(leaf)+'<small>'+escapeHtml(dir||'project root')+'</small></span><span class="wf-cnt" title="Steps that read it">'+f.readers.length+'</span>';
 }
 function workspaceFilesView(q) {
-  var head='<strong>File</strong>'+workspaceSegHTML('data-wf-depdir',[['up','⇡ Writer'],['down','⇣ Readers'],['both','⇅ Both']],_wfDepDirection);
-  if(!_reproData)return {label:'Writers and readers of a file',head:head,body:'<p class="wf-empty">Loading files…</p>'};
+  var head='<strong>Dependencies of…</strong>'+workspaceSegHTML('data-wf-depdir',[['up','⇡ Up'],['down','⇣ Down'],['both','⇅ Both']],_wfDepDirection);
+  if(!_reproData)return {label:'Dependencies of a file',head:head,body:'<p class="wf-empty">Loading files…</p>'};
   var anchors=new Set(_workspaceFilters.lineage.map(workspaceAnchorKey)),files=workspaceFileMatches(q),shown=files.slice(0,WORKSPACE_FILE_ROWS);
-  return {label:'Writers and readers of a file',head:head,
+  return {label:'Dependencies of a file',head:head,
     body:shown.map(function(f){return '<button type="button" class="wf-row wf-pick" data-wf-pick="file|'+escapeAttr(f.logical)+'" data-wf-key="pick:file|'+escapeAttr(f.logical)+'">'+workspaceFileRowHTML(f,anchors)+'</button>';}).join('')
       +(files.length>shown.length?'<p class="wf-empty">'+(files.length-shown.length)+' more. Type to narrow.</p>':'')||'<p class="wf-empty">'+(q?'Nothing matches.':'No step declares a file.')+'</p>',
-    foot:'Pick a file to keep the steps that write or read it.'};
+    foot:'Pick a file to keep the steps it comes from or feeds.'};
 }
 function workspaceAnchorView(i) {
   var a=_workspaceFilters.lineage[i];if(!a)return null;
   return {label:lineageAnchorLead(a)+' '+lineageAnchorLabel(a),head:'<strong>'+escapeHtml(lineageAnchorLabel(a))+'</strong>'+(a.file?'<small class="wf-path">'+escapeHtml(a.file)+'</small>':''),
-    body:'<div class="wf-pad"><p>Show '+(a.file?'the steps that touch this file':(a.step?'this step':'this task’s steps')+' and what they connect to')+':</p>'+workspaceSegHTML('data-wf-setdir',a.file?[['up','⇡ Writer'],['down','⇣ Readers'],['both','⇅ Both']]:[['up','⇡ Upstream'],['down','⇣ Downstream'],['both','⇅ Both']],a.direction)
+    body:'<div class="wf-pad"><p>Show '+(a.file?'the steps that write or read this file':a.step?'this step':'this task’s steps')+' and what they connect to:</p>'+workspaceSegHTML('data-wf-setdir',[['up','⇡ Upstream'],['down','⇣ Downstream'],['both','⇅ Both']],a.direction)
       +'<p class="wf-note">Several dependency chips combine as a union: a task shows if it connects to any of them.</p></div>',
     foot:'<button type="button" class="wf-link" data-wf-another data-wf-key="another">+ Add another task or step</button>'};
 }
@@ -907,17 +907,17 @@ function workspaceAddView(q) {
     sections.push('<div class="wf-row wf-option" role="option" id="wf-opt-'+items.length+'" data-wf-item="'+items.length+'">'+html+'</div>');items.push({primary:primary,secondary:secondary});}
   function done(){workspacePopClose(true);applyWorkspaceFilters(true);}
   if(!q){
-    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…'],['files','Writers and readers of a file…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){if(f[0]==='scope')_wfScopeList='in';workspacePopShow(f[0]);});});
+    [['status','Task status'],['steps','Step state'],['scope','Task subtree'],['deps','Dependencies of a task or step…'],['files','Dependencies of a file…']].forEach(function(f){add('Filter by','<span class="wf-grow">'+f[1]+'</span><span class="wf-arrow" aria-hidden="true">›</span>',function(){if(f[0]==='scope')_wfScopeList='in';workspacePopShow(f[0]);});});
     WORKSPACE_QUICK_FILTERS.forEach(function(p){add('Quick filters','<span class="wf-grow wf-label">'+p.label+'<small>'+p.desc+'</small></span>',function(){p.apply(_workspaceFilters);done();});});
   } else {
     var statusCounts=workspaceFacetCounts('status'),stepCounts=workspaceFacetCounts('steps'),index=workspaceStepIndex();
     WORKSPACE_STATUSES.filter(function(v){return v.includes(q);}).forEach(function(v){add('Task status','<span class="wf-grow">Status is <span class="badge badge-'+v+'">'+v+'</span></span><span class="wf-cnt">'+(statusCounts[v]||0)+'</span>',function(){var s=_workspaceFilters.status;_workspaceFilters.status=s.neg?{neg:false,values:[v]}:{neg:false,values:workspaceStrings(s.values.concat([v]))};done();});});
     REPRO_STATES.filter(function(s){return s.key.includes(q);}).forEach(function(s){add('Step state','<span class="wf-grow">Steps are '+workspaceStateHTML(s.key)+'</span><span class="wf-cnt">'+(stepCounts?stepCounts[s.key]||0:'…')+'</span>',function(){_workspaceFilters.steps=workspaceStrings(_workspaceFilters.steps.concat([s.key]));done();});});
     workspaceTasks().map(function(t){return {t:t,score:scoreSearchRecord({title:t.title||'',slug:t.path},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var p=x.t.path;
-      add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,'in');done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p},'both');}:null);});
+      add('Tasks','<span class="wf-grow wf-label">'+escapeHtml(x.t.title||p||'Project root')+'<small>'+escapeHtml(p||'Project root')+'</small></span>'+workspaceActsHTML('task',p,true),function(){workspaceScopeAdd(p,'in');done();},p?function(){workspacePopClose(true);addLineageAnchor({task:p});}:null);});
     if(index)(_reproData.graph.steps||[]).map(function(s){return {s:s,score:scoreSearchRecord({title:s.name},q)};}).filter(function(x){return x.score>0;}).sort(function(a,b){return b.score-a.score;}).slice(0,6).forEach(function(x){var n=x.s.name;
-      add('Steps',workspaceGlyphHTML(index.state[n])+'<span class="wf-grow wf-label is-step">'+escapeHtml(n)+'<small>'+escapeHtml(workspaceTaskTitle(x.s.task))+'</small></span>'+workspaceActsHTML('step',n,false),function(){workspacePopClose(true);addLineageAnchor({step:n},'both');});});
-    if(index)workspaceFileMatches(q).slice(0,6).forEach(function(f){add('Files',workspaceFileRowHTML(f),function(){workspacePopClose(true);addLineageAnchor({file:f.logical},'both');});});
+      add('Steps',workspaceGlyphHTML(index.state[n])+'<span class="wf-grow wf-label is-step">'+escapeHtml(n)+'<small>'+escapeHtml(workspaceTaskTitle(x.s.task))+'</small></span>'+workspaceActsHTML('step',n,false),function(){workspacePopClose(true);addLineageAnchor({step:n});});});
+    if(index)workspaceFileMatches(q).slice(0,6).forEach(function(f){add('Files',workspaceFileRowHTML(f),function(){workspacePopClose(true);addLineageAnchor({file:f.logical});});});
     if(!items.length)sections.push('<p class="wf-empty">Nothing matches “'+escapeHtml(q)+'”.</p>');
   }
   return {label:'Add a filter',body:sections.join(''),
@@ -2288,7 +2288,7 @@ function reproPortHTML(f,side,nested,info){
   var tail=note||info&&info.online?'<div class="rp-port-note">'+(info.online?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only'+(info.online.size!=null?' · '+formatArtifactBytes(info.online.size):'')+'</span> ':'')+escapeHtml(note||'')+'</div>':'';
   return '<div class="rp-port-row'+(pinned?' is-pinned':'')+(info&&info.online?' is-online-only':'')+'"><button type="button" class="rp-port" data-rp-action="file-pin" data-value="'+value+'"'+peek+' aria-pressed="'+pinned+'" aria-label="'+escapeAttr(reproFileSummary(f))+'">'
     +reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span>'+(info?'</button><span class="rp-port-meta">'+meta+'</span>':'<span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>')
-    +'<span class="rp-port-acts"><button type="button" class="rp-port-act" data-rp-action="file-filter" data-value="'+value+'" title="Show only the steps that write or read this file">Filter</button>'
+    +'<span class="rp-port-acts"><button type="button" class="rp-port-act" data-rp-action="file-filter" data-value="'+value+'" title="Show only what this file comes from or feeds">Filter</button>'
     +'<button type="button" class="rp-port-act" data-rp-action="file-open" data-value="'+value+'" title="Show this file in the details pane">Open</button></span>'
     +(f.members.length&&!nested?'<button type="button" class="rp-port-fold" data-rp-action="port-fold" data-value="'+value+'" aria-expanded="'+open+'" aria-label="'+escapeAttr((open?'Hide the ':'Show the ')+f.members.length+' declared files in '+f.logical)+'" title="'+f.members.length+' declared files">'+(open?'▾':'▸')+'</button>':'')+'</div>'+tail
     +(open?'<div class="rp-port-members">'+f.members.map(function(p){return reproPortHTML(reproFiles()[p],side,true,info&&{});}).join('')+'</div>':'');
@@ -3959,7 +3959,7 @@ async function loadActiveNode(path) {
          downloaded file has no server to re-export from. */
       + (window.STANDALONE ? '' :
          '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file">Share</button>')
-      + ((path && !window.DOC_MODE) ? '<button class="share-btn lineage-btn" type="button" title="Show only this task\'s upstream and downstream dependencies">Filter to dependencies</button>' : '')
+      + ((path && !window.DOC_MODE) ? '<button class="share-btn lineage-btn" type="button" title="Show only this task and what depends on it; the filter chip changes direction">Filter to dependencies</button>' : '')
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
