@@ -519,6 +519,9 @@ def test_text_preview_is_syntax_highlighted(browser, workspace):
       document.body.prepend(a); })""")
     page.locator('[data-peek="figs/calc.py"]').hover()
     page.wait_for_selector('#file-peek .file-peek-text .hljs-keyword:text-is("def")')
+    colors = page.evaluate("""() => { const text = document.querySelector('#file-peek .file-peek-text');
+      return [getComputedStyle(text.querySelector('.hljs-keyword')).color, getComputedStyle(text).color]; }""")
+    assert colors[0] != colors[1], 'a keyword is drawn in the plain text colour'
     page.locator('[data-peek="figs/notes.txt"]').hover()
     page.wait_for_selector('#file-peek .file-peek-text:has-text("def is not code here")')
     assert page.locator('#file-peek .file-peek-text [class^="hljs-"]').count() == 0
