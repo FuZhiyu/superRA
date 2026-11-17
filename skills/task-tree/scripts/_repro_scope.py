@@ -89,8 +89,11 @@ def _bytes_verified(graph, paths, item):
     return bool(named) and named[0] == item['digest']
 
 
-def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
-    """Compare saved input bytes even when ordinary graph tracking uses a sidecar."""
+def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=(), ledger=None):
+    """Compare saved input bytes even when ordinary graph tracking uses a sidecar.
+
+    *ledger* is the caller's `read_ledger` result, read here when not given.
+    """
     from _repro_acceptance import identity, lock_state, read_json, receipt_path
     receipt = read_json(receipt_path(paths, entry.step.name), {})
     state = receipt.get('state', {})
@@ -99,7 +102,7 @@ def check_boundary_receipt(entry, graph, paths, cache, lock, boundary=()):
         receipt = {}
     recorded = receipt.get('boundary_inputs', [])
     from _repro_acceptance import lock_digest, read_ledger
-    accepted = read_ledger(paths)['steps'].get(entry.step.name)
+    accepted = (read_ledger(paths) if ledger is None else ledger)['steps'].get(entry.step.name)
     if accepted and accepted['lock'] == lock_digest(lock):
         recorded = [{'provenance': 'recorded by the acceptance', **item} for item in accepted['boundary_inputs']]
     entry.boundary_inputs = recorded

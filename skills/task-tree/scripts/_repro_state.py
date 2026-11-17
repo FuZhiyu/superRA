@@ -1225,14 +1225,15 @@ def compute_status(
         )
         entry.external_consumers = external_consumers(graph, step)
         report.entries.append(entry)
+    from _repro_acceptance import apply_to_status, read_ledger
     from _repro_scope import boundary_inputs, check_boundary_receipt
+    ledger = read_ledger(paths) if acceptance_ledger is None else acceptance_ledger
     report.boundary_inputs = boundary_inputs(graph, needed | set(scope or ()), paths, cache, lock, consumers=needed)
     for entry in report.entries:
         current_boundary = [b for b in report.boundary_inputs if entry.step.name in b['consumers']]
-        check_boundary_receipt(entry, graph, paths, cache, lock.get(entry.step.name), current_boundary)
+        check_boundary_receipt(entry, graph, paths, cache, lock.get(entry.step.name), current_boundary, ledger)
         entry.boundary_inputs = current_boundary or entry.boundary_inputs
-    from _repro_acceptance import apply_to_status
-    apply_to_status(report, paths, cache, acceptance_ledger, lock)
+    apply_to_status(report, paths, cache, ledger, lock)
     cache.flush()
     return report
 

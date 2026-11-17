@@ -869,6 +869,19 @@ def test_a_second_status_reads_no_file_content(project):
     assert second.full_reads == 0
 
 
+def test_a_status_reads_the_acceptance_records_once(project, monkeypatch):
+    import _repro_acceptance
+    project.run("build", *CHAIN)
+    reads = []
+    real = _repro_acceptance.read_ledger
+    monkeypatch.setattr(_repro_acceptance, "read_ledger", lambda paths: reads.append(paths) or real(paths))
+
+    report = compute_status(project.graph(), project.paths)
+
+    assert len(report.entries) > 1
+    assert len(reads) == 1
+
+
 def _cache_project(tmp_path):
     """A project folder with a state directory, and the cache file inside it."""
     state = tmp_path / "proj" / ".superra-repro"
