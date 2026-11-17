@@ -371,6 +371,17 @@ class TestEveryProducerEdit:
         (var_project / "Code" / "lib" / "more.jl").write_text("# new\n", encoding="utf-8")
         assert "Code/lib/more.jl changed" in _bash(var_project)
 
+    def test_a_glob_dep_reminds_on_its_matches_alone(self, var_project):
+        steps = (var_project / "superRA" / "03-pipeline" / "task.md")
+        steps.write_text(steps.read_text(encoding="utf-8").replace("- ${CODE}/lib", '- "${CODE}/lib/*.jl"'),
+                         encoding="utf-8")
+        assert "Code/lib/helper.jl" not in _bash(var_project)
+        (var_project / "Code" / "lib" / "notes.txt").write_text("noise\n", encoding="utf-8")
+        (var_project / "Code" / "lib" / "more.jl").write_text("# new\n", encoding="utf-8")
+        context = _bash(var_project)
+        assert "Code/lib/more.jl changed" in context
+        assert "notes.txt" not in context
+
     def test_edit_in_the_first_tool_call_is_seen_after_a_prompt_seed(self, var_project):
         _seed_event(var_project)
         (var_project / "Code" / "est.jl").write_text("# est v2\n", encoding="utf-8")

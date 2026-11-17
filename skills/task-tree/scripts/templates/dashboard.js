@@ -1633,10 +1633,27 @@ function reproFileType(path){
   var leaf=reproLeaf(path),dot=leaf.lastIndexOf('.');
   return dot<0?'folder':REPRO_TYPE_OF[leaf.slice(dot+1).toLowerCase()]||'other';
 }
+/* A glob dep's matcher, as `_repro.glob_regex`: `*` within a segment, `**` across
+   segments, no wildcard matching a leading dot. */
+function reproGlobRe(pattern){
+  var segs=pattern.split('/');
+  return new RegExp('^'+segs.map(function(seg,i){
+    var last=i===segs.length-1;
+    if(seg==='**')return last?'(?:(?!\\.)[^/]+/?)*':'(?:(?!\\.)[^/]+/)*';
+    var s=/^[*?[]/.test(seg)?'(?!\\.)':'';
+    for(var j=0;j<seg.length;j++){
+      var c=seg[j],e=c==='['?seg.indexOf(']',j+2):-1;
+      if(c==='*')s+='[^/]*';else if(c==='?')s+='[^/]';
+      else if(e>0){s+='['+seg.slice(j+1,e).replace(/^!/,'^').replace(/\\/g,'\\\\')+']';j=e;}
+      else s+=c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    }
+    return s+(last?'':'/');
+  }).join('')+'$');
+}
 /* Every declared file by logical path: its type, the steps that write it, and
-   the steps that read it. A folder a step reads takes the declared outputs
-   inside it as `members`: their writers write the folder, and the folder's
-   readers read them. Null before the graph loads. */
+   the steps that read it. A folder or glob a step reads takes the declared
+   outputs inside it or matching it as `members`: their writers write the
+   folder, and the folder's readers read them. Null before the graph loads. */
 var _reproFilesMemo=null;
 function reproFiles(){
   if(!_reproData)return null;
@@ -1650,11 +1667,13 @@ function reproFiles(){
     (s.deps||[]).forEach(function(d){add(file(d).readers,s.name);});
   });
   (_reproData.graph.step_edges||[]).forEach(function(e){var f=file({logical:e.via});add(f.producers,e.from);add(f.readers,e.to);});
+  function member(folder,p){folder.members.push(p);folder.readers.forEach(function(r){add(files[p].readers,r);});files[p].producers.forEach(function(w){add(folder.producers,w);});}
+  var globs=Object.keys(files).filter(function(k){return /[*?[]/.test(k)&&files[k].readers.length;}).map(function(k){return [files[k],reproGlobRe(k)];});
   outs.forEach(function(p){
     for(var d=p,i;(i=d.lastIndexOf('/'))>0;){
-      d=d.slice(0,i);var folder=files[d];if(!folder||!folder.readers.length)continue;
-      folder.members.push(p);folder.readers.forEach(function(r){add(files[p].readers,r);});files[p].producers.forEach(function(w){add(folder.producers,w);});
+      d=d.slice(0,i);var folder=files[d];if(folder&&folder.readers.length)member(folder,p);
     }
+    globs.forEach(function(g){if(g[1].test(p))member(g[0],p);});
   });
   Object.keys(files).forEach(function(k){files[k].members.sort();});
   _reproFilesMemo={data:_reproData,files:files};

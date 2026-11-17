@@ -16,7 +16,7 @@ What invalidates a step: [task-file-contract.md §What invalidates a step](../..
 
 | Row | Act |
 |---|---|
-| `input-changed` on a tracked file or the step definition | Read the diff from the command the row prints, then apply [the stale rule](rerun-or-accept.md#the-stale-rule). A changed file under a declared directory that the script does not read: narrow the declaration. |
+| `input-changed` on a tracked file or the step definition | Read the diff from the command the row prints, then apply [the stale rule](rerun-or-accept.md#the-stale-rule). A changed file under a declared directory that the script does not read: narrow the declaration to the files or a glob. |
 | `other-build`, current side an earlier commit behind HEAD | Sync lag: the recorded build ran elsewhere and its outputs have not arrived. Wait for the sync, or rebuild when outputs do not sync between machines, then recheck `status`. Never accept the older bytes. |
 | `other-build`, current side off HEAD's history | A build from another branch: rebuild here, or wait for that branch to merge. |
 | `other-build`, any other current side | Rebuild; accept only current bytes you have reviewed. |

@@ -148,8 +148,8 @@ A shared dashboard link uses `#/<task-path>?step=<name>` with its worktree selec
 | `name` | Slug, unique across the active graph. Archived name/output conflicts are diagnostic only and cannot replace an active producer. |
 | `cmd` | Shell string, run from the project root. Mutually exclusive with `runner`. |
 | `runner` + `script` | Expands a runner template from config; the script is added to `deps` automatically. |
-| `deps` | Files or directories the step reads. With `cmd`, list the script here. A directory dep reads every out inside it, so each producing step gets an edge. |
-| `outs` | Files or directories the step writes. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge; no other step's out may lie inside it. |
+| `deps` | Files, globs, or directories the step reads. With `cmd`, list the script here. A glob (`data/raw/*.csv`, `out/**/*.parquet`) reads the files it matches: `*` stays inside one folder, a whole `**` segment spans any depth, and no wildcard matches a leading dot; quote a glob that starts with `*`. A directory dep hashes every file in it, `.DS_Store` and build leftovers included. A glob or directory dep reads every out that matches or lies inside it, so each producing step gets an edge. |
+| `outs` | Files or directories the step writes, never globs. A directory out owns every file inside it, so a downstream `deps` entry below that directory infers the edge; no other step's out may lie inside it. |
 | `kind` | `build` (default) or `check`. A `check` step declares no `outs` and reruns when its deps change. |
 | `params` | Flat mapping hashed into the step's definition. |
 
@@ -217,11 +217,11 @@ Findings come back in the `Finding` shape shared with `task check`, under the `r
 
 - **Text:** prose outside the fence; YAML outside the subset, in a section or in `config.yaml`.
 - **Names and outs:** a missing or non-slug `name`; a duplicate active step name; two active steps declaring the same out; one step's out inside another step's directory out.
-- **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a `params` value that is not a flat mapping.
+- **Step shape:** a step that declares neither `cmd` nor `runner` + `script`; a `kind` other than `build` or `check`; a `check` step with outs; a `deps` or `outs` value that is not a list; an `outs` entry that is neither a path nor `path:` with an optional `sidecar:`; a glob in `outs`, `sidecar`, or `script`; a `params` value that is not a flat mapping.
 - **Dependencies:** step cycles, unresolved logical prerequisites, or incomplete task parsing.
 - **Keys and config:** an unknown section, step, or `reproduction:` key; a `runner` the config does not define; a runner template without `{script}`; an unknown `${VAR}`.
 
-**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; an archived or postponed prerequisite; a task-level cycle; an `include` that could not be resolved or lies outside the project root and every `${VAR}` directory; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
+**`[WARNING]`** — a dep that neither exists on disk nor is produced by a step; a declared dep that is a folder on disk, other than another step's out (name the files or a glob); an archived or postponed prerequisite; a task-level cycle; an `include` that could not be resolved or lies outside the project root and every `${VAR}` directory; a retired key, which is ignored: `tier:` in a section or step, `env_probe` or `code_roots` under `reproduction:`.
 
 **Unregistered results artifact** — an advisory `[WARNING]` that never blocks, one per file, when a task's `## Results` links a file on disk that looks generated (a data or exhibit extension, or a `.tex` inside a directory some step writes into) and that no active step declares as an out and no step reads as a dep. Silent for a tree with no `## Reproduction` section and no `reproduction:` config, for prose and source links, and for scratch paths.
 

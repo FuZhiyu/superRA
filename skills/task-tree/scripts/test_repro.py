@@ -828,6 +828,48 @@ class TestFindings:
         assert _has(graph, "warning", "which no step produces and which is not on disk")
         assert graph.external_inputs[0].exists is False
 
+    def test_a_declared_folder_dep_points_to_a_glob(self, tmp_path):
+        plan = _plan(tmp_path)
+        (tmp_path / "data" / "raw").mkdir(parents=True)
+        block = "steps:\n  - name: load\n    cmd: true\n    deps: [{dep}]\n"
+        _write_repro_task(plan / "01-a", "A", block.format(dep="data/raw"))
+        assert _has(_graph(plan), "warning", "name the files it reads or a glob such as data/raw/*.csv")
+        _write_repro_task(plan / "01-a", "A", block.format(dep='"data/raw/*.csv"'))
+        graph = _graph(plan)
+        assert _messages(graph, "warning") == []
+        assert graph.external_inputs[0].exists is True
+
+    def test_a_folder_another_step_writes_draws_no_glob_warning(self, tmp_path):
+        plan = _plan(tmp_path)
+        (tmp_path / "out" / "parts").mkdir(parents=True)
+        _write_repro_task(plan / "01-a", "A", "steps:\n  - name: gen\n    cmd: true\n    outs: [out/parts]\n"
+                          "  - name: use\n    cmd: true\n    deps: [out/parts]\n")
+        assert _messages(_graph(plan), "warning") == []
+
+    @pytest.mark.parametrize("field", ['outs: ["out/*.csv"]', 'runner: sh\n    script: "Code/*.sh"'])
+    def test_only_deps_take_a_glob(self, tmp_path, field):
+        plan = _plan(tmp_path)
+        (plan / "config.yaml").write_text("reproduction:\n  runners:\n    sh: sh {script}\n", encoding="utf-8")
+        cmd = "" if "runner" in field else "    cmd: true\n"
+        _write_repro_task(plan / "01-a", "A", f"steps:\n  - name: gen\n{cmd}    {field}\n")
+        assert _has(_graph(plan), "error", "only 'deps' entries take a glob")
+
+    def test_a_glob_dep_links_the_outs_it_matches(self, tmp_path):
+        plan = _plan(tmp_path)
+        _write_repro_task(
+            plan / "01-a", "A",
+            "steps:\n"
+            "  - name: csv\n    cmd: true\n    outs: [out/t/a.csv]\n"
+            "  - name: log\n    cmd: true\n    outs: [out/t/a.log]\n"
+            "  - name: deep\n    cmd: true\n    outs: [out/t/sub]\n"
+            "  - name: whole\n    cmd: true\n    outs: [res]\n"
+            '  - name: flat\n    cmd: true\n    deps: ["out/t/*.csv"]\n'
+            '  - name: tree\n    cmd: true\n    deps: ["out/**/*.csv"]\n'
+            '  - name: inside\n    cmd: true\n    deps: ["res/*.csv"]\n',
+        )
+        edges = {(src, dst) for src, dst, _ in _graph(plan).step_edges}
+        assert edges == {("csv", "flat"), ("csv", "tree"), ("deep", "tree"), ("whole", "inside")}
+
     def test_include_warnings_are_attributed_to_the_owning_task(self, tmp_path):
         plan = _plan(tmp_path)
         code = tmp_path / "Code"

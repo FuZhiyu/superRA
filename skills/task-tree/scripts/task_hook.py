@@ -356,10 +356,11 @@ def _hook_wrote() -> None:
 
 def _repro_owning_steps(graph, rel: str) -> list[str]:
     """Names of steps whose deps (declared, script, or Julia closure) reach rel."""
+    from _repro import covers
     names = []
     for step in graph.steps:
         for dep in step.deps:
-            if rel == dep.resolved or rel.startswith(dep.resolved + "/"):
+            if covers(dep.resolved, rel):
                 names.append(step.name)
                 break
     return names
@@ -1176,10 +1177,12 @@ def _repro_watch(plan_root: Path) -> tuple[list[str], list[list]]:
 
     `files` are the literal-path deps and scripts of registered steps, minus step
     outs. `dirs` are `[directory, suffixes | None]` scanned on every call: each
-    declared directory dependency (every file) and each script's directory (new
-    scripts of a configured runner's language), skipping the task root.
+    declared directory or glob dependency (every file it covers) and each
+    script's directory (new scripts of a configured runner's language),
+    skipping the task root.
     """
     import _edit_detect
+    from _repro import glob_base, is_glob
     project_root = plan_root.parent
     graph = _hook_graph(plan_root)
     suffixes = _edit_detect.runner_suffixes(graph.config.runners)
@@ -1187,10 +1190,14 @@ def _repro_watch(plan_root: Path) -> tuple[list[str], list[list]]:
     dirs: dict[str, list[str] | None] = {}
     for step in graph.steps:
         for dep in step.deps:
-            if "${" in dep.resolved or _repro_is_out(graph, dep.resolved):
+            glob = is_glob(dep.resolved)
+            if "${" in dep.resolved or _repro_is_out(graph, glob_base(dep.resolved) if glob else dep.resolved):
                 continue
             path = project_root / dep.resolved
-            if path.is_dir():
+            if glob:
+                if (project_root / glob_base(dep.resolved)).is_dir():
+                    dirs[str(path)] = None
+            elif path.is_dir():
                 dirs[str(path)] = None
             elif path.is_file():
                 files.append(str(path))

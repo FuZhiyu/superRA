@@ -32,7 +32,7 @@ One step per script is the default.
 Open the producer and list what it opens: its real reads are `deps`, its real writes are `outs`.
 
 - **Deps**
-  - **Name files.** `[ADVISORY]` A script that reads a few named files declares those files, not their directory. Use a directory entry only when the names are generated or the count is large.
+  - **Name files.** `[ADVISORY]` A script that reads a few named files declares those files, not their directory. Generated names or a large count: declare a glob by type (`data/raw/*.csv`), never the bare directory, whose state counts every stray file in it.
   - **Stop at external inputs:** declare each as a dep that no step produces.
   - **Declare upstream code only when the step reads or executes it;** provenance alone is not a dependency.
 - **Outs**

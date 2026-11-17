@@ -632,7 +632,7 @@ def _config_origins(graph, step) -> list[dict]:
 
 def impact(graph, paths, files, scope=(), config_file=None):
     """Steps a change to *files* would make stale: direct readers, their descendants, and recorded durations."""
-    from _repro import CONFIG_FILENAME
+    from _repro import CONFIG_FILENAME, overlaps
     from _repro_signals import downstream_steps, step_durations
     selected, unknown = select_steps(graph, scope, include_ancestors=False)
     if unknown:
@@ -645,8 +645,7 @@ def impact(graph, paths, files, scope=(), config_file=None):
         reasons = []
         for dep in step.deps:
             path = str(absolute(paths.project_root, dep.resolved).resolve())
-            if dep.logical in files or any(path == p or path.startswith(p + '/') or p.startswith(path + '/')
-                                           for p in resolved.values()):
+            if dep.logical in files or any(overlaps(path, p) for p in resolved.values()):
                 reasons.append({'path': dep.logical, 'origins': step.dependency_origins.get(dep.logical, [])})
         origins = _config_origins(graph, step) if configs else []
         if origins:

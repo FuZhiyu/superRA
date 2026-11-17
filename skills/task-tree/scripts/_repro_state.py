@@ -28,11 +28,11 @@ from pathlib import Path
 from typing import Iterable
 
 if __package__:
-    from ._repro import Graph, Step
+    from ._repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from ._task_validate import OUTPUT_CAP
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
-    from _repro import Graph, Step
+    from _repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from _task_validate import OUTPUT_CAP
 
 try:  # Python 3.11+
@@ -374,29 +374,31 @@ class HashCache:
                 continue
         self.warm(files)
 
-    def tree_hash(self, path: Path) -> str | Unread:
+    def tree_hash(self, path: Path, glob: str | None = None) -> str | Unread:
         """One hash over every file under a directory, by relative path.
 
         Symlinked files and subdirectories are followed, each real directory
         once. A directory's flags are checked before it is listed, since
         listing an online-only directory downloads its entries. A broken link,
         an unreadable file, or uncached online-only content makes the whole
-        directory `Unread` rather than silently leaving it out.
+        directory `Unread` rather than silently leaving it out. With *glob*,
+        only the files it matches count, and the walk stops at its depth.
         """
+        key = glob or str(path)
         digest = hashlib.sha256()
         entries: list[tuple[str, str]] = []
         unreadable: list[OSError] = []
         online = False
         try:
             if file_flags(os.stat(path)) & SF_DATALESS:
-                self._online[str(path)] = True
+                self._online[key] = True
                 return Unread("online-only")
         except OSError:
             return Unread("unreadable")
         # The loop below returns at the first file it cannot hash, so the walk ends there too:
         # nothing past it is listed or read, and the first problem met wins.
         files = []
-        for found in _tree_files(path, unreadable):
+        for found in _tree_files(path, unreadable, glob):
             files.append(found)
             state = found if unread(found) else self._known(*found)
             if unread(state) or (state is _MISS and not os.access(found[0], os.R_OK)):
@@ -407,25 +409,28 @@ class HashCache:
             online = online or is_online_only(child, child_info)
             child_hash = self._hashed(child, child_info)
             if unread(child_hash):
-                self._online[str(path)] = online or child_hash.why == "online-only"
+                self._online[key] = online or child_hash.why == "online-only"
                 return Unread(child_hash.why)
             entries.append((os.path.relpath(child, path).replace(os.sep, "/"), child_hash))
         if stopped:
             if stopped.why == "online-only":
-                self._online[str(path)] = True
+                self._online[key] = True
             return stopped
-        self._online[str(path)] = online
+        self._online[key] = online
         if unreadable:
             return Unread("unreadable")
         for name, value in sorted(entries):
             digest.update(f"{name}\0{value}\n".encode())
-        return f"dir:{digest.hexdigest()}"
+        return f"{'glob' if glob else 'dir'}:{digest.hexdigest()}"
 
     def path_state(self, path: Path) -> str | Unread | None:
-        """State of a file or directory: its content hash, `Unread`, or None if absent.
+        """State of a file, directory, or glob: its content hash, `Unread`, or None if absent.
 
         One ``stat`` decides both the branch and, for a file, the cache key.
         """
+        if is_glob(str(path)) and not path.exists():
+            base = Path(glob_base(str(path)))
+            return self.tree_hash(base, str(path)) if base.is_dir() else None
         try:
             info = path.stat()
         except (FileNotFoundError, NotADirectoryError):
@@ -444,6 +449,11 @@ class HashCache:
         under a directory that has not been walked. A legacy placeholder's size
         is unknown.
         """
+        if is_glob(str(path)) and not path.exists():
+            base = Path(glob_base(str(path)))
+            if walk and str(path) not in self._online and base.is_dir():
+                self._online[str(path)] = _holds_online_only(base)
+            return self._online.get(str(path), False), None
         try:
             info = path.stat()
         except OSError:
@@ -539,19 +549,26 @@ class HashCache:
             self._dirty = bool(self._fresh)
 
 
-def _tree_files(path: Path, unreadable: list[OSError]):
+def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
     """Each regular file under a directory with its `stat`, in hashing order.
 
     A walk that cannot continue ends with the `Unread` saying why: an
-    online-only subdirectory, which is never listed, or a broken link.
+    online-only subdirectory, which is never listed, or a broken link. With
+    *glob* (an absolute pattern based at *path*), only matching files are
+    yielded and only directories a match could lie in are entered.
     """
     visited: set[tuple[int, int]] = set()
+    match = glob_regex(glob).match if glob else None
     for parent, dirnames, filenames in os.walk(path, onerror=unreadable.append, followlinks=True):
         info = os.stat(parent)
         if (info.st_dev, info.st_ino) in visited:
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
+        if glob:
+            dirnames[:] = [d for d in dirnames if glob_could_hold(glob, os.path.join(parent, d))]
+        if match:
+            filenames = [f for f in filenames if match(os.path.join(parent, f))]
         dirnames.sort()
         for dirname in dirnames:
             try:
@@ -635,7 +652,7 @@ def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[N
 
 
 def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
-    """Nodes for other steps' outs that cover, or lie inside, this step's deps.
+    """Nodes for other steps' outs that cover, or lie inside, this step's deps or globs.
 
     `_repro._link` reads a dep below a directory out as produced by that
     directory, and a directory dep as read from every out inside it; the status
@@ -663,6 +680,12 @@ def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
     declared = {d.logical for d in step.deps}
     extra: list[Node] = []
     for dep in step.deps:
+        if is_glob(dep.resolved):
+            for path, node in covering:
+                if overlaps(dep.resolved, path) and node[0] not in declared:
+                    declared.add(node[0])
+                    extra.append(node)
+            continue
         for directory, node in covering:
             if dep.resolved.startswith(directory + "/"):
                 if node[0] not in declared:

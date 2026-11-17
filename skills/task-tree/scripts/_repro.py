@@ -47,6 +47,109 @@ VAR_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
 # ---------------------------------------------------------------------------
+# Glob deps
+# ---------------------------------------------------------------------------
+# A dep with `*`, `?`, or `[...]` reads the files it matches: `*` stays inside
+# one path segment, a whole `**` segment spans any number of them, and a
+# wildcard never matches a leading dot, as in the shell.
+
+GLOB_CHARS = frozenset("*?[")
+
+
+def is_glob(path: str) -> bool:
+    return not GLOB_CHARS.isdisjoint(path)
+
+
+def glob_base(pattern: str) -> str:
+    """The literal directory a glob starts from: its segments before the first wildcard."""
+    parts = pattern.split("/")
+    for i, part in enumerate(parts):
+        if is_glob(part):
+            return "/".join(parts[:i])
+    return pattern
+
+
+def _segment_regex(segment: str) -> str:
+    out = ["(?!\\.)"] if segment[:1] in GLOB_CHARS else []
+    i = 0
+    while i < len(segment):
+        char = segment[i]
+        end = -1
+        if char == "[":
+            j = i + 1 + (segment[i + 1:i + 2] == "!")
+            j += segment[j:j + 1] == "]"
+            end = segment.find("]", j)
+        if char == "*":
+            out.append("[^/]*")
+        elif char == "?":
+            out.append("[^/]")
+        elif end > 0:
+            inner = segment[i + 1:end]
+            inner = "^" + inner[1:] if inner.startswith("!") else inner
+            out.append("[" + inner.replace("\\", "\\\\") + "]")
+            i = end
+        else:
+            out.append(re.escape(char))
+        i += 1
+    return "".join(out)
+
+
+_GLOB_RES: dict[str, re.Pattern] = {}
+
+
+def glob_regex(pattern: str) -> re.Pattern:
+    compiled = _GLOB_RES.get(pattern)
+    if compiled is None:
+        segments = pattern.split("/")
+        parts = []
+        for i, segment in enumerate(segments):
+            last = i == len(segments) - 1
+            if segment == "**":
+                parts.append("(?:(?!\\.)[^/]+/?)*" if last else "(?:(?!\\.)[^/]+/)*")
+            else:
+                parts.append(_segment_regex(segment) + ("" if last else "/"))
+        compiled = _GLOB_RES[pattern] = re.compile("".join(parts) + r"\Z")
+    return compiled
+
+
+def glob_match(pattern: str, path: str) -> bool:
+    return glob_regex(pattern).match(path) is not None
+
+
+def glob_could_hold(pattern: str, directory: str) -> bool:
+    """Whether a file inside `directory` could match `pattern`."""
+    tail = pattern.split("/")
+    for i, segment in enumerate(directory.split("/")):
+        if i >= len(tail):
+            return False
+        if tail[i] == "**":
+            return not segment.startswith(".")
+        if i == len(tail) - 1 or not glob_match(tail[i], segment):
+            return False
+    return True
+
+
+def covers(dep: str, path: str) -> bool:
+    """Whether a dep reads `path`: the file itself, a file inside a directory dep, or a glob match."""
+    if is_glob(dep):
+        return glob_match(dep, path)
+    return path == dep or path.startswith(dep + "/")
+
+
+def overlaps(dep: str, path: str) -> bool:
+    """Whether a dep reads `path` or something inside it.
+
+    For a glob, a `path` with no extension counts as a directory, which
+    overlaps when a match could lie in it.
+    """
+    if not is_glob(dep):
+        return path == dep or path.startswith(dep + "/") or dep.startswith(path + "/")
+    base = glob_base(dep)
+    return (not path or base == path or base.startswith(path + "/") or glob_match(dep, path)
+            or not posixpath.splitext(path)[1] and glob_could_hold(dep, path))
+
+
+# ---------------------------------------------------------------------------
 # Bounded YAML subset parser
 # ---------------------------------------------------------------------------
 
@@ -1060,6 +1163,9 @@ def _build_step(
             sidecar, unknown = _path_ref(str(entry["sidecar"]), variables)
             unknown_vars += unknown
         step.outs.append(Out(path=ref, sidecar=sidecar))
+    for ref in [step.script] + [r for out in step.outs for r in (out.path, out.sidecar)]:
+        if ref is not None and is_glob(ref.logical):
+            raise _StepError(f"step {name!r} names {ref.logical}; only 'deps' entries take a glob")
 
     if unknown_vars and strict_vars:
         missing = ", ".join(f"${{{v}}}" for v in sorted(set(unknown_vars)))
@@ -1371,8 +1477,8 @@ def step_errors(graph: Graph, names, tasks=()) -> tuple[list[Finding], list[str]
             continue
         for step in steps:
             for dep in step.deps:
-                if any(dep.logical == o.logical or dep.resolved == o.resolved
-                       or dep.resolved.startswith(o.resolved + "/") for o in outs):
+                if any(dep.logical == o.logical or (overlaps(dep.resolved, o.resolved) if is_glob(dep.resolved)
+                       else dep.resolved == o.resolved or dep.resolved.startswith(o.resolved + "/")) for o in outs):
                     errors.append(Finding(task_path=step.task_path, category=CATEGORY, severity="error",
                         message=f"step {step.name!r} reads {dep.logical}, which task {task_path or '(root)'} "
                                 "declares in a step that failed to register"))
@@ -1433,14 +1539,25 @@ def _link(graph: Graph, project_root: Path) -> None:
 
     for step in graph.steps:
         for dep in step.deps:
-            producer = _producing_step(dep.resolved, producer_paths, graph.producers)
-            inside = {graph.producers[p] for p in producer_paths if p.startswith(dep.resolved + "/")}
-            if producer is not None:
-                inside.add(producer)
+            glob = is_glob(dep.resolved)
+            on_disk = project_root / (glob_base(dep.resolved) if glob else dep.resolved)
+            if (not glob and dep.resolved not in graph.producers and on_disk.is_dir()
+                    and {"kind": "declared"} in step.dependency_origins.get(dep.logical, [])):
+                findings.append(Finding(task_path=step.task_path, category=CATEGORY, severity="warning",
+                    message=(f"step {step.name!r} depends on folder {dep.logical}, so every file in it is "
+                             f"hashed, .DS_Store and build leftovers included; name the files it reads "
+                             f"or a glob such as {dep.logical}/*.csv")))
+            if glob:
+                inside = {graph.producers[p] for p in producer_paths if overlaps(dep.resolved, p)}
+            else:
+                producer = _producing_step(dep.resolved, producer_paths, graph.producers)
+                inside = {graph.producers[p] for p in producer_paths if p.startswith(dep.resolved + "/")}
+                if producer is not None:
+                    inside.add(producer)
             if inside:
                 edges.update((source, step.name, dep.logical) for source in inside)
                 continue
-            exists = (project_root / dep.resolved).exists()
+            exists = on_disk.is_dir() if glob else on_disk.exists()
             entry = externals.get(dep.logical)
             if entry is None:
                 externals[dep.logical] = ExternalInput(

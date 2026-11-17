@@ -1087,6 +1087,34 @@ def test_a_directory_dep_waits_for_the_outs_inside_it(dir_project, jobs):
     assert dir_project.states() == {"z-gen": "fresh", "a-use": "fresh"}
 
 
+def test_a_glob_state_covers_only_its_matches(tmp_path):
+    root = tmp_path / "data"
+    (root / "sub").mkdir(parents=True)
+    (root / "a.csv").write_text("a")
+    pattern = root / "*.csv"
+    before = HashCache().path_state(pattern)
+    assert before.startswith("glob:")
+    for name in (".DS_Store", "notes.aux", "sub/b.csv"):
+        (root / name).write_text("noise")
+        assert HashCache().path_state(pattern) == before
+    assert HashCache().path_state(root / "**" / "*.csv") != HashCache().path_state(pattern)
+    (root / "a.csv").write_text("a2")
+    assert HashCache().path_state(pattern) != before
+    assert HashCache().path_state(tmp_path / "absent" / "*.csv") is None
+
+
+def test_a_glob_dep_orders_and_stales_on_its_matches_alone(dir_project):
+    dir_project.write("superRA/01-gen/task.md", TASK_GEN.replace('"${OUT}/parts"', '"${OUT}/parts/a.txt"'))
+    dir_project.write("superRA/02-use/task.md", TASK_USE.replace('"${OUT}/parts/a.txt"', '"${OUT}/parts/*.txt"'))
+    assert dir_project.run("build", ".", "-j", "2") == 0
+    assert dir_project.read("output/used.txt") == "v1\n"
+    dir_project.write("output/parts/.DS_Store", "finder")
+    dir_project.write("output/parts/run.log", "noise")
+    assert dir_project.states() == {"z-gen": "fresh", "a-use": "fresh"}
+    dir_project.write("output/parts/extra.txt", "new input")
+    assert dir_project.states()["a-use"] == "stale"
+
+
 # ---------------------------------------------------------------------------
 # Sidecars, resolved commands, and failure recovery
 # ---------------------------------------------------------------------------

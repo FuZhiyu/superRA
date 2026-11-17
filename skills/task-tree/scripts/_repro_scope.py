@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import threading
 
-from _repro import build_graph
+from _repro import build_graph, glob_base, is_glob, overlaps
 from _repro_state import (
     Change, HashCache, ReproStateError, absolute, directory_dep_nodes, is_online_only,
     output_nodes, read_lock, read_run_record, spec_hash, step_nodes, unread, unread_phrase,
@@ -11,6 +11,7 @@ from _repro_state import (
 
 
 def _owners(graph, path):
+    path = glob_base(path) if is_glob(path) else path
     return [(s, out) for s in graph.steps for out in s.outs
             if path == out.path.resolved or path.startswith(out.path.resolved + '/')]
 
@@ -174,8 +175,7 @@ def _execution_contract(graph, names):
         ownership = sorted((path, owner.name, owner.task_path, out.path.resolved,
                             out.path.logical, out.sidecar.resolved if out.sidecar else None)
                            for path in paths for owner in graph.steps for out in owner.outs
-                           if path == out.path.resolved or path.startswith(out.path.resolved + '/')
-                           or out.path.resolved.startswith(path + '/'))
+                           if overlaps(path, out.path.resolved))
         contract[name] = dict(task=step.task_path, spec=spec_hash(step), deps=sorted(deps),
                               products=sorted(products), ownership=ownership)
     # Duplicate step names can be omitted by the graph parser. Retain those

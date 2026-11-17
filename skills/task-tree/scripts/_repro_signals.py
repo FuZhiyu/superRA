@@ -98,12 +98,15 @@ def _matches(candidate: str, declared: str) -> bool:
     found as a run of whole segments anywhere in the candidate, so a
     variable-rooted directory covers the files under it
     (`${OUT}/estimates` covers `output/estimates/a.csv`). A declaration that is
-    nothing but a variable (`${OUT}`) has no tail and covers everything.
+    nothing but a variable (`${OUT}`) has no tail and covers everything; a
+    glob tail is cut at its first wildcard.
     Matching a tail can only suppress a warning — an unresolved variable must
     never make a registered out look unregistered.
     """
+    from _repro import covers, glob_base, is_glob
     if "${" in declared:
-        needle = [s for s in _literal_tail(declared).split("/") if s]
+        tail = _literal_tail(declared)
+        needle = [s for s in (glob_base(tail) if is_glob(tail) else tail).split("/") if s]
         if not needle:
             return True
         segments = candidate.split("/")
@@ -111,7 +114,7 @@ def _matches(candidate: str, declared: str) -> bool:
             segments[i:i + len(needle)] == needle
             for i in range(len(segments) - len(needle) + 1)
         )
-    return candidate == declared or candidate.startswith(declared + "/")
+    return covers(declared, candidate)
 
 
 def _declared_paths(graph) -> tuple[list[str], list[str]]:

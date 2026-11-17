@@ -161,8 +161,11 @@ def _tree_files(plan_root: Path) -> list[str] | None:
 def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> list[str]:
     """Files under `root` (those with `suffixes`, or all), skipping hidden and
     scratch folders and never listing an online-only directory; empty when the
-    directory holds more than MAX_DIR_FILES."""
+    directory holds more than MAX_DIR_FILES. A glob `root` lists its matches."""
+    from _repro import glob_base, glob_could_hold, glob_match, is_glob
     from _repro_state import path_online_only
+    glob = root if is_glob(root) else None
+    root = glob_base(glob) if glob else root
     found: list[str] = []
     if path_online_only(root):
         return found
@@ -170,12 +173,16 @@ def _scan_dir(root: str, suffixes: list[str] | None, recursive: bool = True) -> 
         dirnames[:] = (
             [d for d in dirnames
              if not d.startswith(".") and d not in SKIP_DIRS and d.lower() not in _SCRATCH_DIRS
+             and (glob is None or glob_could_hold(glob, os.path.join(parent, d)))
              and not path_online_only(os.path.join(parent, d))]
             if recursive else []
         )
         for name in filenames:
+            path = os.path.join(parent, name)
+            if glob is not None and not glob_match(glob, path):
+                continue
             if suffixes is None or os.path.splitext(name)[1].lower() in suffixes:
-                found.append(os.path.join(parent, name))
+                found.append(path)
         if len(found) > MAX_DIR_FILES:
             return []
     return found
@@ -250,8 +257,8 @@ def detect(
     is reported.
 
     `watch_dirs` supplies `[directory, suffixes | None]` entries scanned on every
-    call: a directory dependency (`None`: every file, a new file counts as a
-    change) or a code directory (script `suffixes`: only a *new* script counts).
+    call: a directory or glob dependency (`None`: every file or match, a new one
+    counts as a change) or a code directory (script `suffixes`: only a *new* script counts).
     Entries are cached with `extra_files`. `created` collects the reported paths
     that did not exist in the previous baseline.
     """
