@@ -803,7 +803,7 @@ def node_state(
     _, hashed, must_exist = node
     if must_exist is not None and not absolute(project_root, must_exist).exists():
         return None
-    value = path_state(cache, project_root, hashed, glob=must_exist is None and is_glob(node[0]))
+    value = path_state(cache, project_root, hashed, glob=node_glob(node))
     if unread(value) and value.size is not None and must_exist is not None:
         value = Unread(value.why, read_size(cache, project_root, node))
     return value

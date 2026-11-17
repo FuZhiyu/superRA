@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import threading
 
-from _repro import build_graph, is_glob, overlaps
+from _repro import build_graph, covers, is_glob, overlaps
 from _repro_state import (
     Change, HashCache, ReproStateError, absolute, directory_dep_nodes, is_online_only,
     output_nodes, read_lock, read_run_record, spec_hash, step_nodes, unread, unread_phrase,
@@ -14,7 +14,7 @@ def _owners(graph, path, glob=False):
     """(step, out) pairs that write *path*; for a glob, every out it overlaps."""
     return [(s, out) for s in graph.steps for out in s.outs
             if (overlaps(path, out.path.resolved, glob=True) if glob
-                else path == out.path.resolved or path.startswith(out.path.resolved + '/'))]
+                else covers(out.path.resolved, path, glob=False))]
 
 
 def boundary_inputs(graph, names, paths, cache=None, lock=None, consumers=None):

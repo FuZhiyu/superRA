@@ -1490,7 +1490,7 @@ def step_errors(graph: Graph, names, tasks=()) -> tuple[list[Finding], list[str]
         for step in steps:
             for dep in step.deps:
                 if any(dep.logical == o.logical or (overlaps(dep.resolved, o.resolved, glob=True) if dep.glob
-                       else dep.resolved == o.resolved or dep.resolved.startswith(o.resolved + "/")) for o in outs):
+                       else covers(o.resolved, dep.resolved, glob=False)) for o in outs):
                     errors.append(Finding(task_path=step.task_path, category=CATEGORY, severity="error",
                         message=f"step {step.name!r} reads {dep.logical}, which task {task_path or '(root)'} "
                                 "declares in a step that failed to register"))

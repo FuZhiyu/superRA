@@ -43,7 +43,6 @@ from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
 from _repro_normalize import CleanerFailed, Outcome, clean, out_files, step_cleaners, step_env  # noqa: E402
 from _repro_state import (  # noqa: E402
-    node_glob,
     BLOCKING,
     LOCK_FILENAME,
     OUTPUT_CAP,
@@ -63,6 +62,7 @@ from _repro_state import (  # noqa: E402
     directory_dep_nodes,
     ensure_state_dir,
     format_status,
+    node_glob,
     node_sizes,
     output_nodes,
     prune_lock,
