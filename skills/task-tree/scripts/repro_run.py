@@ -41,7 +41,7 @@ from _repro import Graph, Out, Step, build_graph, step_errors  # noqa: E402
 from _repro_acceptance import capture_receipt, check_sources, current_state, mutation_lock, supersede  # noqa: E402
 from _repro_builds import platform_name  # noqa: E402
 from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
-from _repro_normalize import CleanerFailed, Outcome, clean, out_files, step_env  # noqa: E402
+from _repro_normalize import CleanerFailed, Outcome, clean, out_files, step_cleaners, step_env  # noqa: E402
 from _repro_state import (  # noqa: E402
     BLOCKING,
     LOCK_FILENAME,
@@ -72,6 +72,7 @@ from _repro_state import (  # noqa: E402
     runner_paths,
     select_steps,
     spec_hash,
+    spec_node_id,
     stamp_ref,
     step_nodes,
     unread,
@@ -250,11 +251,15 @@ def _run_step(build: Build, step: Step, entry) -> str:
         if returncode != 0:
             raise StepFailed(f"step {step.name!r} exited {returncode}; see {paths.log_ref(step.name)}")
         try:
-            cleaned = clean(step_out_files(paths.project_root, step), graph.config.normalize, paths.project_root)
+            cleaned = clean(step_out_files(paths.project_root, step), graph.config.normalize, paths.project_root,
+                            spawn=_tracked_spawn(build, step))
         except CleanerFailed as exc:
             raise StepFailed(f"step {step.name!r}: {exc}") from None
         if build.stopping.is_set():
             raise StepFailed(f"step {step.name!r} was interrupted while its outputs were cleaned")
+        # A directory out that first exists now changes which cleaner rules apply to it.
+        step.cleaners = step_cleaners(step.outs, graph.config.normalize, paths.project_root)
+        before["deps"][spec_node_id(step.name)] = spec_hash(step)
         build.notes[step.name] = skip_lines(cleaned, repro_command("normalize", [build.target(step)], "--json"))
 
         for out in step.outs:
@@ -291,6 +296,24 @@ def _run_step(build: Build, step: Step, entry) -> str:
     record["outcome"] = "success"
     write_run_record(paths, step.name, record)
     return "executed"
+
+
+def _tracked_spawn(build: Build, step: Step):
+    """Start a cleaner process where `_stop` can terminate it, as it does the step's own process."""
+    @contextmanager
+    def spawn(args, **kwargs):
+        with build.running_lock:
+            if build.stopping.is_set():
+                raise StepFailed(f"step {step.name!r} was interrupted while its outputs were cleaned")
+            process = subprocess.Popen(args, start_new_session=True, **kwargs)  # noqa: S603 - a configured cleaner
+            build.running[step.name] = process
+        try:
+            with process:
+                yield process
+        finally:
+            with build.running_lock:
+                build.running.pop(step.name, None)
+    return spawn
 
 
 def step_out_files(project_root: Path, step: Step) -> list[tuple[str, Path]]:
@@ -852,9 +875,13 @@ def _normalize(args, graph, paths: RunnerPaths) -> int:
     steps = {s.name: s for s in graph.steps}
     for name in select_steps(graph, targets)[0] if targets else []:
         files += step_out_files(project_root, steps[name])
+    outcome = Outcome()
     try:
         with mutation_lock(paths):
-            outcome = clean(list(dict.fromkeys(files)), graph.config.normalize, project_root)
+            try:
+                clean(list(dict.fromkeys(files)), graph.config.normalize, project_root, outcome=outcome)
+            finally:  # a failing cleaner may already have rewritten files
+                _refresh_sidecars(graph, paths, outcome.changed)
     except (CleanerFailed, ReproStateError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -867,6 +894,17 @@ def _normalize(args, graph, paths: RunnerPaths) -> int:
     for line in skip_lines(outcome, command):
         print(line, file=sys.stderr)
     return 0
+
+
+def _refresh_sidecars(graph, paths: RunnerPaths, changed: list[str]) -> None:
+    """Rewrite the sidecar of every declared out a cleaner changed, so status hashes the cleaned bytes."""
+    cache = HashCache(paths.cache_file)
+    for step in graph.steps:
+        for out in step.outs:
+            logical = out.path.logical
+            if out.sidecar is not None and any(c == logical or c.startswith(f"{logical}/") for c in changed):
+                _write_sidecar(paths.project_root, out, absolute(paths.project_root, out.sidecar.resolved), cache)
+    cache.flush()
 
 
 def _declared_logical(graph, project_root: Path, path: Path) -> str:
