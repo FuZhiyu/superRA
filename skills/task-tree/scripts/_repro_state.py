@@ -249,6 +249,9 @@ def hash_threads() -> int:
         return min(MAX_HASH_THREADS, os.cpu_count() or 1)
 
 
+SWEEP_BYTES = 4 << 20  # a cache file this large is swept at the next flush even with nothing new to save
+
+
 class HashCache:
     """Content hashes keyed on (size, mtime_ns), persisted as JSON.
 
@@ -256,6 +259,10 @@ class HashCache:
     part of the key: Dropbox does not preserve it across machines. An
     online-only file is never opened: a hit still returns its hash, a miss
     returns `Unread`.
+
+    The file is shared: a flush merges what another process saved since this
+    one loaded it, drops the entries whose file is gone, and replaces the file
+    in one rename, so a reader never meets half of it.
     """
 
     def __init__(self, path: Path | None = None):
@@ -266,17 +273,24 @@ class HashCache:
         self._entries: dict[str, list] = {}
         self._online: dict[str, bool] = {}  # directory -> holds online-only content, from its last walk
         self._dirty = False
+        self._fresh: set[str] = set()  # stored here since the file was last read or written
+        self._saved: tuple | None = None  # the file's (size, mtime_ns) when last read or written
         self._flush_lock = threading.Lock()
         self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
-        if path is not None and path.is_file():
-            try:
-                loaded = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                loaded = {}
-            if isinstance(loaded, dict):
-                self._entries = {
-                    k: v for k, v in loaded.items() if isinstance(v, list) and len(v) == 3
-                }
+        if path is not None:
+            self._entries, self._saved = self._read_file()
+
+    def _read_file(self) -> tuple[dict[str, list], tuple | None]:
+        """The saved entries and the file's (size, mtime_ns); nothing when it is absent or unreadable."""
+        try:
+            info = self.path.stat()
+            loaded = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}, None
+        if not isinstance(loaded, dict):
+            return {}, None
+        entries = {k: v for k, v in loaded.items() if isinstance(v, list) and len(v) == 3}
+        return entries, (info.st_size, info.st_mtime_ns)
 
     def file_hash(self, path: Path) -> str | Unread | None:
         """sha256 of a file's content; `Unread` when it cannot be read here; None when absent."""
@@ -322,6 +336,7 @@ class HashCache:
         if not unread(value):
             self.full_reads += 1
             self._entries[str(path)] = [info.st_size, info.st_mtime_ns, value]
+            self._fresh.add(str(path))
             self._dirty = True
         return value
 
@@ -447,17 +462,81 @@ class HashCache:
             return True, None
         return False, info.st_size
 
+    def _merge_saved(self) -> None:
+        """Take in what another process saved since this one read the file.
+
+        Its entry wins unless this process hashed the file itself since then.
+        """
+        try:
+            info = self.path.stat()
+        except OSError:
+            return
+        if (info.st_size, info.st_mtime_ns) == self._saved:
+            return
+        saved, _ = self._read_file()
+        for key, entry in saved.items():
+            if key not in self._fresh:
+                self._entries[key] = entry
+
+    def _sweep(self) -> int:
+        """Drop each entry whose file is gone; return how many went.
+
+        An entry stays when its file may only be out of reach: behind a broken
+        link or an online-only folder, or outside the project in a folder that
+        is missing, as on an unmounted drive. The project is the folder that
+        holds the state directory. Folders are checked from the top down, so
+        nothing below an online-only folder is looked up.
+        """
+        project = str(self.path.parent.parent) + os.sep
+        folders: dict[str, bool | None] = {}  # True: there; False: gone; None: cannot tell
+
+        def there(folder: str) -> bool | None:
+            if folder not in folders:
+                parent = os.path.dirname(folder)
+                above = True if parent == folder else there(parent)
+                if above is not True:
+                    folders[folder] = above
+                else:
+                    try:
+                        info = os.stat(folder)
+                        dataless = file_flags(info) & SF_DATALESS
+                        folders[folder] = None if dataless else stat.S_ISDIR(info.st_mode)
+                    except (FileNotFoundError, NotADirectoryError):
+                        folders[folder] = None if os.path.islink(folder) else False
+                    except OSError:
+                        folders[folder] = None
+            return folders[folder]
+
+        dropped = 0
+        for key in list(self._entries):
+            folder = there(os.path.dirname(key))
+            gone = not os.path.lexists(key) if folder else folder is False and key.startswith(project)
+            if gone and self._entries.pop(key, None) is not None:
+                dropped += 1
+        return dropped
+
     def flush(self) -> None:
         """Persist, but never create the state directory — `ensure_state_dir` owns
         that, so a tree with no steps stays untouched."""
-        if self.path is None or not self._dirty or not self.path.parent.is_dir():
+        if self.path is None or not self.path.parent.is_dir():
             return
+        oversized = self._saved is not None and self._saved[0] > SWEEP_BYTES
+        if not self._dirty and not oversized:
+            return
+        from _repro_acceptance import atomic_text
         with self._flush_lock:  # `-j` workers share one cache
+            self._merge_saved()
+            if not self._sweep() and not self._dirty:
+                return
+            fresh = set(self._fresh)  # a worker may store more while the file is written
             try:
-                self.path.write_text(json.dumps(dict(self._entries)), encoding="utf-8")
+                atomic_text(self.path, json.dumps(dict(self._entries)))
+                info = self.path.stat()
             except OSError:
                 return
-            self._dirty = False
+            self._saved = (info.st_size, info.st_mtime_ns)
+            self._fresh -= fresh
+            self._dirty = bool(self._fresh)
 
 
 def _tree_files(path: Path, unreadable: list[OSError]):

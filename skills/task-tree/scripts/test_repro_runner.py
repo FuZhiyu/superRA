@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import signal
 import threading
 import time
@@ -866,6 +867,121 @@ def test_a_second_status_reads_no_file_content(project):
     second = HashCache(project.paths.cache_file)
     compute_status(graph, project.paths, cache=second)
     assert second.full_reads == 0
+
+
+def _cache_project(tmp_path):
+    """A project folder with a state directory, and the cache file inside it."""
+    state = tmp_path / "proj" / ".superra-repro"
+    state.mkdir(parents=True)
+    return tmp_path / "proj", state / "hashes.json"
+
+
+def _saved_keys(cache_file):
+    return set(json.loads(cache_file.read_text()))
+
+
+def test_a_flush_drops_the_entries_of_deleted_files(tmp_path):
+    root, cache_file = _cache_project(tmp_path)
+    (root / "sub").mkdir()
+    for name in ("a.txt", "kept.txt", "sub/b.txt"):
+        (root / name).write_text(name)
+    cache = HashCache(cache_file)
+    for name in ("a.txt", "kept.txt", "sub/b.txt"):
+        cache.file_hash(root / name)
+    cache.flush()
+    assert len(_saved_keys(cache_file)) == 3
+
+    (root / "a.txt").unlink()
+    shutil.rmtree(root / "sub")
+    (root / "c.txt").write_text("c")
+    later = HashCache(cache_file)
+    later.file_hash(root / "c.txt")
+    later.flush()
+
+    assert _saved_keys(cache_file) == {str(root / "kept.txt"), str(root / "c.txt")}
+
+
+def test_a_flush_keeps_entries_whose_file_may_only_be_out_of_reach(tmp_path):
+    root, cache_file = _cache_project(tmp_path)
+    target, outside = tmp_path / "drive", tmp_path / "elsewhere"
+    target.mkdir()
+    outside.mkdir()
+    (root / "data").symlink_to(target)
+    (target / "linked.txt").write_text("linked")
+    (outside / "far.txt").write_text("far")
+    (tmp_path / "near.txt").write_text("near")
+    cache = HashCache(cache_file)
+    for path in (root / "data/linked.txt", outside / "far.txt", tmp_path / "near.txt"):
+        cache.file_hash(path)
+    cache.flush()
+
+    shutil.rmtree(target)  # the link inside the project now points nowhere
+    shutil.rmtree(outside)  # a folder outside the project is missing: an unmounted drive looks the same
+    (tmp_path / "near.txt").unlink()  # its folder is still there, so this file is gone
+    (root / "new.txt").write_text("new")
+    later = HashCache(cache_file)
+    later.file_hash(root / "new.txt")
+    later.flush()
+
+    assert _saved_keys(cache_file) == {
+        str(root / "data/linked.txt"), str(outside / "far.txt"), str(root / "new.txt"),
+    }
+
+
+def test_a_flush_keeps_what_another_process_saved_meanwhile(tmp_path):
+    root, cache_file = _cache_project(tmp_path)
+    for name in ("a.txt", "b.txt"):
+        (root / name).write_text(name)
+    one, two = HashCache(cache_file), HashCache(cache_file)
+    one.file_hash(root / "a.txt")
+    one.flush()
+    two.file_hash(root / "b.txt")
+    two.flush()
+
+    assert _saved_keys(cache_file) == {str(root / "a.txt"), str(root / "b.txt")}
+    again = HashCache(cache_file)
+    again.file_hash(root / "a.txt")
+    again.file_hash(root / "b.txt")
+    assert again.full_reads == 0
+
+
+def test_a_failed_flush_leaves_the_saved_cache_whole(tmp_path, monkeypatch):
+    root, cache_file = _cache_project(tmp_path)
+    (root / "a.txt").write_text("a")
+    cache = HashCache(cache_file)
+    cache.file_hash(root / "a.txt")
+    cache.flush()
+    before = cache_file.read_text()
+
+    (root / "b.txt").write_text("b")
+    cache.file_hash(root / "b.txt")
+    monkeypatch.setattr(os, "replace", lambda *args: (_ for _ in ()).throw(OSError("disk full")))
+    cache.flush()
+
+    assert cache_file.read_text() == before
+    assert [p.name for p in cache_file.parent.iterdir()] == ["hashes.json"]
+
+
+def test_an_oversized_cache_is_swept_without_anything_new_to_save(tmp_path, monkeypatch):
+    root, cache_file = _cache_project(tmp_path)
+    for name in ("a.txt", "b.txt"):
+        (root / name).write_text(name)
+    cache = HashCache(cache_file)
+    cache.file_hash(root / "a.txt")
+    cache.file_hash(root / "b.txt")
+    cache.flush()
+    (root / "a.txt").unlink()
+
+    HashCache(cache_file).flush()  # nothing new and a small file: left alone
+    assert len(_saved_keys(cache_file)) == 2
+
+    monkeypatch.setattr(_repro_state, "SWEEP_BYTES", 0)
+    HashCache(cache_file).flush()
+    assert _saved_keys(cache_file) == {str(root / "b.txt")}
+
+    written = cache_file.stat().st_mtime_ns
+    HashCache(cache_file).flush()  # nothing left to drop: no rewrite
+    assert cache_file.stat().st_mtime_ns == written
 
 
 @pytest.mark.parametrize("broken", ["section", "step"])
