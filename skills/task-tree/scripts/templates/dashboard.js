@@ -1237,7 +1237,7 @@ function renderSearchResults(query) {
       + '<span class="search-result-title">' + escapeHtml(rec.title || pathLabel) + '</span>'
       + '<span class="search-result-path">' + escapeHtml(pathLabel) + '</span>'
       + (snippet ? '<span class="search-result-snippet">' + snippet + '</span>' : '')
-      + (rec.file ? '<button type="button" class="search-result-filter" tabindex="-1" onmousedown="onSearchFilterClick(event, ' + idx + ')">Filter to file</button>' : '')
+      + (rec.file ? '<button type="button" class="search-result-filter" tabindex="-1" onmousedown="onSearchFilterClick(event, ' + idx + ')" title="Shift+Enter">Filter to file <span class="wf-kbd">⇧↵</span></button>' : '')
       + '</li>';
   }).join('');
   input.setAttribute('aria-expanded', 'true');
@@ -1298,7 +1298,9 @@ function onSearchPaletteKeydown(event) {
     if (_searchResults.length) highlightSearchResult((_searchActiveIdx - 1 + _searchResults.length) % _searchResults.length);
   } else if (event.key === 'Enter') {
     event.preventDefault();
-    if (_searchActiveIdx >= 0) chooseSearchResult(_searchActiveIdx);
+    if (_searchActiveIdx < 0) return;
+    if (event.shiftKey && _searchResults[_searchActiveIdx].file) onSearchFilterClick(event, _searchActiveIdx);
+    else chooseSearchResult(_searchActiveIdx);
   }
 }
 
@@ -1674,9 +1676,15 @@ function reproEdgeCarries(e,path){
 function reproFileTypeTag(type){return '<span class="rp-ft rp-ft-'+type+'" title="'+REPRO_TYPE_LABEL[type]+'" aria-hidden="true"></span>';}
 /* The graph without the file edges whose type is unticked in the Files menu. */
 var _reproHiddenTypes=[];
+/* A file edge's types: a folder edge takes the types of the declared members its writer puts there, and stays Folder without any. */
+function reproEdgeTypes(e){
+  var type=reproFileType(e.via),f=type==='folder'&&(reproFiles()||{})[e.via],types=[];
+  (f?f.members:[]).forEach(function(p){if(reproEdgeCarries(e,p)&&types.indexOf(reproFileType(p))<0)types.push(reproFileType(p));});
+  return types.length?types:[type];
+}
 function reproTypeFilter(graph){
   if(!_reproHiddenTypes.length)return graph;
-  return Object.assign({},graph,{step_edges:(graph.step_edges||[]).filter(function(e){return _reproHiddenTypes.indexOf(reproFileType(e.via))<0;})});
+  return Object.assign({},graph,{step_edges:(graph.step_edges||[]).filter(function(e){return reproEdgeTypes(e).some(function(t){return _reproHiddenTypes.indexOf(t)<0;});})});
 }
 function reproWithin(path, root) { return root === '' || path === root || path.indexOf(root + '/') === 0; }
 /* Step lookup plus each step's incoming and outgoing edges. */
@@ -2247,14 +2255,19 @@ var REPRO_PORT_CAP=5,REPRO_PORT_GROUP=12,REPRO_PORT_PEEK_MS=1500,_reproPortsOpen
 /* *info* marks a row in the step reader: its meta names the writer or the
    readers, and a line with its folder, note, and online-only tag follows it. */
 function reproPortHTML(f,side,nested,info){
-  function names(list){return list[0]+(list.length>1?' +'+(list.length-1):'');}
-  var meta=side==='in'?(f.producers.length?info?names(f.producers):f.producers.length>1?f.producers.length+' steps':f.producers[0]:'external'):(f.readers.length?'→ '+(info?names(f.readers):f.readers.length):'final');
   var open=!nested&&!!(_reproPortsOpen.folders||{})[f.logical],pinned=_reproPortsOpen.pinned===f.logical,value=escapeAttr(f.logical);
-  var peek=window.STANDALONE||f.type==='folder'?'':' data-peek="'+escapeAttr(f.resolved)+'" data-peek-delay="'+REPRO_PORT_PEEK_MS+'"';
+  var meta=side==='in'?(f.producers.length>1?f.producers.length+' steps':f.producers[0]||'external'):(f.readers.length?'→ '+f.readers.length:'final');
+  if(info){
+    /* The reader names the connected step as a link, the rest behind the file's Open. */
+    var list=side==='in'?f.producers:f.readers,step=list.length&&(_reproData.graph.steps||[]).find(function(s){return s.name===list[0];});
+    meta=list.length?(side==='in'?'':'→ ')+reproButton(list[0],'related',list[0])+(step&&!workspaceTaskMatches(step.task)?'<span class="repro-hint">Hidden from navigation</span>':'')
+      +(list.length>1?' <button type="button" class="rp-port-more-steps" data-rp-action="file-open" data-value="'+value+'" title="'+escapeAttr(list.slice(1).join(', '))+'">+'+(list.length-1)+'</button>':''):escapeHtml(meta);
+  }
+  var peek=window.STANDALONE||f.type==='folder'?'':' data-peek="'+escapeAttr(f.resolved)+'"'+(info?'':' data-peek-delay="'+REPRO_PORT_PEEK_MS+'"');
   var dir=f.logical.slice(0,f.logical.lastIndexOf('/')+1),note=info&&!nested&&[dir,info.note].filter(Boolean).join(' · ');
   var tail=note||info&&info.online?'<div class="rp-port-note">'+(info.online?'<span class="repro-cloud-tag" title="Online-only here">'+REPRO_CLOUD_HTML+' online-only'+(info.online.size!=null?' · '+formatArtifactBytes(info.online.size):'')+'</span> ':'')+escapeHtml(note||'')+'</div>':'';
   return '<div class="rp-port-row'+(pinned?' is-pinned':'')+(info&&info.online?' is-online-only':'')+'"><button type="button" class="rp-port" data-rp-action="file-pin" data-value="'+value+'"'+peek+' aria-pressed="'+pinned+'" aria-label="'+escapeAttr(reproFileSummary(f))+'">'
-    +reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span><span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>'
+    +reproFileTypeTag(f.type)+'<span class="rp-port-name">'+escapeHtml(reproLeaf(f.logical))+'</span>'+(info?'</button><span class="rp-port-meta">'+meta+'</span>':'<span class="rp-port-meta">'+escapeHtml(meta)+'</span></button>')
     +'<span class="rp-port-acts"><button type="button" class="rp-port-act" data-rp-action="file-filter" data-value="'+value+'" title="Show only the steps that write or read this file">Filter</button>'
     +'<button type="button" class="rp-port-act" data-rp-action="file-open" data-value="'+value+'" title="Show this file in the details pane">Open</button></span>'
     +(f.members.length&&!nested?'<button type="button" class="rp-port-fold" data-rp-action="port-fold" data-value="'+value+'" aria-expanded="'+open+'" aria-label="'+escapeAttr((open?'Hide the ':'Show the ')+f.members.length+' declared files in '+f.logical)+'" title="'+f.members.length+' declared files">'+(open?'▾':'▸')+'</button>':'')+'</div>'+tail
@@ -2299,7 +2312,7 @@ function reproPortsHTML(owner,side,pos){
     +(list.length>REPRO_PORT_CAP?'<button type="button" class="rp-port-more" data-rp-action="ports-more" data-value="'+side+'" aria-expanded="'+open+'">'+(open?'Show fewer':'+'+(list.length-REPRO_PORT_CAP)+' more')+'</button>':'')+'</div>';
 }
 /* The port state (pin, folds, expanded sides) belongs to one owner and resets when the selection moves. */
-function reproPortsSync(){var owner=reproPortOwner(),id=owner?owner.id:'';if(_reproPortsOpen.step!==id)_reproPortsOpen={step:id};return owner;}
+function reproPortsSync(){var owner=reproPortOwner(),id=owner?owner.id:'';if(_reproPortsOpen.step!==id)_reproPortsOpen={step:id,pinned:_reproFile};return owner;}
 function reproDrawPorts(container){
   container.querySelectorAll('.rp-ports').forEach(function(el){el.remove();});
   reproHighlightFile(container,null);
@@ -2331,7 +2344,7 @@ function reproHighlightFile(container,path){
 }
 /* The Files menu: one checkbox per file type the visible wires carry. */
 function reproTypeMenuHTML(graph){
-  var counts={};(graph.step_edges||[]).forEach(function(e){var t=reproFileType(e.via);counts[t]=(counts[t]||0)+1;});
+  var counts={};(graph.step_edges||[]).forEach(function(e){reproEdgeTypes(e).forEach(function(t){counts[t]=(counts[t]||0)+1;});});
   return '<p>Show the wires that carry:</p>'+REPRO_FILE_TYPES.filter(function(t){return counts[t.key]||_reproHiddenTypes.indexOf(t.key)>=0;}).map(function(t){
     return '<label class="rp-type-row"><input type="checkbox" id="rp-type-'+t.key+'" data-rp-type="'+t.key+'"'+(_reproHiddenTypes.indexOf(t.key)<0?' checked':'')+'>'+reproFileTypeTag(t.key)+'<span>'+t.label+'</span><b>'+(counts[t.key]||0)+'</b></label>';
   }).join('');
@@ -3094,8 +3107,9 @@ function reproDisclosure(key, label, content, open) {
 function renderReproDetail(name) {
   var host=document.getElementById('repro-detail');
   if(!host)return;
-  var files=_reproFile&&!_reproInspectorClosed&&reproFiles();
-  if(files&&files[_reproFile]){renderReproFile(host);return;}
+  var files=_reproFile&&reproFiles();
+  if(files&&!files[_reproFile]){_reproFile='';history.replaceState(history.state,'',reproHash());}
+  else if(files&&!_reproInspectorClosed){renderReproFile(host);return;}
   host.removeAttribute('data-file');
   var step=_reproData&&(_reproData.graph.steps||[]).find(function(s){return s.name===name;});
   var visible=!!step&&!_reproInspectorClosed;

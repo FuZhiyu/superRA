@@ -1197,7 +1197,7 @@ steps:
 """
 
 
-def _file_tracing_export(tmp_path: Path) -> Path:
+def _file_tracing_export(tmp_path: Path, report: bool = False) -> Path:
     root = tmp_path / "superRA"
     root.mkdir(parents=True)
     _write_task_md(root / "task.md", "File tracing project", "in-progress")
@@ -1207,6 +1207,12 @@ def _file_tracing_export(tmp_path: Path) -> Path:
         task / "task.md", "Build", "in-progress",
         objective="Build the outputs.", reproduction=FILE_TRACING_STEPS,
     )
+    if report:
+        (root / "02-report").mkdir()
+        _write_task_md(
+            root / "02-report" / "task.md", "Report", "in-progress", objective="Report.",
+            reproduction="steps:\n  - name: report\n    cmd: sh code/report.sh\n    deps: [code/report.sh, out/table.tex]\n    outs: [report.pdf]\n",
+        )
     export = tmp_path / "dashboard.html"
     export.write_text(plan_dashboard.render_standalone_html(root), encoding="utf-8")
     return export
@@ -1450,11 +1456,17 @@ class TestFileTracingBrowser:
                 "plot-a>compile", "plot-b>compile",
             ]
             page.click(".rp-files-menu > summary")
+            # A wire naming the figs folder counts as the figures it carries.
+            assert page.locator("#rp-type-folder").count() == 0
+            assert page.inner_text('.rp-type-row:has(#rp-type-figure) b') == "2"
             page.click("#rp-type-code")
             page.wait_for_function("() => _reproLayoutCache.layout.edges.length === 4")
             assert "gen-code>run-generated" not in page.evaluate(pairs)
             assert page.evaluate("document.querySelector('.rp-files-menu').open")
             assert '"types":["code"]' in unquote(page.evaluate("location.href"))
+            page.click("#rp-type-figure")
+            page.wait_for_function("() => _reproLayoutCache.layout.edges.length === 2")
+            assert page.evaluate(pairs) == ["make-data>use-a", "make-data>use-b"]
             browser.close()
 
     def test_step_reader_lists_files_as_rows_naming_the_connected_step(self, tmp_path):
@@ -1464,7 +1476,7 @@ class TestFileTracingBrowser:
         from playwright.sync_api import sync_playwright
 
         export = _file_tracing_export(tmp_path)
-        rows = "rows => rows.map(r => r.firstChild.dataset.value + ' ' + r.querySelector('.rp-port-meta').innerText + ' ' + r.querySelectorAll('.rp-port-act').length)"
+        rows = "rows => rows.map(r => r.firstChild.dataset.value + ' ' + r.querySelector('.rp-port-meta').textContent + ' ' + r.querySelectorAll('.rp-port-act').length)"
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch()
             page = browser.new_page(viewport={"width": 1400, "height": 900})
@@ -1481,12 +1493,18 @@ class TestFileTracingBrowser:
             page.reload()
             page.wait_for_selector("#repro-detail .repro-file-rows")
             first = page.locator("#repro-detail .rp-port-row").first
-            assert first.evaluate("r => r.querySelector('.rp-port-meta').innerText") == "→ use-a +1"
+            assert first.locator('.rp-port-meta [data-rp-action="related"]').inner_text() == "use-a"
+            assert first.locator(".rp-port-more-steps").inner_text() == "+1"
             assert "out/" in page.locator("#repro-detail .rp-port-note").first.inner_text()
+            # Live, the reader previews at the default delay; the graph's rows wait 1.5 s.
+            delays = page.evaluate("""() => { window.STANDALONE = false; const f = reproFiles()['out/a.parquet'];
+                const delay = html => { const d = document.createElement('div'); d.innerHTML = html; return d.querySelector('.rp-port').dataset.peekDelay || null; };
+                const both = [delay(reproPortHTML(f, 'out', false, {})), delay(reproPortHTML(f, 'out'))]; window.STANDALONE = true; return both; }""")
+            assert delays == [None, "1500"]
 
             # Open from the reader shows the file; Filter adds the file chip.
             first.hover()
-            first.locator('[data-rp-action="file-open"]').click()
+            first.locator('.rp-port-act[data-rp-action="file-open"]').click()
             page.wait_for_selector(".repro-file-detail")
             assert page.inner_text(".repro-file-detail .repro-detail-name") == "out/a.parquet"
             page.click('.repro-file-detail [data-rp-action="file-close"]')
@@ -1496,6 +1514,26 @@ class TestFileTracingBrowser:
             first.locator('[data-rp-action="file-filter"]').click()
             page.wait_for_selector(".wf-chip")
             assert "a.parquet" in page.inner_text(".wf-chip")
+
+            # A step name in a row selects that step.
+            page.locator('#repro-detail .rp-port-row').first.locator('[data-rp-action="related"]').click()
+            page.wait_for_selector('#repro-detail[data-step="use-a"]')
+            browser.close()
+
+    def test_step_reader_marks_a_connected_step_hidden_by_filters(self, tmp_path):
+        from playwright.sync_api import sync_playwright
+
+        export = _file_tracing_export(tmp_path, report=True)
+        state = {"expanded": [], "selected": "use-a", "layout": "tree",
+                 "filters": {"scope": {"in": [], "out": ["02-report"]}}}
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch()
+            page = browser.new_page(viewport={"width": 1400, "height": 900})
+            page.goto(f"{export.as_uri()}#/01-build?repro={quote(json.dumps(state))}")
+            page.wait_for_selector("#repro-detail .repro-file-rows")
+            out = page.locator("#repro-detail .repro-file-rows").first.locator(".rp-port-row").first
+            assert out.locator('[data-rp-action="related"]').inner_text() == "report"
+            assert "Hidden from navigation" in out.locator(".rp-port-meta").inner_text()
             browser.close()
 
     def test_header_search_finds_an_input_file_and_filters_to_it(self, tmp_path):
@@ -1515,10 +1553,20 @@ class TestFileTracingBrowser:
             result = page.locator(".search-result", has_text="raw/in.csv")
             result.wait_for()
             assert "File" in result.locator(".search-result-path").inner_text()
+            assert "⇧↵ filter to file" in page.inner_text(".search-palette-foot")
             result.locator(".search-result-filter").dispatch_event("mousedown")
             page.wait_for_selector(".wf-chip")
             assert "in.csv" in page.inner_text(".wf-chip")
             assert page.evaluate(steps) == ["make-data"]
+
+            # Shift+Enter filters to the highlighted File result from the keyboard.
+            page.evaluate("() => { _workspaceFilters.lineage = []; applyWorkspaceFilters(true); }")
+            page.evaluate("openSearchPalette()")
+            page.fill("#search-palette-input", "b.csv")
+            page.wait_for_selector('.search-result[aria-selected="true"]:has-text("out/b.csv")')
+            page.keyboard.press("Shift+Enter")
+            page.wait_for_selector(".wf-chip")
+            assert "b.csv" in page.inner_text(".wf-chip")
             browser.close()
 
     def test_the_open_file_is_part_of_the_url(self, tmp_path):
@@ -1543,7 +1591,16 @@ class TestFileTracingBrowser:
             again.goto(url)
             again.wait_for_selector(".repro-file-detail")
             assert again.inner_text(".repro-file-detail .repro-detail-name") == "out/a.parquet"
+            # The reopened file is pinned in the graph too.
+            assert again.get_attribute(".rp-ports-out .rp-port-row.is-pinned .rp-port", "data-value") == "out/a.parquet"
             again.click('.repro-file-detail [data-rp-action="file-close"]')
             again.wait_for_selector("#repro-detail .repro-file-rows")
             assert '"file"' not in unquote(again.evaluate("location.href"))
+
+            # A file the graph no longer declares leaves the URL.
+            state = {"expanded": ["01-build"], "selected": "make-data", "layout": "graph", "filters": None, "file": "out/gone.csv"}
+            stale = browser.new_page(viewport={"width": 1400, "height": 900})
+            stale.goto(f"{export.as_uri()}#/01-build?repro={quote(json.dumps(state))}")
+            stale.wait_for_selector('#repro-detail[data-step="make-data"]')
+            stale.wait_for_function("() => decodeURIComponent(location.href).indexOf('gone.csv') === -1")
             browser.close()
