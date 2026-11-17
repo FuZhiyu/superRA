@@ -543,18 +543,22 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         )
 
 
-def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
+def rebuild_worktree_state(wt_id: str, refreshed: WorktreeState | None = None) -> WorktreeState | None:
     """Rebuild (or evict) the cached WorktreeState for *wt_id*.
 
     Re-walks the worktree's plan root and refreshes its cached state in place so
     handlers and the watcher see the new tree.  Returns the refreshed state, or
     ``None`` when the worktree is no longer cached.  This is the
-    cache-invalidation hook the watcher calls.
+    cache-invalidation hook the watcher calls; *refreshed* is a walk the caller
+    already made.
     """
     existing = _worktree_cache.get(wt_id)
     if existing is None:
         return None
-    refreshed = _build_worktree_state(wt_id, existing.plan_root)
+    if refreshed is None:
+        refreshed = _build_worktree_state(wt_id, existing.plan_root)
+    # A graph built from the replaced tree must not answer the refetch.
+    _repro_graph_cache.pop(wt_id, None)
     # Refresh in place so any handler/watcher holding the same object sees it.
     existing.root_task = refreshed.root_task
     existing.task_index = refreshed.task_index
@@ -665,7 +669,7 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
 # A watcher for a worktree runs only while that worktree has at least one
 # connected client.  ``_ensure_watcher`` is called by ``/events`` after the new
 # client's queue is registered (so no early change event is lost to a
-# watcher-init race, including the initial refresh emitted below);
+# watcher-init race, including the refresh a changed tree emits below);
 # ``_stop_watcher`` is called when the last client leaves.  Both run under that
 # worktree's ``_worktree_locks`` entry so a concurrent connect and disconnect
 # cannot spawn a duplicate watcher or tear a live one down.
@@ -686,21 +690,43 @@ async def _ensure_watcher(wt: str) -> None:
     A present-but-``done()`` task (a watcher that finished or crashed) is treated
     as absent and respawned, so a dead watcher is never silently reused.  Before
     each spawn, rebuild the cached state to include edits made while no watcher
-    was running, then tell the registered clients to reload; ``awatch`` only
-    reports changes that happen after it starts.
+    was running; ``awatch`` only reports changes that happen after it starts.
+    Only a walk that differs from the cached tree replaces it and tells the
+    registered clients to reload: they were rendered from the cached state, so
+    an unchanged tree leaves them current.
     """
     async with _worktree_lock(wt):
         existing = _worktree_watchers.get(wt)
         if existing is not None and not existing.done():
             return
-        rebuild_worktree_state(wt)
+        state = _worktree_cache.get(wt)
+        fresh = _build_worktree_state(wt, state.plan_root) if state is not None else None
+        changed = fresh is not None and _tree_snapshot(fresh) != _tree_snapshot(state)
+        if changed:
+            rebuild_worktree_state(wt, fresh)
         # Fresh stop event per spawn: a respawn after a crashed/finished watcher
         # must start with an unset event so the new watch loop is not torn down
         # by a stale signal from the prior generation.
         stop_event = asyncio.Event()
         _worktree_stop_events[wt] = stop_event
         _worktree_watchers[wt] = asyncio.create_task(_watch_worktree(wt, stop_event))
-        await _broadcast("full-reload", "{}", wt)
+        if changed:
+            await _broadcast("full-reload", "{}", wt)
+
+
+def _tree_snapshot(state: WorktreeState | None) -> tuple:
+    """Everything a page renders from *state*'s tree, comparable across rebuilds.
+
+    Children compare as a set: building the reproduction graph reorders them in
+    place (``order_tree``), and a rebuild restores the filesystem order.
+    """
+    if state is None:
+        return ()
+    return tuple(
+        (path, t.title, t.status, tuple(t.depends_on), t.body, t.parse_error,
+         tuple(sorted(c.path for c in t.children)))
+        for path, t in sorted(state.task_index.items())
+    )
 
 
 def _is_benign_awatch_teardown_race(exc: BaseException) -> bool:
@@ -1121,16 +1147,17 @@ async def healthz():
 # ---------------------------------------------------------------------------
 
 
-def _discovered_worktree_map() -> dict[str, Path]:
+def _discovered_worktree_map(worktrees: list | None = None) -> dict[str, Path]:
     """Map worktree id (directory basename) -> plan root Path for every
-    discovered worktree that has a task tree.
+    discovered worktree that has a task tree; *worktrees* reuses a discovery
+    the caller already ran.
 
     On a basename collision between two discovered worktrees, neither bare
     basename is registered; the longest-unique-suffix forms are registered
     instead so a caller can still name each unambiguously.
     """
     plan_roots: list[Path] = []
-    for w in discover_worktrees():
+    for w in discover_worktrees() if worktrees is None else worktrees:
         if w.plan_root is not None:
             plan_roots.append(Path(w.plan_root))
 
@@ -2614,8 +2641,8 @@ async def remove_comment(path: str, comment_id: int, request: Request):
 
 def _list_worktrees_sync() -> dict:
     """Blocking core of ``/api/worktrees``: discovery spawns a ``git`` subprocess
-    per worktree (``worktree list``, ``rev-parse``, ``log -1``), so this is run
-    off-loop in its entirety and only reads module state (no mutation)."""
+    per worktree (``worktree list``, ``rev-parse``, ``log -1``), so it runs once,
+    off-loop, and this only reads module state (no mutation)."""
     launch_dir = str(PLAN_ROOT.resolve().parent)
     all_wts = discover_worktrees()
     if not all_wts:
@@ -2647,7 +2674,7 @@ def _list_worktrees_sync() -> dict:
 
     # Reverse the basename map so each worktree carries its ?wt= selector token.
     wt_id_by_plan_root: dict[str, str] = {
-        str(pr.resolve()): wt_id for wt_id, pr in _discovered_worktree_map().items()
+        str(pr.resolve()): wt_id for wt_id, pr in _discovered_worktree_map(all_wts).items()
     }
 
     entries = []

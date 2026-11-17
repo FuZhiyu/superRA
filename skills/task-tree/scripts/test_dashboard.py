@@ -334,6 +334,8 @@ class TestServerRoutes:
         # The HTML-attachment frame policy names CDN hosts as data; no tag loads one.
         assert not re.search(r'(?:src|href)="https://cdn\.jsdelivr\.net', html)
         assert "fonts.googleapis.com" in html
+        # The font stylesheet must not hold the scripts below it.
+        assert 'display=swap" rel="stylesheet" media="print" onload="this.media=\'all\'">' in html
         # No standalone-only inlining leaks into the served page.
         assert "data:font/woff2;base64," not in html
         assert "var STANDALONE_IMAGES =" not in html
@@ -545,8 +547,6 @@ class TestServerRoutes:
             resp = await gen
             body_iter = resp.body_iterator
             await body_iter.__anext__()  # initial heartbeat
-            startup_refresh = await body_iter.__anext__()
-            assert "event: full-reload" in startup_refresh
 
             queue = next(iter(plan_dashboard._worktree_clients[wt]))
             for _ in range(queue.maxsize):
@@ -1342,11 +1342,72 @@ class TestWatcherLifecycle:
             await plan_dashboard._ensure_watcher("wt-a")
             task = plan_dashboard._worktree_watchers.get("wt-a")
             assert task is not None and not task.done()
-            assert "event: full-reload" in queue.get_nowait()
+            # Nothing changed since the page was rendered: no reload.
+            assert queue.empty()
             # A second ensure for the same worktree does not start a second.
             await plan_dashboard._ensure_watcher("wt-a")
             assert plan_dashboard._worktree_watchers["wt-a"] is task
             assert queue.empty()
+            await plan_dashboard._stop_watcher("wt-a")
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_watcher_start_ignores_child_order(self, tmp_path):
+        """Building the reproduction graph reorders cached children in place;
+        a page load after that is still not told to reload."""
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        root = plan_dashboard._worktree_cache["wt-a"].plan_root
+        for name in ("a", "b"):
+            (root / name).mkdir()
+            _write_task_md(root / name / "task.md", name.upper(), "not-started")
+        plan_dashboard.rebuild_worktree_state("wt-a")
+        plan_dashboard._worktree_cache["wt-a"].root_task.children.reverse()
+
+        async def _test():
+            queue: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {queue}
+            await plan_dashboard._ensure_watcher("wt-a")
+            assert queue.empty()
+            await plan_dashboard._stop_watcher("wt-a")
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_replacing_the_tree_drops_the_graph_built_from_it(self, tmp_path):
+        """The refetch after a reload must not get a graph of the old tree,
+        which the cache would serve: task.md mtimes match the edit already."""
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        state = plan_dashboard._worktree_cache["wt-a"]
+        plan_dashboard._repro_graph(state)
+        assert "wt-a" in plan_dashboard._repro_graph_cache
+        plan_dashboard.rebuild_worktree_state("wt-a")
+        assert "wt-a" not in plan_dashboard._repro_graph_cache
+        self._reset()
+
+    def test_watcher_start_reloads_after_unwatched_new_task(self, tmp_path):
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        state = plan_dashboard._worktree_cache["wt-a"]
+        (state.plan_root / "added").mkdir()
+        _write_task_md(state.plan_root / "added" / "task.md", "Added", "not-started")
+
+        async def _test():
+            queue: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {queue}
+            await plan_dashboard._ensure_watcher("wt-a")
+            assert "event: full-reload" in queue.get_nowait()
+            assert "added" in state.task_index
             await plan_dashboard._stop_watcher("wt-a")
 
         try:
@@ -4437,6 +4498,7 @@ class TestStandaloneSelfContained:
         assert "cdn.jsdelivr.net/npm/htmx" not in html
         # Google Fonts is the one CDN tag left (allowed by scope).
         assert "fonts.googleapis.com" in html
+        assert 'display=swap" rel="stylesheet">' in html  # the export keeps the blocking link
 
     def test_img_loop_consults_standalone_images_first(self):
         """The client img[src] loop looks up STANDALONE_IMAGES before its

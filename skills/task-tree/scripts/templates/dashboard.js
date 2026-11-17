@@ -6602,6 +6602,7 @@ function reconnectSse() {
     data.sseEventSource = null;
   }
   main.setAttribute('sse-connect', wtUrl('/events'));
+  _sseOpened = false;
   htmx.process(main);
 }
 
@@ -6642,6 +6643,18 @@ var fullReloadEl = document.getElementById('sse-full-reload');
 if (fullReloadEl) {
   fullReloadEl.addEventListener('htmx:sseBeforeMessage', function() { onFullReload(); });
 }
+
+/* ── SSE reopen: the stream dropped, so events may have been missed ──
+   The server reloads a page on its first connect only when the tree changed
+   since the cache it was rendered from. Every later open of the same stream
+   (a server restart, a network drop) refetches here, since the page may be
+   older than that cache. reconnectSse resets the flag: a worktree switch
+   reloads by itself. */
+var _sseOpened = false;
+document.body.addEventListener('htmx:sseOpen', function() {
+  if (_sseOpened) onFullReload();
+  _sseOpened = true;
+});
 
 /* ── SSE repro-updated: a build rewrote the committed lock ──
    Same hx-swap="none" trigger-only pattern as full-reload; the payload is empty
