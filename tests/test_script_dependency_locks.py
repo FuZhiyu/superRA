@@ -16,13 +16,18 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SHIPPED = ("skills", "hooks")
+COMMAND_SUFFIXES = (".md", ".sh", ".py", ".json", ".yml", ".yaml")
+DEV_TREES = ("tests", "docs", "scripts", ".github")
+HISTORICAL_DOCS = ("docs/drafts", "docs/plans", "docs/showcase-fixtures")
 BLOCK = re.compile(r"^# /// script\n(.*?)^# ///$", re.S | re.M)
 REQUIREMENT = re.compile(r"^([A-Za-z0-9._-]+)(?:\[([^\]]*)\])?\s*(.*)$")
 FIXED_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+# A global uv option can take a separate shell word as its value.
+OPTION_VALUE = r"""(?:"[^"`]*"|'[^'`]*'|[^-\s`;&|'"][^\s`;&|]*)"""
+UV_COMMAND = rf"(?<![\w-])uv\s+(?:-[^\s`;&|]+\s+(?:{OPTION_VALUE}\s+)?)*?"
 AD_HOC = re.compile(
-    r"(?<![\w-])uv\s+run\b[^`]*?(?<![\w-])(?:--with(?:-editable|-requirements)?|-w)(?![\w-])"
-    r"|(?<![\w-])uv\s+tool\s+run\b"
-    r"|(?<![\w/-])uvx\s+"
+    UV_COMMAND + r"(?:run\b[^`;&|]*?(?<![\w-])(?:--with(?:-editable|-requirements)?(?![\w-])|-w)"
+    r"|tool\s+run\b)|(?<![\w/-])uvx\s+"
 )
 
 
@@ -77,12 +82,15 @@ SCRIPTS = [
     if script.suffix == ".py" and (metadata(script) or {}).get("dependencies")
 ]
 
-# Development text outside the shipped trees. Task records under `superRA/`
-# keep the commands that were run at the time.
+# Task records and historical documents keep the commands that were run at the time.
 DEV_TEXT = [ROOT / name for name in ("CLAUDE.md", "README.md", "RELEASE-NOTES.md")] + sorted(
     p
-    for p in (ROOT / "tests").rglob("*")
-    if p.is_file() and p.suffix in (".md", ".sh", ".py") and p != Path(__file__).resolve()
+    for top in DEV_TREES
+    for p in (ROOT / top).rglob("*")
+    if p.is_file()
+    and p.suffix in COMMAND_SUFFIXES
+    and p != Path(__file__).resolve()
+    and not any(p.is_relative_to(ROOT / directory) for directory in HISTORICAL_DOCS)
 ) + sorted(p for p in (ROOT / "skills").rglob("*.py") if is_test_file(p.relative_to(ROOT)) and "vendor" not in p.parts)
 
 
@@ -140,9 +148,13 @@ def logical_lines(text: str):
         "uv run --with package==1.0 python example.py",
         "uv run --with=package==1.0 python example.py",
         "uv run -w package==1.0 python example.py",
+        "uv run -wpackage==1.0 python example.py",
+        "uv --no-config -q run --with package==1.0 python example.py",
+        'uv --directory "working directory" run --with package==1.0 python example.py',
         "uv run --with-editable . python example.py",
         "uv run --with-requirements requirements.txt python example.py",
         "uv tool run --from package==1.0 program",
+        "uv --offline tool run --from package==1.0 program",
         "uvx package==1.0",
     ],
 )
@@ -150,8 +162,16 @@ def test_ad_hoc_detection(command):
     assert AD_HOC.search(command)
 
 
-def test_mentions_of_with_are_not_commands():
-    assert not AD_HOC.search("Use `uv run --script x.py`. Avoid `--with`.")
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Use `uv run --script x.py`. Avoid `--with`.",
+        "uv --no-config run --script x.py",
+        "uv run --script x.py && other --with argument",
+    ],
+)
+def test_ad_hoc_detection_accepts_locked_commands(text):
+    assert not AD_HOC.search(text)
 
 
 def test_logical_lines_join_continuations():
@@ -165,7 +185,7 @@ def test_logical_lines_join_continuations():
 
 def test_no_ad_hoc_installs():
     violations = []
-    for path in shipped_files((".md", ".sh", ".py", ".json", ".yml", ".yaml")) + DEV_TEXT:
+    for path in shipped_files(COMMAND_SUFFIXES) + DEV_TEXT:
         text = path.read_text(encoding="utf-8", errors="replace")
         for number, line in logical_lines(text):
             if AD_HOC.search(line):
