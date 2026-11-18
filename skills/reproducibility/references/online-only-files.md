@@ -25,18 +25,10 @@ An online-only file not yet hashed here reads `changed` when its size differs fr
 ## Download
 
 - **File Provider, by hand:** Finder → right-click → Download Now. Make Available Offline (Dropbox) or Keep Downloaded (iCloud) also prevents later eviction.
-- **File Provider, from a script:** a coordinated read requests the whole file.
+- **File Provider, from a script:** the [coordinated-read helper](../scripts/download_online_only.py) requests the whole file.
 
   ```bash
-  uv run --no-project --with pyobjc-framework-Cocoa==12.2.2 --with pyobjc-core==12.2.2 python - <file>... <<'EOF'
-  import os, sys
-  import Foundation
-  for p in sys.argv[1:]:
-      c = Foundation.NSFileCoordinator.alloc().initWithFilePresenter_(None)
-      url = Foundation.NSURL.fileURLWithPath_(os.path.abspath(p))
-      err = c.coordinateReadingItemAtURL_options_error_byAccessor_(url, 0, None, lambda u: None)
-      print(p, err or ('local' if not os.lstat(p).st_flags & 0x40000000 else 'still online-only'))
-  EOF
+  uv run --script <skill-dir>/scripts/download_online_only.py path/to/file
   ```
 
   A plain full read (`cat <file> > /dev/null`) also triggers a download but may leave the file partial. `fileproviderctl materialize` and `brctl download` no longer exist.
