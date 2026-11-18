@@ -1,4 +1,4 @@
-"""Shipped scripts, skill text, and development commands install only pinned packages.
+"""Shipped and development commands run with committed dependency locks.
 
 Static and offline: compares each script's inline metadata with its sidecar
 lock, so it needs neither uv nor a network. Run from the repo root:
@@ -19,8 +19,11 @@ SHIPPED = ("skills", "hooks")
 BLOCK = re.compile(r"^# /// script\n(.*?)^# ///$", re.S | re.M)
 REQUIREMENT = re.compile(r"^([A-Za-z0-9._-]+)(?:\[([^\]]*)\])?\s*(.*)$")
 FIXED_TIMESTAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-# `uv run --with <pkg>`, `uv tool run --from <pkg>`, and `uvx <pkg>`.
-AD_HOC = re.compile(r"(?:--with(?:=|\s+)|--from(?:=|\s+)|(?<![\w/-])uvx\s+)(['\"]?)([A-Za-z0-9._-]+(?:\[[^\]]*\])?[^\s'\"]*)\1")
+AD_HOC = re.compile(
+    r"(?<![\w-])uv\s+run\b[^`]*?(?<![\w-])(?:--with(?:-editable|-requirements)?|-w)(?![\w-])"
+    r"|(?<![\w-])uv\s+tool\s+run\b"
+    r"|(?<![\w/-])uvx\s+"
+)
 
 
 def is_test_file(path: Path) -> bool:
@@ -49,28 +52,34 @@ def metadata(script: Path) -> dict | None:
     return tomllib.loads(body)
 
 
-def canonical(name: str, extras: list[str] | str | None, specifier: str | None) -> tuple:
+def canonical(
+    name: str, extras: list[str] | str | None, specifier: str | None, marker: str | None
+) -> tuple:
     if isinstance(extras, str):
         extras = [e.strip() for e in extras.split(",") if e.strip()]
     return (
         re.sub(r"[-_.]+", "-", name).lower(),
         tuple(sorted(extras or ())),
         tuple(sorted(s.strip().replace(" ", "") for s in (specifier or "").split(",") if s.strip())),
+        (marker or "").strip().replace('"', "'"),
     )
 
 
 def declared(requirement: str) -> tuple:
-    name, extras, specifier = REQUIREMENT.match(requirement.strip()).groups()
-    return canonical(name, extras, specifier)
+    package, _, marker = requirement.partition(";")
+    name, extras, specifier = REQUIREMENT.match(package.strip()).groups()
+    return canonical(name, extras, specifier, marker)
 
 
 SCRIPTS = [
-    p for p in shipped_files((".py",)) if p.suffix == ".py" and (metadata(p) or {}).get("dependencies")
-] + [ROOT / "tests" / "run_tests.py"]
+    script
+    for script in shipped_files((".py",)) + sorted((ROOT / "tests").rglob("*.py"))
+    if script.suffix == ".py" and (metadata(script) or {}).get("dependencies")
+]
 
 # Development text outside the shipped trees. Task records under `superRA/`
 # keep the commands that were run at the time.
-DEV_TEXT = [ROOT / "CLAUDE.md", ROOT / "README.md"] + sorted(
+DEV_TEXT = [ROOT / name for name in ("CLAUDE.md", "README.md", "RELEASE-NOTES.md")] + sorted(
     p
     for p in (ROOT / "tests").rglob("*")
     if p.is_file() and p.suffix in (".md", ".sh", ".py") and p != Path(__file__).resolve()
@@ -89,7 +98,7 @@ def test_script_lock_matches_declared_dependencies(script: Path):
     lock = tomllib.loads(lock_path.read_text(encoding="utf-8"))
 
     locked = {
-        canonical(r["name"], r.get("extras"), r.get("specifier"))
+        canonical(r["name"], r.get("extras"), r.get("specifier"), r.get("marker"))
         for r in lock.get("manifest", {}).get("requirements", [])
     }
     assert locked == {declared(d) for d in meta["dependencies"]}, "lock is stale; relock the script"
@@ -125,20 +134,40 @@ def logical_lines(text: str):
         yield start, " ".join(parts)
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "uv run --with package==1.0 python example.py",
+        "uv run --with=package==1.0 python example.py",
+        "uv run -w package==1.0 python example.py",
+        "uv run --with-editable . python example.py",
+        "uv run --with-requirements requirements.txt python example.py",
+        "uv tool run --from package==1.0 program",
+        "uvx package==1.0",
+    ],
+)
+def test_ad_hoc_detection(command):
+    assert AD_HOC.search(command)
+
+
+def test_mentions_of_with_are_not_commands():
+    assert not AD_HOC.search("Use `uv run --script x.py`. Avoid `--with`.")
+
+
 def test_logical_lines_join_continuations():
-    text = "uv run --no-project \\\n  --with requests \\\n  python x.py\nplain\n"
-    assert list(logical_lines(text)) == [(1, "uv run --no-project    --with requests    python x.py"), (4, "plain")]
-    assert AD_HOC.findall(next(logical_lines(text))[1])[0][1] == "requests"
+    text = "\n".join(
+        ["uv run --no-project \\", "  --with requests==1.0 \\", "  python x.py", "plain"]
+    )
+    commands = list(logical_lines(text))
+    assert commands == [(1, "uv run --no-project    --with requests==1.0    python x.py"), (4, "plain")]
+    assert AD_HOC.search(commands[0][1])
 
 
-def test_ad_hoc_installs_are_pinned():
-    unpinned = []
+def test_no_ad_hoc_installs():
+    violations = []
     for path in shipped_files((".md", ".sh", ".py", ".json", ".yml", ".yaml")) + DEV_TEXT:
         text = path.read_text(encoding="utf-8", errors="replace")
         for number, line in logical_lines(text):
-            if "uv" not in line:
-                continue
-            for _, package in AD_HOC.findall(line):
-                if "==" not in package and not package.startswith(("-", "<", "$", "{")):
-                    unpinned.append(f"{path.relative_to(ROOT)}:{number}: {package}")
-    assert not unpinned, "unpinned ad hoc installs:\n" + "\n".join(unpinned)
+            if AD_HOC.search(line):
+                violations.append(f"{path.relative_to(ROOT)}:{number}")
+    assert not violations, "use uv run --script with a committed lock:\n" + "\n".join(violations)
