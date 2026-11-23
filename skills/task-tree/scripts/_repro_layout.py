@@ -39,10 +39,12 @@ def _holds_tasks(directory: Path) -> bool:
     try:
         if directory.is_symlink() or not directory.is_dir():
             return False
-        if (directory / "task.md").is_file():
+        task_md = directory / "task.md"
+        if not task_md.is_symlink() and task_md.is_file():
             return True
-        return any((child / "task.md").is_file() for child in directory.iterdir()
-                   if child.name != "attachments" and child.is_dir())
+        return any(child.name != "attachments" and not child.is_symlink() and child.is_dir()
+                   and not (child / "task.md").is_symlink() and (child / "task.md").exists()
+                   for child in directory.iterdir())
     except OSError:
         return False
 

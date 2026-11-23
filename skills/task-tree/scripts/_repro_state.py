@@ -316,8 +316,13 @@ class HashCache:
         self._fresh: set[str] = set()  # stored here since the file was last read or written
         self._saved: tuple | None = None  # the file's (size, mtime_ns) when last read or written
         # superRA's own records and state, which every build rewrites, are never part of a dependency.
-        self._own = (os.path.realpath(path.parent.parent) if path is not None and path.parent.name == layout.LOCAL_DIRNAME
-                     and path.parent.parent.name == layout.REPRO_DIRNAME else None)
+        # The cache sits in the state folder, which is `<task root>/.repro/local` or `<project>/.superra-repro`;
+        # either way the task root's `.repro` is left out, since a branch switch can leave one beside root-level records.
+        self._own = None
+        if path is not None:
+            state = path.parent
+            in_tree = state.name == layout.LOCAL_DIRNAME and state.parent.name == layout.REPRO_DIRNAME
+            self._own = os.path.realpath(state.parent if in_tree else layout.repro_home(state.parent))
         self._flush_lock = threading.Lock()
         self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
         if path is not None:

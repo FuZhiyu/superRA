@@ -12,12 +12,12 @@ from __future__ import annotations
 import json
 import os
 import shlex
-from contextlib import nullcontext
+from contextlib import ExitStack
 from pathlib import Path
 
 import _repro_layout as layout
 from _repro_acceptance import LEGACY_LEDGER, _normalize, atomic_json, atomic_text, mutation_lock, portable_record
-from _repro_state import ReproStateError, RunnerPaths, ensure_state_dir, lock_text, read_lock_document
+from _repro_state import ReproStateError, RunnerPaths, ensure_state_dir, lock_text, read_lock_document, runner_paths
 
 
 def _ledger_records(ledger: Path) -> dict[str, dict]:
@@ -33,11 +33,14 @@ def _ledger_records(ledger: Path) -> dict[str, dict]:
                               "Nothing was moved.") from None
     records, bad = {}, []
     for name, record in value["steps"].items():
-        normalized = _normalize(record)
-        if normalized is None:
+        try:
+            normalized = _normalize(record)
+            records[name] = json.loads(json.dumps(portable_record(normalized))) if normalized is not None else None
+        except (AttributeError, KeyError, TypeError, ValueError):  # a sealed record whose inner rows are malformed
+            records[name] = None
+        if records[name] is None:
+            del records[name]
             bad.append(name)
-        else:
-            records[name] = portable_record(normalized)
     if bad:
         raise ReproStateError(f"{ledger.name} holds {len(bad)} record(s) that cannot be converted: "
                               f"{', '.join(sorted(bad))}. Remove them from the file, then rerun. Nothing was moved.")
@@ -50,25 +53,55 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
     home = layout.repro_home(root, plan_root)
     old = RunnerPaths(project_root=root, state_dir=root / layout.ROOT_STATE_DIRNAME)
     new = RunnerPaths(project_root=root, state_dir=home / layout.LOCAL_DIRNAME, records_dir=home)
+    active = runner_paths(root, plan_root)
+    # Every state folder a build or an acceptance could be running from: the layout in use, and the root-level one.
+    held = {paths.state_dir: paths for paths in (active, old) if paths.state_dir.is_dir()}
+    with ExitStack() as locks:
+        if not dry_run:
+            for paths in held.values():
+                locks.enter_context(mutation_lock(paths))  # refuses while a build or an acceptance runs
+        return _migrate(root, home, old, new, active.records_dir is None, dry_run)
+
+
+def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_layout: bool,
+             dry_run: bool) -> tuple[list[str], int]:
+    """`migrate` under its locks: what to move is read, checked, and moved with nothing else writing records."""
     ledger = root / LEGACY_LEDGER
     ref = new.ref
 
     lock = old.lock_file if old.lock_file.is_file() else old.legacy_lock_file if old.legacy_lock_file.is_file() else None
     converted = lock is not None and lock != old.lock_file
     records = sorted(old.acceptance_dir.glob("*.json")) if old.acceptance_dir.is_dir() else []
-    state = old.state_dir.is_dir() and not new.state_dir.exists()
-    stray_state = old.state_dir.is_dir() and new.state_dir.exists()
+    both_states = old.state_dir.is_dir() and new.state_dir.exists()
+    state = old.state_dir.is_dir() and not both_states
 
     # Everything that can refuse, before the first move.
     document = read_lock_document(old.lock_file) if converted else None
     ledger_records = _ledger_records(ledger)
+    if both_states and root_layout:
+        return [f"Error: both {ref(old.state_dir)}/ and {ref(new.state_dir)}/ hold this machine's state. The root-level "
+                f"one belongs to the records being moved. Remove {ref(new.state_dir)}/, which another branch left "
+                "behind, and rerun. Nothing was moved."], 1
     clash = [ref(new.lock_file)] if lock is not None and new.lock_file.exists() else []
     same = [record for record in records if (new.acceptance_dir / record.name).is_file()
             and (new.acceptance_dir / record.name).read_bytes() == record.read_bytes()]
     clash += [ref(new.acceptance_dir / record.name) for record in records
               if (new.acceptance_dir / record.name).exists() and record not in same]
+    for name, record in list(ledger_records.items()):
+        target = new.acceptance_dir / f"{name}.json"
+        if (old.acceptance_dir / f"{name}.json").is_file():
+            del ledger_records[name]  # in the root layout a per-step record already wins over the ledger's
+        elif target.exists():
+            try:
+                differs = json.loads(target.read_text(encoding="utf-8")) != record
+            except (OSError, ValueError):
+                differs = True
+            if differs:
+                clash.append(ref(target))
+            else:
+                del ledger_records[name]
     if clash:
-        return [f"Error: {', '.join(sorted(clash))} already exists and differs from the root-level copy. "
+        return [f"Error: {', '.join(sorted(set(clash)))} already exists and differs from the root-level copy. "
                 "Merge the two by hand, remove the root-level copy, and rerun. Nothing was moved."], 1
 
     rows = []  # (source, target, note)
@@ -76,18 +109,18 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
         rows.append((ref(lock), ref(new.lock_file), "converted" if converted else ""))
     if records:
         rows.append((ref(old.acceptance_dir) + "/", ref(new.acceptance_dir) + "/", f"{len(records)} record(s)"))
-    if ledger_records or ledger.is_file():
+    if ledger.is_file():
         rows.append((ref(ledger), ref(new.acceptance_dir) + "/", "converted to one record per step"))
     if state:
         rows.append((ref(old.state_dir) + "/", ref(new.state_dir) + "/", "this machine only; git ignores it"))
-    if not rows and not stray_state:
+    if not rows and not both_states:
         return ["Nothing to migrate: no reproduction records or state at the project root."], 0
     width = max((len(row[0]) for row in rows), default=0)
     lines = [f"{'Would move' if dry_run else 'Moved'} into {ref(home)}/:"] if rows else []
     lines += [f"  {source:<{width}}  ->  {target}" + (f"  ({note})" if note else "") for source, target, note in rows]
-    if stray_state:
-        lines.append(f"Left in place: {ref(old.state_dir)}/, since {ref(new.state_dir)}/ already holds this "
-                     "machine's state. It is no longer used; remove it.")
+    if both_states:
+        lines.append(f"Left in place: {ref(old.state_dir)}/, the state of branches whose records are still at the "
+                     "project root.")
     if dry_run:
         return lines, 0
 
@@ -102,32 +135,30 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
         write(target)
         undo.append(lambda: target.unlink(missing_ok=True))
 
-    with mutation_lock(old) if old.state_dir.is_dir() else nullcontext():  # refuses while a build runs
-        try:
-            if converted:
-                create(new.lock_file, lambda target: atomic_text(target, lock_text(document)))
-            elif lock is not None:
-                move(lock, new.lock_file)
-            for record in records:
-                if record not in same:
-                    move(record, new.acceptance_dir / record.name)
-            for name, record in ledger_records.items():
-                if not (new.acceptance_dir / f"{name}.json").exists():
-                    create(new.acceptance_dir / f"{name}.json", lambda target, record=record: atomic_json(target, record))
-            if state:
-                move(old.state_dir, new.state_dir)
-        except BaseException:
-            for step in reversed(undo):
-                try:
-                    step()
-                except OSError:
-                    pass
-            for emptied in (new.acceptance_dir, home):
-                try:
-                    emptied.rmdir()
-                except OSError:
-                    pass
-            raise
+    try:
+        if converted:
+            create(new.lock_file, lambda target: atomic_text(target, lock_text(document)))
+        elif lock is not None:
+            move(lock, new.lock_file)
+        for record in records:
+            if record not in same:
+                move(record, new.acceptance_dir / record.name)
+        for name, record in ledger_records.items():
+            create(new.acceptance_dir / f"{name}.json", lambda target, record=record: atomic_json(target, record))
+        if state:
+            move(old.state_dir, new.state_dir)
+    except BaseException:
+        for step in reversed(undo):
+            try:
+                step()
+            except OSError:
+                pass
+        for emptied in (new.acceptance_dir, home):
+            try:
+                emptied.rmdir()
+            except OSError:
+                pass
+        raise
     # Every move held: drop what they superseded.
     for record in same:
         record.unlink(missing_ok=True)
@@ -139,8 +170,8 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
 
     gone = [name for name, moved in ((ref(old.lock_file), lock is not None and not converted),
                                      (ref(old.acceptance_dir), bool(records)),
-                                     (ref(ledger), bool(rows) and any(row[0] == ref(ledger) for row in rows))) if moved]
-    if rows and (gone or converted):
+                                     (ref(ledger), any(row[0] == ref(ledger) for row in rows))) if moved]
+    if gone or converted:
         staging = f"git add -- {shlex.quote(ref(home))}"
         if gone:
             staging = (f"git rm -r -q --cached --ignore-unmatch -- {' '.join(shlex.quote(name) for name in gone)} "

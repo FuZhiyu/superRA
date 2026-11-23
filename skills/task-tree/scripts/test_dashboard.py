@@ -7158,7 +7158,13 @@ class TestReproLockWatch:
         state = plan_dashboard._build_worktree_state("wt-a", root)
         before = plan_dashboard._repro_tree_signature(state)
         (tmp_path / ".superra-repro").mkdir()  # the state is now the root-level folder, until the runner moves it
-        assert plan_dashboard._repro_tree_signature(state) != before
+        moved = plan_dashboard._repro_tree_signature(state)
+        assert moved != before
+        # A merge brings a root-level record in beside task-root ones: the graph carries a finding for it.
+        (root / ".repro").mkdir()
+        (root / ".repro" / "lock.json").write_text('{"version": 2, "steps": {}}\n', encoding="utf-8")
+        (tmp_path / "repro-acceptance").mkdir()
+        assert ("repro-acceptance",) in plan_dashboard._repro_tree_signature(state)
 
     @pytest.mark.parametrize("lock_ref", ["superRA/.repro/lock.json", "repro-lock.json"])
     def test_lock_change_broadcasts_repro_updated(self, tmp_path, lock_ref):

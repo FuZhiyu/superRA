@@ -297,3 +297,68 @@ def test_explain_searches_the_lock_at_both_locations_in_either_layout(project):
     assert lock_refs(project.paths)[:2] == both
     _to_root_layout(project)
     assert lock_refs(project.paths)[:2] == both
+
+
+def test_migrate_stops_when_a_legacy_ledger_disagrees_with_a_task_root_record(project, capsys):
+    """Records split by a merge: the ledger's review must not vanish in favour of a different one."""
+    _accepted_root_project(project)
+    record = json.loads((project.root / "repro-acceptance" / "build-a.json").read_text())
+    ledger = {"version": 1, "steps": {"build-a": record}}
+    os.rename(project.root / "repro-lock.json", project.plan_root / ".repro-lock.tmp")
+    os.makedirs(project.plan_root / ".repro" / "acceptance")
+    os.rename(project.plan_root / ".repro-lock.tmp", project.plan_root / ".repro" / "lock.json")
+    os.rename(project.root / "repro-acceptance" / "build-a.json", project.plan_root / ".repro" / "acceptance" / "build-a.json")
+    (project.root / "repro-acceptance").rmdir()
+    project.write("repro-acceptance.json", json.dumps(ledger))
+    capsys.readouterr()
+    code = project.run("migrate")
+    err = capsys.readouterr().err
+    # The ledger holds the pre-reshape form of a record, so it either converts to the same bytes or is refused.
+    assert (project.root / "repro-acceptance.json").exists() == (code == 1), err
+    assert (project.plan_root / ".repro" / "acceptance" / "build-a.json").is_file()
+
+
+def test_migrate_refuses_two_state_folders_when_it_moves_root_level_records(project, capsys):
+    """After a branch switch the task root can hold another branch's state; the root-level one is the records' own."""
+    assert project.run("build", *CHAIN) == 0
+    _to_root_layout(project)
+    (project.plan_root / ".repro" / "local").mkdir(parents=True)
+    capsys.readouterr()
+    assert project.run("migrate") == 1
+    assert "both .superra-repro/ and superRA/.repro/local/ hold this machine's state" in capsys.readouterr().err
+    assert (project.root / "repro-lock.json").is_file() and (project.root / STATE_DIRNAME).is_dir()
+
+
+def test_migrate_waits_for_whoever_writes_records_in_the_layout_in_use(project, capsys):
+    """Task-root records with a leftover at the root: an acceptance there holds the task-root lock, not the root one."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
+    assert project.run("accept", "01-a", "--reason", "Comment-only edit") == 0
+    os.rename(project.paths.acceptance_dir, project.root / "repro-acceptance")
+    capsys.readouterr()
+    with mutation_lock(runner_paths(project.root)):
+        assert project.run("migrate") == 1
+    assert "another reproduction build or acceptance mutation is running" in capsys.readouterr().err
+    assert (project.root / "repro-acceptance" / "build-a.json").is_file()
+    assert project.run("migrate") == 0
+    assert (project.plan_root / ".repro" / "acceptance" / "build-a.json").is_file()
+
+
+def test_a_directory_dep_leaves_the_task_roots_repro_folder_out_in_the_root_layout_too(project):
+    """A branch switch leaves `superRA/.repro/local/` beside root-level records; it is no part of the step's input."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("superRA/04-all/task.md", WHOLE_TREE)
+    assert project.run("build", "04-all") == 0
+    _to_root_layout(project)
+    assert project.states("04-all") == {"tree": "fresh"}
+    project.write("superRA/.repro/local/stamps/left-behind.stamp", "x\n")
+    assert project.states("04-all") == {"tree": "fresh"}
+
+
+def test_a_symlinked_task_file_does_not_make_a_task_root(tmp_path):
+    proj = tmp_path / "proj"
+    (proj / ".plan").mkdir(parents=True)
+    (proj / ".plan" / "task.md").write_text("---\ntitle: Root\nstatus: not-started\n---\n")
+    (proj / "superRA").mkdir()
+    (proj / "superRA" / "task.md").symlink_to(proj / ".plan" / "task.md")
+    assert _repro_layout.task_root(proj) == proj / ".plan"
