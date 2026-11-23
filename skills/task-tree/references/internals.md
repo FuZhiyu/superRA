@@ -337,9 +337,11 @@ Agent-facing summary: [task-file contract §Records](task-file-contract.md#recor
 
 - **Task root (default):** `superRA/.repro/lock.json`, `superRA/.repro/acceptance/`, and this machine's state in `superRA/.repro/local/`, which holds its own `.gitignore` and Dropbox's ignore flag.
 - **Project root:** any of `repro-lock.json`, `repro-acceptance/`, `repro-acceptance.json`, `pytask.lock`, or `repro-builds.json` there keeps the records at the root, with state in `.superra-repro/` and its `.gitignore` line. `superra repro migrate` renames all three into the task root.
-- **State follows the records:** once the records are in the task root, the next `superra repro` command moves a root-level `.superra-repro/` there, unless a build holds its lock.
+- **State follows the records:** once the records are in the task root, the next `superra repro` command moves a root-level `.superra-repro/` there under the mutation lock, so never while a build runs.
+- **No task root given** (the hooks, `step_durations`): `superRA/`, or a legacy `.plan/` when that is the one present.
 - **A check stamp's lock id stays `.superra-repro/stamps/<step>.stamp`** in both layouts; `Step.stamp` is the file. Moving the state therefore stales no check.
-- **Root-level records beside task-root ones** are never read; every command warns until they are removed.
+- **Root-level records beside task-root ones** are never read; every `superra repro` command warns until they are removed.
+- **A `.repro` folder is never part of a dependency:** directory deps skip it, and globs skip every dot-folder.
 
 ### The lock
 

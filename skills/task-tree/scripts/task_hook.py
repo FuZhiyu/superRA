@@ -229,6 +229,14 @@ def _repro_state_dir(project_root: Path) -> Path:
     return state_dir(project_root)
 
 
+def _touch_marker(marker: Path) -> None:
+    """Write a reminder marker; the state directory it may create ignores itself in git."""
+    from _repro_layout import self_ignore
+    self_ignore(marker.parents[2])  # <state>/hook-markers/<session>/<digest>
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch()
+
+
 def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str) -> Path:
     digest = hashlib.sha256(resolved_path.encode("utf-8")).hexdigest()[:32]
     return _repro_state_dir(project_root) / REPRO_MARKER_SUBDIR / session_key / digest
@@ -242,8 +250,7 @@ def _mentioned(project_root: Path, session_key: str, text: str) -> bool:
 def _record_mention(project_root: Path, session_key: str, text: str) -> None:
     marker = _repro_marker_path(project_root, session_key, text)
     try:
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.touch()
+        _touch_marker(marker)
     except OSError:
         pass
 
@@ -457,8 +464,7 @@ def _repro_emit(
                 )
             )
         try:
-            marker.parent.mkdir(parents=True, exist_ok=True)
-            marker.touch()
+            _touch_marker(marker)
         except OSError:
             pass
     return feedback
@@ -632,8 +638,7 @@ def _implemented_coverage_reminder(plan_root: Path, task_path: str) -> list[str]
     if not files:
         return []
     try:
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.touch()
+        _touch_marker(marker)
     except OSError:
         pass
     from _task_validate import OUTPUT_CAP as cap

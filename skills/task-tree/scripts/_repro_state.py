@@ -160,13 +160,12 @@ def adopt_root_state(project_root: Path, plan_root: Path | None = None) -> None:
     legacy = root / layout.ROOT_STATE_DIRNAME
     if home is None or not legacy.is_dir() or (home / layout.LOCAL_DIRNAME).exists():
         return
-    from _repro_acceptance import lock_holder  # deferred: _repro_acceptance imports this module
-    if lock_holder(RunnerPaths(project_root=root, state_dir=legacy)) is not None:
-        return
+    from _repro_acceptance import mutation_lock  # deferred: _repro_acceptance imports this module
     try:
-        home.mkdir(parents=True, exist_ok=True)
-        os.rename(legacy, home / layout.LOCAL_DIRNAME)
-    except OSError:  # a read-only checkout keeps using it where it is
+        with mutation_lock(RunnerPaths(project_root=root, state_dir=legacy)):  # no build may start in it meanwhile
+            home.mkdir(parents=True, exist_ok=True)
+            os.rename(legacy, home / layout.LOCAL_DIRNAME)
+    except (ReproStateError, OSError):  # a running build, or a read-only checkout, keeps using it where it is
         pass
 
 
@@ -199,12 +198,7 @@ def ensure_state_dir(paths: RunnerPaths) -> None:
         directory.mkdir(parents=True, exist_ok=True)
     dropbox_ignore(paths.state_dir)
     if paths.state_dir.name != STATE_DIRNAME:  # in the task root: the folder ignores itself
-        try:
-            ignore = paths.state_dir / ".gitignore"
-            if not ignore.exists():
-                ignore.write_text("*\n", encoding="utf-8")
-        except OSError:
-            pass
+        layout.self_ignore(paths.state_dir)
         return
     gitignore = paths.project_root / ".gitignore"
     entry = f"{STATE_DIRNAME}/"
@@ -677,6 +671,8 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
+        # superRA's own records and state, which every build rewrites, are never part of a dependency.
+        dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]
@@ -750,6 +746,7 @@ def _holds_online_only(path: Path, glob: str | None = None) -> bool:
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
+        dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]

@@ -66,14 +66,16 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
                 if normalized is not None and not (new.acceptance_dir / f"{name}.json").exists():
                     atomic_json(new.acceptance_dir / f"{name}.json", portable_record(normalized))
             ledger.unlink()
-    if old.state_dir.is_dir():
-        new.state_dir.parent.mkdir(parents=True, exist_ok=True)
-        os.rename(old.state_dir, new.state_dir)
+        if old.state_dir.is_dir():  # under the lock, so no build starts in the old folder meanwhile
+            new.state_dir.parent.mkdir(parents=True, exist_ok=True)
+            os.rename(old.state_dir, new.state_dir)
+    if new.state_dir.is_dir():
         ensure_state_dir(new)
 
     staged = [shown(source).rstrip("/") for source, _, _ in moves if source != old.state_dir]
     if staged:
-        lines.append(f"Commit the move: `git add -A -- {' '.join([*staged, new.ref(home)])}`.")
+        lines.append(f"Commit the move: `git rm -r -q --cached --ignore-unmatch -- {' '.join(staged)} "
+                     f"&& git add -- {new.ref(home)}`.")
         lines.append(f"Every checkout and coauthor then needs a superRA that reads {new.ref(home)}/; "
                      "an older one finds no records there.")
     if leftovers:

@@ -5,7 +5,9 @@ import json
 import os
 import re
 
-from _repro_state import STATE_DIRNAME, runner_paths
+import _repro_layout
+from _repro_acceptance import mutation_lock
+from _repro_state import STATE_DIRNAME, RunnerPaths, adopt_root_state, runner_paths
 from test_repro_runner import CHAIN, Project, project  # noqa: F401
 
 
@@ -52,7 +54,8 @@ def test_migrate_moves_records_and_state_and_stales_nothing(project, capsys):
     assert re.search(r"repro-lock\.json\s+->  superRA/\.repro/lock\.json", out)
     assert re.search(r"repro-acceptance/\s+->  superRA/\.repro/acceptance/", out)
     assert re.search(r"\.superra-repro/\s+->  superRA/\.repro/local/", out)
-    assert "`git add -A -- repro-lock.json repro-acceptance superRA/.repro`" in out
+    assert ("`git rm -r -q --cached --ignore-unmatch -- repro-lock.json repro-acceptance "
+            "&& git add -- superRA/.repro`") in out
     for gone in ("repro-lock.json", "repro-acceptance", STATE_DIRNAME):
         assert not (project.root / gone).exists()
     project.paths = runner_paths(project.root)
@@ -85,3 +88,62 @@ def test_root_level_state_moves_into_the_task_root_once_the_records_are_there(pr
     assert not (project.root / STATE_DIRNAME).exists()
     assert (project.paths.stamps_dir / "check-b.stamp").is_file()
     assert set(project.states(*CHAIN).values()) == {"fresh"}
+
+
+def test_root_level_state_stays_put_while_a_build_holds_its_lock(project):
+    assert project.run("build", *CHAIN) == 0
+    legacy = project.root / STATE_DIRNAME
+    os.rename(project.paths.state_dir, legacy)
+    with mutation_lock(RunnerPaths(project_root=project.root, state_dir=legacy)):
+        adopt_root_state(project.root)
+        assert legacy.is_dir() and not (project.plan_root / ".repro" / "local").exists()
+    adopt_root_state(project.root)
+    assert not legacy.exists() and (project.plan_root / ".repro" / "local" / "hashes.json").is_file()
+
+
+def test_a_project_whose_task_root_is_dot_plan_keeps_hook_and_runner_state_there(tmp_path):
+    """The hooks pass no task root: a legacy `.plan/` tree must not grow a stray `superRA/`."""
+    import task_hook
+    proj = tmp_path / "proj"
+    (proj / ".plan").mkdir(parents=True)
+    state = proj / ".plan" / ".repro" / "local"
+    assert _repro_layout.state_dir(proj) == state and runner_paths(proj).state_dir == state
+    task_hook._record_mention(proj, "s1", "Code/a.sh")
+    assert task_hook._mentioned(proj, "s1", "Code/a.sh")
+    assert (state / ".gitignore").read_text() == "*\n"  # git lists nothing the hook wrote
+    assert not (proj / "superRA").exists()
+    assert task_hook._repro_plan_root_for_file(proj / "Code" / "a.sh") == proj / ".plan"
+
+
+WHOLE_TREE = """\
+---
+title: "All"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+List the tree.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: tree
+    cmd: ls superRA > output/tree.txt
+    deps:
+      - superRA
+    outs:
+      - output/tree.txt
+```
+"""
+
+
+def test_a_directory_dep_covering_the_task_root_leaves_the_records_and_state_out(project):
+    assert project.run("build", *CHAIN) == 0
+    project.write("superRA/04-all/task.md", WHOLE_TREE)
+    assert project.run("build", "04-all") == 0  # its own log and lock entry do not change its dep
+    assert project.states("04-all") == {"tree": "fresh"}
+    assert project.run("build", "03-x") == 0  # rewrites the lock, a log, and a run record
+    assert project.states("04-all") == {"tree": "fresh"}

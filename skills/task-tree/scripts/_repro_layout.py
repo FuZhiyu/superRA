@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 TASK_ROOT_DIRNAME = "superRA"
+TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, ".plan")  # the order the hooks look a task root up in
 REPRO_DIRNAME = ".repro"
 LOCAL_DIRNAME = "local"
 TREE_LOCK_FILENAME = "lock.json"
@@ -29,11 +30,17 @@ ROOT_LEGACY_FILENAMES = ("repro-acceptance.json", "pytask.lock", "repro-builds.j
 ROOT_RECORDS = (ROOT_LOCK_FILENAME, ROOT_ACCEPTANCE_DIRNAME, *ROOT_LEGACY_FILENAMES)
 
 
+def task_root(project_root) -> Path:
+    """The project's task root when none is given: `superRA/`, or a legacy `.plan/` when that is the one present."""
+    root = Path(project_root)
+    return next((root / name for name in TASK_ROOT_DIRNAMES if (root / name).is_dir()), root / TASK_ROOT_DIRNAME)
+
+
 def repro_home(project_root, plan_root=None) -> Path:
     """`<task root>/.repro`, spelled below *project_root* when the task root is its child."""
     root = Path(project_root)
     if plan_root is None:
-        return root / TASK_ROOT_DIRNAME / REPRO_DIRNAME
+        return task_root(root) / REPRO_DIRNAME
     plan = Path(plan_root)
     if plan.parent != root and os.path.realpath(plan.parent) == os.path.realpath(root):
         plan = root / plan.name
@@ -58,6 +65,18 @@ def state_dir(project_root, plan_root=None) -> Path:
     if legacy.is_dir() or records_dir(project_root, plan_root) is None:
         return legacy
     return local
+
+
+def self_ignore(directory) -> None:
+    """Create a state directory holding its own `.gitignore`, so git never lists what a hook or the runner writes."""
+    directory = Path(directory)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        ignore = directory / ".gitignore"
+        if not ignore.exists():
+            ignore.write_text("*\n", encoding="utf-8")
+    except OSError:  # a read-only checkout
+        pass
 
 
 def project_ref(project_root, path) -> str:
