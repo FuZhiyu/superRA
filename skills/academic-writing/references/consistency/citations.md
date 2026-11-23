@@ -72,7 +72,7 @@ Building on own prior work is fine; ten self-citations in a 50-paper reference l
 ## Gated Checklist
 
 - `[BLOCKING]` **No orphan citations.** Every `\cite{key}` resolves to a bibliography entry.
-- `[BLOCKING]` **Orphan references reported** — never-cited entries listed, flagged not deleted (`SKILL.md §Preserve substance, polish prose`).
+- `[BLOCKING]` **Orphan references reported** — never-cited entries listed, flagged not deleted ([Substance is the author's](../../SKILL.md#substance-is-the-authors)).
 - `[BLOCKING]` **Uncited claims flagged** with location and text.
 - `[BLOCKING]` **Foundational methodology references present** — the method's seminal papers cited.
 - `[BLOCKING]` **Author / year mismatches flagged** with both values.

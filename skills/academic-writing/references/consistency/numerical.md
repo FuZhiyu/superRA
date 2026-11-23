@@ -21,7 +21,7 @@ Numerical failures come in six patterns:
 
 Per quantitative claim in prose:
 
-- **Source identified.** Table / figure / explicit calculation / cited paper. None of these → the number is floating; source it or remove it.
+- **Source identified.** Table / figure / explicit calculation / cited paper. None of these → the number is floating; report it.
 - **Value matches source exactly** (within stated rounding).
 - **Units and scale match.**
 
@@ -36,8 +36,8 @@ Pick a convention (e.g., 3 decimal places for coefficients, 2 for percentages) a
 
 ### Cross-table sample size
 
-- Same specification across tables → same N.
-- Different specifications (a control that drops observations, a balanced-panel subset) → different N is fine, explained in the notes or text.
+- Different N across exhibits presented as one specification goes to the researcher for a code fix per [code–paper alignment](code-paper.md#methodology-match).
+- Different specifications (a control that drops observations, a balanced-panel subset) → different N is a finding only when a reader would misread a result without it.
 
 ### Figure–caption–text triangle
 
@@ -85,8 +85,8 @@ Always distinguish `pp` and `%`.
 ## Gated Checklist
 
 - `[BLOCKING]` **Every number in edited prose traces to a source** (table, figure, calculation, or citation).
-- `[BLOCKING]` **Text numbers match table numbers** at the stated precision; mismatches reported.
-- `[BLOCKING]` **Cross-table sample-size discrepancies explained or flagged.**
+- `[BLOCKING]` **Exact quotes match the source.** An approximate statement ("roughly", "about") is a finding only when it no longer holds. See [Material consistency findings](../review.md#material-consistency-findings).
+- `[BLOCKING]` **Cross-table sample sizes checked.** Route different N across exhibits presented as one specification to the researcher for a code fix. For different specifications, flag a difference only when a reader would misread a result without it.
 - `[BLOCKING]` **Figure–caption–text alignment verified** for every figure touched or referenced.
 - `[BLOCKING]` **Table caption accuracy verified** — rows/columns, cell meaning, significance stars, sample.
 - `[BLOCKING]` **Unit / scale consistency** — percent vs decimal, pp vs %, units named on every headline number.
