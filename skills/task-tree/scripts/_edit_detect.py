@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from _checkout_scope import is_foreign
+from _repro_layout import state_dir as _state_dir
 from _task_io import SKIP_DIRS
 
 TASK_ROOT_DIRNAME = "superRA"
@@ -263,7 +264,7 @@ def detect(
     that did not exist in the previous baseline.
     """
     plan_root = plan_root.resolve()
-    baseline_dir = plan_root.parent / STATE_DIRNAME / BASELINE_SUBDIR
+    baseline_dir = _state_dir(plan_root.parent, plan_root) / BASELINE_SUBDIR
     state_path = baseline_dir / f"{session_key}.json"
     if seed_only and state_path.exists():
         return []

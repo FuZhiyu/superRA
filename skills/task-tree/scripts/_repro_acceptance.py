@@ -19,7 +19,7 @@ from _repro_state import (
     spec_node_id, step_nodes, unread, unread_file_lines, unread_phrase, _topological, repro_command,
 )
 
-LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
+LEDGER = 'repro-acceptance'  # at the project root; `paths.acceptance_dir` is where the records are
 LEGACY_LEDGER = 'repro-acceptance.json'
 SNAPSHOT_LIMIT = 128 * 1024
 HEARTBEAT_SECONDS = 10.0
@@ -160,6 +160,8 @@ def portable_rows(rows):
 
 
 def _read_legacy(paths):
+    if paths.records_dir is not None:
+        return None
     path = paths.project_root / LEGACY_LEDGER
     if not path.is_file():
         return None
@@ -176,7 +178,7 @@ def _read_legacy(paths):
 def read_ledger(paths):
     """Every trusted acceptance; a malformed or conflicted record is set aside alone, with a warning."""
     records = dict(_read_legacy(paths) or {})
-    for path in sorted((paths.project_root / LEDGER).glob('*.json')):
+    for path in sorted(paths.acceptance_dir.glob('*.json')):
         try:
             records[path.stem] = json.loads(path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
@@ -197,8 +199,8 @@ def _convert_legacy(paths):
     legacy = _read_legacy(paths)
     if legacy is None:
         return
-    directory = paths.project_root / LEDGER
-    directory.mkdir(exist_ok=True)
+    directory = paths.acceptance_dir
+    directory.mkdir(parents=True, exist_ok=True)
     for name, record in legacy.items():
         normalized = _normalize(record)
         if normalized is not None and not (directory / f'{name}.json').exists():
@@ -211,7 +213,7 @@ def write_record(paths, name, value):
     """Write one step's committed record, or remove it when *value* is None; equal content stays."""
     with RECORD_LOCK:
         _convert_legacy(paths)
-        path = paths.project_root / LEDGER / f'{name}.json'
+        path = paths.acceptance_dir / f'{name}.json'
         if value is None:
             path.unlink(missing_ok=True)
             return

@@ -44,7 +44,6 @@ from _repro_scope import boundary_inputs, record_verified_inputs  # noqa: E402
 from _repro_normalize import CleanerFailed, Outcome, clean, out_files, step_cleaners, step_env  # noqa: E402
 from _repro_state import (  # noqa: E402
     BLOCKING,
-    LOCK_FILENAME,
     OUTPUT_CAP,
     TOML_AVAILABLE,
     HashCache,
@@ -61,6 +60,7 @@ from _repro_state import (  # noqa: E402
     dependency_state,
     directory_dep_nodes,
     ensure_state_dir,
+    adopt_root_state,
     format_status,
     node_glob,
     node_sizes,
@@ -83,6 +83,7 @@ from _repro_state import (  # noqa: E402
     write_run_record,
 )
 from _task_io import TASK_ROOT_DIRNAME, resolve_plan_root_arg  # noqa: E402
+from _repro_layout import ROOT_RECORDS  # noqa: E402
 
 REEXEC_ENV = "SUPERRA_REPRO_REEXEC"
 NO_TARGET_ERROR = "name at least one task or task#step target; '.' selects every registered step"
@@ -273,7 +274,7 @@ def _run_step(build: Build, step: Step, entry) -> str:
                 continue  # the step maintains its own sidecar, unless a cleaner rewrote the out after it
             _write_sidecar(paths.project_root, out, sidecar, build.cache)
         if step.kind == "check":
-            stamp = paths.project_root / stamp_ref(step.name)
+            stamp = absolute(paths.project_root, step.stamp or stamp_ref(step.name))
             stamp.parent.mkdir(parents=True, exist_ok=True)
             stamp.write_text(f"{spec_hash(step)}\n", encoding="utf-8")
 
@@ -596,7 +597,7 @@ def run_build(
         print("Interrupted: running steps were stopped and recorded as failed.", file=sys.stderr)
     legacy = [p.name for p in (paths.legacy_lock_file, paths.legacy_builds_file) if p.is_file()]
     if paths.lock_file.is_file() and legacy:
-        print(f"{LOCK_FILENAME} now holds the build records; {', '.join(legacy)} no longer read. "
+        print(f"{paths.ref(paths.lock_file)} now holds the build records; {', '.join(legacy)} no longer read. "
               f"Remove with `git rm {' '.join(legacy)}`.")
     return 1 if interrupted or counts.get("failed") or counts.get("skipped") else 0
 
@@ -785,10 +786,27 @@ def build_parser() -> argparse.ArgumentParser:
         "superra repro dag --mermaid",
     ])
     dag.add_argument("--mermaid", action="store_true")
+
+    migrate = _sub(sub, "migrate", "Move root-level records and state (repro-lock.json, repro-acceptance/, "
+                   ".superra-repro/) into the task root", [
+        "superra repro migrate --dry-run",
+        "superra repro migrate",
+    ])
+    migrate.add_argument("--dry-run", action="store_true", help="list the moves without making them")
     return parser
 
 
-LOCK_READERS = ("build", "status", "explain", "accept", "revoke", "impact")
+LOCK_READERS = ("build", "status", "explain", "accept", "revoke", "impact", "migrate")
+
+
+def _warn_root_leftovers(paths: RunnerPaths) -> None:
+    """Root-level records a project whose records live in the task root still carries are never read."""
+    if paths.records_dir is None:
+        return
+    left = [name for name in ROOT_RECORDS if os.path.lexists(paths.project_root / name)]
+    if left:
+        print(f"Warning: {', '.join(left)} at the project root: not read, since the records live in "
+              f"{paths.ref(paths.records_dir)}/. Merge by hand anything not yet there, then remove.", file=sys.stderr)
 
 
 def _reexec(argv: list[str], command: str) -> int:
@@ -957,9 +975,21 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Error: task root not found: {plan_root}", file=sys.stderr)
         sys.exit(1)
     project_root = plan_root.resolve().parent
-    paths = runner_paths(project_root)
+    if args.command != "migrate":
+        adopt_root_state(project_root, plan_root)
+    paths = runner_paths(project_root, plan_root)
     if args.command in LOCK_READERS and not TOML_AVAILABLE and paths.reads_legacy_lock:
         sys.exit(_reexec(argv, args.command))
+    if args.command == "migrate":
+        from _repro_migrate import migrate
+        try:
+            lines, code = migrate(project_root, plan_root, dry_run=args.dry_run)
+        except (ReproStateError, OSError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        print("\n".join(lines), file=sys.stderr if code else sys.stdout)
+        sys.exit(code)
+    _warn_root_leftovers(paths)
 
     from _repro_acceptance import bind_sources, source_signature
     signature = source_signature(plan_root) if args.command in ("build", "accept") else None

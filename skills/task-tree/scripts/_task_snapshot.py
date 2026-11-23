@@ -106,7 +106,7 @@ def step_states(graph, plan_root, names):
     if not names:
         return {}, None
     targets = [f'{graph.step(n).task_path or "."}#{n}' for n in sorted(names)]
-    paths = runner_paths(plan_root.resolve().parent)
+    paths = runner_paths(plan_root.resolve().parent, plan_root.resolve())
     try:
         report = compute_status(graph, paths, targets=targets, upstream=True, live_build=lock_holder(paths))
     except ReproStateError as exc:

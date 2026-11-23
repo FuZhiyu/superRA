@@ -1,4 +1,4 @@
-"""superRA's own build loop and `repro-lock.json`: scheduling, interruption, the
+"""superRA's own build loop and the committed lock: scheduling, interruption, the
 lock format and its merges, and freshness edge cases (symlinked data, a deleted
 lock, sidecar reruns, scoped status)."""
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from _repro_acceptance import LEDGER, read_ledger, receipt_path
+from _repro_acceptance import read_ledger, receipt_path
 from _repro_builds import platform_name
 from _repro_state import (
     read_lock,
@@ -33,7 +33,7 @@ SCRIPTS = Path(__file__).parent
 
 def test_the_lock_holds_one_line_per_step_in_step_order_and_round_trips(project):
     assert project.run("build", ".") == 0
-    text = project.read("repro-lock.json")
+    text = project.read("superRA/.repro/lock.json")
     document = json.loads(text)
     assert list(document) == ["steps", "version"] and document["version"] == 2
     assert list(document["steps"]) == sorted(document["steps"])
@@ -49,7 +49,7 @@ def test_the_lock_holds_one_line_per_step_in_step_order_and_round_trips(project)
     assert read_lock(project.paths.lock_file)["build-b"].depends_on["build-b::spec"] == entry["spec"]
 
     _write_lock_document(project.paths, read_lock_document(project.paths.lock_file))
-    assert project.read("repro-lock.json") == text
+    assert project.read("superRA/.repro/lock.json") == text
     umask = os.umask(0)
     os.umask(umask)
     assert project.paths.lock_file.stat().st_mode & 0o777 == 0o666 & ~umask  # not mkstemp's 0600
@@ -72,7 +72,7 @@ def _merge_repo(project):
     git(project.root, "add", "-A")
     git(project.root, "commit", "-qm", "code")
     assert project.run("build", ".") == 0
-    git(project.root, "add", "repro-lock.json")
+    git(project.root, "add", "superRA/.repro/lock.json")
     git(project.root, "commit", "-qm", "build")
 
 
@@ -90,7 +90,7 @@ def test_branches_that_build_different_steps_merge_cleanly(project, left, right)
         git(project.root, "commit", "-qam", branch)
     git(project.root, "checkout", "-q", "left")
     git(project.root, "merge", "-q", "--no-edit", "right")  # raises on a conflict
-    assert set(json.loads(project.read("repro-lock.json"))["steps"]) == {"build-a", "build-b", "check-b", "build-x"}
+    assert set(json.loads(project.read("superRA/.repro/lock.json"))["steps"]) == {"build-a", "build-b", "check-b", "build-x"}
     assert project.status(".").ok
 
 
@@ -110,7 +110,7 @@ def test_a_lock_conflicted_by_adjacent_new_steps_reads_both_and_the_next_build_r
         git(project.root, "commit", "-qm", branch)
     git(project.root, "checkout", "-q", "left")
     merge = subprocess.run(["git", "merge", "--no-edit", "right"], cwd=project.root, capture_output=True, text=True)
-    assert merge.returncode != 0 and "<<<<<<<" in project.read("repro-lock.json")
+    assert merge.returncode != 0 and "<<<<<<<" in project.read("superRA/.repro/lock.json")
     capsys.readouterr()
 
     assert set(project.states().values()) == {"fresh"}
@@ -119,7 +119,7 @@ def test_a_lock_conflicted_by_adjacent_new_steps_reads_both_and_the_next_build_r
     times = project.run_times()
     assert project.run("build", ".") == 0
     assert project.run_times() == times  # nothing reran
-    text = project.read("repro-lock.json")
+    text = project.read("superRA/.repro/lock.json")
     assert "<<<<<<<" not in text
     assert {"build-p", "build-q"} <= set(json.loads(text)["steps"])
 
@@ -149,13 +149,13 @@ def _mixed_check_repo(project, *, adjacent_new_steps):
 @pytest.mark.parametrize("adjacent_new_steps", [True, False])
 def test_a_check_both_branches_rebuilt_never_reads_fresh_after_a_merge(project, capsys, adjacent_new_steps):
     merge = _mixed_check_repo(project, adjacent_new_steps=adjacent_new_steps)
-    assert merge.returncode != 0 and "<<<<<<<" in project.read("repro-lock.json")
+    assert merge.returncode != 0 and "<<<<<<<" in project.read("superRA/.repro/lock.json")
     capsys.readouterr()
     assert project.states()["check-m"] == "missing"
     assert "dropped 1 entry the two sides disagree on: check-m" in capsys.readouterr().err
     assert project.run("build", "05-m") == 1  # the merged tree really fails the check
     assert project.states()["check-m"] == "failed"
-    assert "<<<<<<<" not in project.read("repro-lock.json")
+    assert "<<<<<<<" not in project.read("superRA/.repro/lock.json")
 
 
 def test_acceptance_records_of_one_step_never_line_merge_into_a_trusted_record(project, monkeypatch):
@@ -179,25 +179,25 @@ def test_acceptance_records_of_one_step_never_line_merge_into_a_trusted_record(p
 @pytest.mark.parametrize("style", [[], ["--diff3"]])
 def test_a_lock_entry_both_sides_changed_is_dropped_so_its_step_reads_missing(project, capsys, style):
     assert project.run("build", ".") == 0
-    base = project.read("repro-lock.json")
+    base = project.read("superRA/.repro/lock.json")
     sides = []
     for text in ("left", "right"):
         project.write("Code/a.sh", f"# {text}\nmkdir -p output\necho hello > output/a.txt\n")
         assert project.run("build", "01-a") == 0
-        sides.append(project.read("repro-lock.json"))
+        sides.append(project.read("superRA/.repro/lock.json"))
     files = [project.write(f"lock-{label}.json", body) for label, body in zip(("ours", "base", "theirs"),
                                                                              (sides[0], base, sides[1]))]
     merged = subprocess.run(["git", "merge-file", "-p", *style, *map(str, files)],
                             capture_output=True, text=True).stdout
     assert "<<<<<<<" in merged
-    project.write("repro-lock.json", merged)
+    project.write("superRA/.repro/lock.json", merged)
     capsys.readouterr()
 
     assert set(read_lock(project.paths.lock_file)) == {"build-b", "check-b", "build-x"}
     assert "dropped 1 entry the two sides disagree on: build-a" in capsys.readouterr().err
     assert project.states()["build-a"] == "missing"
     assert project.run("build", "01-a") == 0
-    assert "<<<<<<<" not in project.read("repro-lock.json")
+    assert "<<<<<<<" not in project.read("superRA/.repro/lock.json")
     assert project.states()["build-a"] == "fresh"
 
 
@@ -256,7 +256,7 @@ def test_dry_run_writes_no_lock_record_receipt_or_acceptance(project):
     project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
     review(project)
     project.write("Code/b.sh", project.read("Code/b.sh") + "# edited\n")
-    watched = [project.paths.lock_file, project.root / LEDGER / "build-a.json", *project.paths.runs_dir.iterdir(),
+    watched = [project.paths.lock_file, project.paths.acceptance_dir / "build-a.json", *project.paths.runs_dir.iterdir(),
                *(receipt_path(project.paths, name) for name in ("build-a", "build-b", "check-b"))]
     before = {path: path.read_bytes() for path in watched}
     assert project.run("build", ".", "--dry-run", "--force", "-j", "2") == 0

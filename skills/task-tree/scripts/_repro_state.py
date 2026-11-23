@@ -5,10 +5,13 @@ Stdlib only. ``repro build`` (in ``repro_run.py``) decides run-or-skip with
 the same ``compute_status`` that ``repro status`` / ``explain``, `task read`,
 and the dashboard use.
 
-The committed ``repro-lock.json`` is the record of what each step last built.
-Its node ids are the logical (``${VAR}``-form) paths this module also uses, so
-a lock written on one checkout reads on another. A project without it reads a
-legacy ``pytask.lock`` (with ``repro-builds.json``) converted in memory.
+The committed lock is the record of what each step last built. Its node ids
+are the logical (``${VAR}``-form) paths this module also uses, so a lock
+written on one checkout reads on another. ``_repro_layout`` decides where the
+lock, the acceptance records, and this machine's state sit: in the task root,
+or at the project root for a project not yet migrated. A root-level project
+without ``repro-lock.json`` reads a legacy ``pytask.lock`` (with
+``repro-builds.json``) converted in memory.
 """
 
 from __future__ import annotations
@@ -32,10 +35,12 @@ from typing import Iterable
 if __package__:
     from ._repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from ._task_validate import OUTPUT_CAP
+    from . import _repro_layout as layout
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
     from _repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from _task_validate import OUTPUT_CAP
+    import _repro_layout as layout
 
 try:  # Python 3.11+
     import tomllib
@@ -44,8 +49,8 @@ except ModuleNotFoundError:  # pragma: no cover - 3.10 re-execs to read a legacy
 
 TOML_AVAILABLE = tomllib is not None
 
-STATE_DIRNAME = ".superra-repro"
-LOCK_FILENAME = "repro-lock.json"
+STATE_DIRNAME = layout.ROOT_STATE_DIRNAME  # also the fixed prefix of a check stamp's lock id (`stamp_ref`)
+LOCK_FILENAME = layout.ROOT_LOCK_FILENAME
 LOCK_VERSION = 2  # 2: one line per step entry; 1 (indented entries) still reads
 LEGACY_LOCK_FILENAME = "pytask.lock"
 LEGACY_BUILDS_FILENAME = "repro-builds.json"
@@ -74,10 +79,11 @@ class ReproStateError(RuntimeError):
 
 @dataclass(frozen=True)
 class RunnerPaths:
-    """Where the runner keeps its per-machine state and its committed lock."""
+    """Where the runner keeps its per-machine state and its committed records."""
 
     project_root: Path
     state_dir: Path
+    records_dir: Path | None = None  # `<task root>/.repro`; None while the records sit at the project root
 
     @property
     def logs_dir(self) -> Path:
@@ -97,7 +103,20 @@ class RunnerPaths:
 
     @property
     def lock_file(self) -> Path:
+        if self.records_dir is not None:
+            return self.records_dir / layout.TREE_LOCK_FILENAME
         return self.project_root / LOCK_FILENAME
+
+    @property
+    def acceptance_dir(self) -> Path:
+        """One committed acceptance record per step."""
+        if self.records_dir is not None:
+            return self.records_dir / layout.TREE_ACCEPTANCE_DIRNAME
+        return self.project_root / layout.ROOT_ACCEPTANCE_DIRNAME
+
+    def ref(self, path: Path) -> str:
+        """*path* relative to the project root — what reports and records carry."""
+        return layout.project_ref(self.project_root, path)
 
     @property
     def legacy_lock_file(self) -> Path:
@@ -109,23 +128,46 @@ class RunnerPaths:
 
     @property
     def reads_legacy_lock(self) -> bool:
-        """No ``repro-lock.json`` yet, but a ``pytask.lock`` to convert."""
-        return not self.lock_file.is_file() and self.legacy_lock_file.is_file()
+        """Root-level records with no ``repro-lock.json`` yet, but a ``pytask.lock`` to convert."""
+        return self.records_dir is None and not self.lock_file.is_file() and self.legacy_lock_file.is_file()
 
     def log_file(self, step: str) -> Path:
         return self.logs_dir / f"{step}.log"
 
     def log_ref(self, step: str) -> str:
         """Project-relative log path — what reports and records carry."""
-        return f"{STATE_DIRNAME}/logs/{step}.log"
+        return f"{self.ref(self.state_dir)}/logs/{step}.log"
 
     def run_file(self, step: str) -> Path:
         return self.runs_dir / f"{step}.json"
 
 
-def runner_paths(project_root: Path) -> RunnerPaths:
+def runner_paths(project_root: Path, plan_root: Path | None = None) -> RunnerPaths:
+    """The project's records and state where `_repro_layout` finds them; *plan_root* defaults to `superRA/`."""
     root = Path(project_root)
-    return RunnerPaths(project_root=root, state_dir=root / STATE_DIRNAME)
+    return RunnerPaths(project_root=root, state_dir=layout.state_dir(root, plan_root),
+                       records_dir=layout.records_dir(root, plan_root))
+
+
+def adopt_root_state(project_root: Path, plan_root: Path | None = None) -> None:
+    """Move a root-level state directory into the task root once the records live there.
+
+    A checkout receives migrated records through git while its own state still
+    sits at the project root; a build running from that state keeps it there.
+    """
+    root = Path(project_root)
+    home = layout.records_dir(root, plan_root)
+    legacy = root / layout.ROOT_STATE_DIRNAME
+    if home is None or not legacy.is_dir() or (home / layout.LOCAL_DIRNAME).exists():
+        return
+    from _repro_acceptance import lock_holder  # deferred: _repro_acceptance imports this module
+    if lock_holder(RunnerPaths(project_root=root, state_dir=legacy)) is not None:
+        return
+    try:
+        home.mkdir(parents=True, exist_ok=True)
+        os.rename(legacy, home / layout.LOCAL_DIRNAME)
+    except OSError:  # a read-only checkout keeps using it where it is
+        pass
 
 
 def dropbox_ignore(path: Path) -> None:
@@ -156,6 +198,14 @@ def ensure_state_dir(paths: RunnerPaths) -> None:
     for directory in (paths.state_dir, paths.logs_dir, paths.runs_dir, paths.stamps_dir):
         directory.mkdir(parents=True, exist_ok=True)
     dropbox_ignore(paths.state_dir)
+    if paths.state_dir.name != STATE_DIRNAME:  # in the task root: the folder ignores itself
+        try:
+            ignore = paths.state_dir / ".gitignore"
+            if not ignore.exists():
+                ignore.write_text("*\n", encoding="utf-8")
+        except OSError:
+            pass
+        return
     gitignore = paths.project_root / ".gitignore"
     entry = f"{STATE_DIRNAME}/"
     try:
@@ -170,7 +220,10 @@ def ensure_state_dir(paths: RunnerPaths) -> None:
 
 
 def stamp_ref(step_name: str) -> str:
-    """Logical path of a check step's stamp — its product, so a passed check can skip."""
+    """Lock id of a check step's stamp — its product, so a passed check can skip.
+
+    Fixed wherever the state directory sits, so moving it stales no check; `Step.stamp` is the file.
+    """
     return f"{STATE_DIRNAME}/stamps/{step_name}.stamp"
 
 
@@ -741,7 +794,7 @@ def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[N
     deps = [outputs.get(d.resolved, (d.logical, d.resolved, None)) for d in step.deps]
     if step.kind == "check":
         stamp = stamp_ref(step.name)
-        return deps, [(stamp, stamp, None)]
+        return deps, [(stamp, step.stamp or stamp, None)]
     return deps, [outputs[o.path.resolved] for o in step.outs]
 
 
@@ -1394,7 +1447,7 @@ def _classify(
     result.duration = record.get("duration")
     result.last_run = record.get("ended_at")
     if record.get("log"):
-        result.log = record["log"]
+        result.log = paths.log_ref(step.name)  # where the log is now; the record may predate a move
 
     outcomes: dict[str, str] = {}
     elsewhere = False
@@ -1947,6 +2000,7 @@ __all__ = [
     "STATE_DIRNAME",
     "STATUSES",
     "absolute",
+    "adopt_root_state",
     "StatusReport",
     "StepStatus",
     "TOML_AVAILABLE",

@@ -222,9 +222,16 @@ def _repro_session_key(data: dict) -> str:
     return f"hour-{int(time.time() // 3600)}"
 
 
+def _repro_state_dir(project_root: Path) -> Path:
+    """This machine's reproduction state, wherever the project keeps it."""
+    _ensure_scripts_on_path()
+    from _repro_layout import state_dir
+    return state_dir(project_root)
+
+
 def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str) -> Path:
     digest = hashlib.sha256(resolved_path.encode("utf-8")).hexdigest()[:32]
-    return project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR / session_key / digest
+    return _repro_state_dir(project_root) / REPRO_MARKER_SUBDIR / session_key / digest
 
 
 def _mentioned(project_root: Path, session_key: str, text: str) -> bool:
@@ -304,7 +311,7 @@ def _log_slow_call() -> None:
         import _edit_detect
         anchor = _checkout_scope.session_anchor(data)
         plan_root = _edit_detect._plan_root_above(anchor.resolve()) if anchor else None
-        state_dir = plan_root.parent / REPRO_STATE_DIRNAME if plan_root else None
+        state_dir = _repro_state_dir(plan_root.parent) if plan_root else None
         if state_dir is None or not state_dir.is_dir():
             return
         log = state_dir / SLOW_CALL_LOG
@@ -535,7 +542,7 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
 
 def _clear_repro_markers(project_root: Path, resolved_paths: set[str]) -> None:
     """Remove reminder markers for resolved_paths, across every session key."""
-    base = project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR
+    base = _repro_state_dir(project_root) / REPRO_MARKER_SUBDIR
     if not base.is_dir():
         return
     digests = {

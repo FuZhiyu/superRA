@@ -17,7 +17,7 @@ import pytest
 import _repro_state
 from _repro_acceptance import accept, inspect_baseline
 from _repro_scope import _bytes_verified
-from _repro_state import DOWNLOAD_NOTES, SF_DATALESS, HashCache, ReproStateError, Unread, read_lock, stamp_ref
+from _repro_state import DOWNLOAD_NOTES, SF_DATALESS, HashCache, ReproStateError, Unread, read_lock
 from test_repro_acceptance import review
 from test_repro_runner import CHAIN, TASK_A, Project, _use_a_sidecar, project  # noqa: F401
 
@@ -149,11 +149,11 @@ def test_an_uncached_online_only_file_whose_size_differs_from_the_lock_reads_cha
 
 def test_a_version_2_lock_without_sizes_still_reads(project, offline):
     assert project.run("build", *CHAIN) == 0
-    document = json.loads(project.read("repro-lock.json"))
+    document = json.loads(project.read("superRA/.repro/lock.json"))
     assert document["version"] == 2
     for raw in document["steps"].values():
         raw.pop("sizes")
-    project.write("repro-lock.json", json.dumps(document))
+    project.write("superRA/.repro/lock.json", json.dumps(document))
     assert project.states(*CHAIN) == {"build-a": "fresh", "build-b": "fresh", "check-b": "fresh"}
     project.write("output/a.txt", "a longer replacement\n")  # no recorded size: unknown, not changed
     offline.evict("output/a.txt")
@@ -256,7 +256,7 @@ def test_an_absent_output_makes_its_producer_missing(project):
 def test_failed_never_built_and_passed_elsewhere_outrank_an_online_only_input(project, offline):
     from _repro_state import write_run_record
     assert project.run("build", *CHAIN) == 0
-    (project.root / stamp_ref("check-b")).unlink()
+    (project.paths.stamps_dir / "check-b.stamp").unlink()
     offline.evict("output/b.txt")  # cached: check-b passed at these inputs on another machine
     assert project.status(*CHAIN).entry("check-b").status == "fresh"
 
@@ -352,7 +352,7 @@ def test_edit_detection_never_opens_an_online_only_file_or_lists_an_online_only_
     watch = task_hook._repro_watch(proj.plan_root)
     assert _edit_detect.detect(proj.plan_root, "s1", lambda: watch[0], lambda: watch[1]) == []
     assert os.path.realpath(proj.root / "Data/panel/y2021") not in offline.listed
-    baseline = json.loads(next((proj.root / ".superra-repro/hook-baseline").glob("s1.json")).read_text())
+    baseline = json.loads(next((proj.root / "superRA/.repro/local/hook-baseline").glob("s1.json")).read_text())
     assert baseline["files"][str(proj.root / "Data/panel/y2020/p.csv")][2] is None  # kept, never hashed
 
 

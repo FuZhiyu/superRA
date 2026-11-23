@@ -71,7 +71,7 @@ It also re-points each literal `superRA/<task-path>` to the new path, in these f
 
 - **Task-tree Markdown** — `## Reproduction` declarations and prose alike.
 - **Tracked source files** in this project — code, notebooks, `.tex`, config, and project Markdown, by file type. Outside git, the move names the path to search for by hand.
-- **Left unchanged** — logs, JSON, data files, `comments.yaml`, `repro-lock.json`, and `repro-acceptance/` keep the path they recorded. Untracked files do too, as does a path assembled at runtime (`joinpath("superRA", slug)`).
+- **Left unchanged** — logs, JSON, data files, `comments.yaml`, and the reproduction records in `superRA/.repro/` keep the path they recorded. Untracked files do too, as does a path assembled at runtime (`joinpath("superRA", slug)`).
 - **Not matched** — a URL, any file inside another project in the same repo, and a path whose prefix does not lead here. A path needs no prefix, a root variable (`$ROOT/`), or a prefix resolving to this project from the citing file or the project root.
 - **Kept as written** — a variable prefix counts as this project's root, and a moved file's own prefix of only `.` and `..` steps is rebuilt from its new directory. A file whose other file-relative prefix (`x/../../`) would stop reaching the project after a depth change is named in the `Left` line.
 - **Named for a hand search** — online-only files, which are never downloaded, files that are not UTF-8, and each file still citing the old path after the rewrite, such as a path relative to a `cd` in a command.
@@ -113,6 +113,7 @@ superra repro explain 02-merge            # where each changed hash came from, g
 superra repro explain Output/panel.parquet --json # one file's provenance, producer, and readers
 superra repro impact Code/helpers.jl --scope 02-merge # affected steps, including outside scope, with last durations
 superra repro normalize 02-merge          # clean the steps' declared outs with the configured cleaners
+superra repro migrate --dry-run           # list the moves of root-level records into superRA/.repro/
 superra repro normalize Figures/plot.pdf  # clean named files, e.g. after running a script directly
 superra repro dag --mermaid               # the step graph
 ```
@@ -149,7 +150,7 @@ Status JSON records `targets`, `upstream` (false under `--only`), `steps` (the s
 
 A step takes the first state its own evidence supports, in the order `failed`, `missing`, `stale`, `unverified`, `fresh`; `local_status` keeps it when a producer lifts it to `stale`. No check downloads a file: an online-only file (`SF_DATALESS`, or a legacy Dropbox placeholder) is never opened, and one whose size differs from the lock's reads changed. Each step's JSON `files` lists every dep and out with its `outcome` (`matches`, `changed`, `absent`, `unknown`, or null for a never-built step's file on disk), `online_only`, and `size`.
 
-A project last built by the pytask engine reads `pytask.lock` and `repro-builds.json` until its first build writes `repro-lock.json`; that build prints the `git rm` that retires them.
+**Root-level records.** A project with `repro-lock.json`, `repro-acceptance/`, or `.superra-repro/` at its root keeps using them there. `superra repro migrate` moves all three into `superRA/.repro/` (`--dry-run` lists the moves) and names the `git add` that stages them; every checkout then needs a superRA that reads `superRA/.repro/`. A project last built by the pytask engine reads `pytask.lock` and `repro-builds.json` until its first build or `migrate` writes the lock; either prints the `git rm` that retires them.
 
 `impact <path...> [--scope <task-or-step>]` lists each affected step with its last recorded duration and total: direct consumers with script/declared/include/environment origins, then descendants with the file connecting them. `superRA/config.yaml` affects every step using a runner template, a `${VAR}`, or `env_deps`. Repeat `--scope` for multiple selections; steps outside it are marked, and stay in JSON as `in_scope: false`. `--json` adds the connecting edges.
 
