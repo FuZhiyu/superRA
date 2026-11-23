@@ -1,10 +1,8 @@
 # Structure — Pyramid Principle + Section Anatomy
 
-> Load when Draft mode runs, or when Polish mode is authorized to restructure (per the Mode routing table in `SKILL.md`). Loading this file is the authority grant for structural edits.
+> For edit scope, see [Mode routing](../SKILL.md#mode-routing) and [Substance is the author's](../SKILL.md#substance-is-the-authors).
 
 Sources: Minto, *The Pyramid Principle* (governing idea, MECE, horizontal/vertical logic, SCQ/SCQA). Chaubey (2018), *The Little Book on Research Writing* (RAP, three-layer building, two-part introduction).
-
-Structural changes beyond the requested scope are *proposed*, not performed unilaterally (`SKILL.md §Preserve substance, polish prose`).
 
 ## How-To
 

@@ -58,7 +58,7 @@ At each stage of superRA workflow, agents load additional skills along three axe
 |---|---|
 | `econ-data-analysis` (`superRA:econ-data-analysis`) | involves data analysis |
 | `theory-modeling` (`superRA:theory-modeling`) | derives, solves, verifies, or proves anything mathematical |
-| `academic-writing` (`superRA:academic-writing`) | drafts, polishes, proofreads, or reviews any reader-facing prose (when touching a `.md` or `.tex` file, most likely you should load this skill) |
+| `academic-writing` (`superRA:academic-writing`) | works on a `.tex` source by default, or works on publication-quality writing in another format (manuscripts, exhibit notes, footnotes, appendices, or response letters) |
 | `slide-design` (`superRA:slide-design`) | designs, reviews, or fixes research presentation slides — audience context, attention flow, simplification, or Beamer layout |
 
 **Harness adapters:** when this skill or its references name a Claude-specific tool (`AskUserQuestion`, `Skill`, `TodoWrite`, `Agent`), consult the adapter reference for the current harness under `references/`.

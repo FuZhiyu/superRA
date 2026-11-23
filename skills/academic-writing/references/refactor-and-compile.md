@@ -1,12 +1,8 @@
 # Refactor-and-Compile — Safe find-replace + build gate
 
-> Load when Polish, Draft, or Review mode performs (or verifies) a find-replace across a document, and for the post-edit build that ends every batch of edits. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` recorded, never blocks.
-
----
-
 ## §Refactor
 
-Context-aware find-replace across a document — rename a variable, change a term of art, update a convention — inside the requested scope, preserving substance and intent (`SKILL.md §Preserve substance, polish prose`).
+**Apply the [mode's bar](../SKILL.md#mode-routing) to every substitution.** Preserve the author's decisions per [Substance is the author's](../SKILL.md#substance-is-the-authors).
 
 **Principle.** Find-replace is cheap to run and expensive to get wrong: naive substitution destroys text that looks like the target but means something else.
 
@@ -58,21 +54,20 @@ Renaming a term of art (`treatment group` → `treated sample`):
 
 - **Build the document** (§Compile). Errors introduced by the refactor block the refactor.
 - **Cross-reference check.** Any label, citation key, or bib key touched? See `consistency/cross-references.md`.
-- **Diff review.** Read the git diff end-to-end; every hunk intended.
+- **Diff review.** Use [Audit your diff](../SKILL.md#audit-your-diff).
 
 ### Refactor Gated Checklist
 
 - `[BLOCKING]` Every substitution previewed before it was applied, covering case and plural/inflection variants; no false-positive or word-boundary match survives in the diff.
 - `[BLOCKING]` Direct quotations and block quotes not touched (quotes are sacred).
 - `[BLOCKING]` Document builds after the refactor (§Compile).
-- `[BLOCKING]` Git diff read end-to-end; every hunk intentional.
 - `[ADVISORY]` Refactor pre-image list (what changed, how many instances, in which files) recorded in the task or status return.
 
 ---
 
 ## §Compile
 
-**Principle.** Every batch of edits ends with a build. Errors block completion; warnings are triaged. Errors absent from the pre-edit build but present after are the edit's responsibility.
+**Principle.** Every batch of edits ends with a build. Errors block completion; warnings are triaged. Errors absent from the pre-edit build but present after are the edit's responsibility. A manuscript with no build step: record that and skip the compile checklist.
 
 ### Build commands per engine
 
