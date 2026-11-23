@@ -3245,29 +3245,23 @@ function reproBuildEstimate(target, mode) {
     var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0, stopped = {}, all = run.length;
     sized.forEach(function(f) { bytes += f.size; });
     gate.forEach(function(f) { stopped[f.node] = true; });
-    var blockedNames = {}, writers = {}, running = {}, edges = _reproData.graph.step_edges || [];
+    var blockedNames = {}, running = {}, edges = _reproData.graph.step_edges || [];
     run.forEach(function(entry) {
       if (!entry) return;
       running[entry.name] = true;
-      (entry.files || []).forEach(function(f) {
-        if (f.role === 'output') writers[f.node] = entry.name;
-        else if (f.role === 'dependency' && stopped[f.node]) blockedNames[entry.name] = true;
-      });
+      if ((entry.files || []).some(function(f) { return f.role === 'dependency' && stopped[f.node]; })) blockedNames[entry.name] = true;
     });
-    /* A step is blocked too when an input is not on this machine and no step that runs writes it.
-       The graph's edges say which steps write an input, a glob or a file under a directory out included. */
-    var producersOf = function(name, node) {
-      var found = edges.filter(function(e) { return e.to === name && e.via === node; }).map(function(e) { return e.from; });
-      return found.length ? found : writers[node] ? [writers[node]] : [];
-    };
+    /* A step is blocked too when a step that feeds it will not run and has left off this machine an
+       output it reads. The feeding step's own output rows say what is here, which a reader's row for a
+       glob or a folder cannot; the graph's edges say who feeds whom. */
+    var gone = function(f) { return f.outcome === 'absent' || f.outcome === 'unknown' || !!f.online_only; };
     for (var grew = true; grew;) {
       grew = false;
       run.forEach(function(entry) {
         if (!entry || blockedNames[entry.name]) return;
-        if ((entry.files || []).some(function(f) {
-          if (f.role !== 'dependency' || !(f.outcome === 'absent' || f.outcome === 'unknown' || f.online_only)) return false;
-          var producers = producersOf(entry.name, f.node);
-          return producers.length && !producers.some(function(p) { return running[p] && !blockedNames[p]; });
+        if (edges.some(function(e) {
+          if (e.to !== entry.name || (running[e.from] && !blockedNames[e.from])) return false;
+          return (statuses[e.from] && statuses[e.from].files || []).some(function(f) { return f.role === 'output' && gone(f) && reproFeeds(f.node, e.via); });
         })) blockedNames[entry.name] = grew = true;
       });
     }
@@ -3293,6 +3287,24 @@ function reproBuildEstimate(target, mode) {
   return run.length + ' step' + (run.length === 1 ? '' : 's') + ' would run'
     + (run.length > unknown ? ' · ~' + reproDuration(total) + ' by last runs' : '')
     + (unknown ? ' · ' + unknown + ' never ran' : '') + tail;
+}
+/* Whether a step's out *out* is among what a reader's dep *via* reads: the same path, one inside the
+   other, or a glob that matches it or a file under it. With no *via* on the edge, every out counts. */
+function reproFeeds(out, via) {
+  if (via == null || out === via || via.indexOf(out + '/') === 0 || out.indexOf(via + '/') === 0) return true;
+  if (!/[*?[]/.test(via)) return false;
+  var glob = via.split('/'), path = out.split('/');
+  var matches = function(pattern, name) {
+    return new RegExp('^' + pattern.replace(/[.+^$(){}|\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]') + '$').test(name);
+  };
+  /* The out is a match, or a directory a match could lie in: its segments fit the glob's leading ones. */
+  var walk = function(i, j) {
+    if (j === path.length) return true;
+    if (i === glob.length) return false;
+    if (glob[i] === '**') return walk(i + 1, j) || walk(i, j + 1);
+    return matches(glob[i], path[j]) && walk(i + 1, j + 1);
+  };
+  return walk(0, 0);
 }
 /* The inputs the runner's gate stops on: online-only, or absent with no
    producer (`unknown`), and written first by no step in *run*. */

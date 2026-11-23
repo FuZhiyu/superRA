@@ -394,8 +394,7 @@ def _schedule(build: Build, n_workers: int) -> None:
                     elif build.dry_run and "would execute" in states and name not in build.gated:
                         if not all(parent in build.outcomes for parent in parents[name]):
                             continue  # a producer still to settle may fail, or leave an input unwritten
-                        unwritten = _unwritten_inputs(build, build.graph.step(name))
-                        build.outcomes[name] = ("blocked", unwritten) if unwritten else ("would execute", "")
+                        build.outcomes[name] = _assumed(build, build.graph.step(name))
                         pending.remove(name)
                     elif all(parent in build.outcomes for parent in parents[name]) and not build.stopping.is_set():
                         step = build.graph.step(name)
@@ -451,18 +450,33 @@ def _interrupt_on_termination():
             signal.signal(sig, handler)
 
 
+def _cannot_start(entry, detail: str) -> tuple[str, str]:
+    """The outcome of a step that cannot start here: blocked, or failed when its last run failed.
+
+    Outputs a failed run left behind are never built on, so its descendants are skipped.
+    """
+    if entry.status != "failed":
+        return "blocked", detail
+    return "failed", "\n".join(filter(None, [
+        "its last run failed and it cannot rerun here, so the steps that read its outputs are skipped", detail]))
+
+
+def _assumed(build: Build, step: Step) -> tuple[str, str]:
+    """Dry run: a step below one that would execute is costed too, unless an input it needs cannot be here."""
+    try:
+        unwritten = _unwritten_inputs(build, step)
+        return _cannot_start(_decide(build, step), unwritten) if unwritten else ("would execute", "")
+    except (ReproStateError, OSError) as exc:
+        return "failed", f"{type(exc).__name__}: {exc}"
+
+
 def _attempt(build: Build, step: Step) -> tuple[str, str]:
     try:
         entry = _decide(build, step)
         try:
             outcome = _run_step(build, step, entry)
         except Blocked as exc:
-            if entry.status != "failed":
-                return "blocked", str(exc)
-            # Outputs a failed run left behind are never built on.
-            return "failed", "\n".join(filter(None, [
-                "its last run failed and it cannot rerun here, so the steps that read its outputs are skipped",
-                str(exc)]))
+            return _cannot_start(entry, str(exc))
         return outcome, "\n".join(build.notes.get(step.name, ()))
     except NotStarted:
         return "skipped", "build interrupted"

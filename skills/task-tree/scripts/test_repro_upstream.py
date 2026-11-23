@@ -229,6 +229,47 @@ def test_a_dry_run_blocks_a_step_below_a_blocked_producer_whose_output_is_online
     assert re.search(r"Would execute 2 step\(s\):\n  p-fresh  \S+\n  p-stale  ", out)
 
 
+REPORT = """\
+---
+title: "Report"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Read the combined file.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: report
+    cmd: cat output/use.txt > output/report.txt
+    deps:
+      - output/use.txt
+    outs:
+      - output/report.txt
+```
+"""
+
+
+def test_a_dry_run_skips_the_readers_of_a_step_that_failed_and_cannot_rerun(fan, capsys):
+    """`use` wrote its output and failed; below a runnable producer it still cannot start, so `report` is skipped."""
+    fan.write("superRA/03-report/task.md", REPORT)
+    assert fan.run("build", ".") == 0
+    fan.write("Code/use.sh", "cat Data/ext.csv output/fresh.txt output/stale.txt output/unv.txt > output/use.txt\nexit 9\n")
+    assert fan.run("build", ".") == 1
+    (fan.root / "Code/unv.sh").unlink()
+    fan.offline.evict("output/unv.txt")
+    capsys.readouterr()
+    assert fan.run("build", ".", "--force", "--dry-run", "-j", "2") == 1
+    out = capsys.readouterr().out
+    assert "✗ use  cannot run\n  its last run failed and it cannot rerun here" in out
+    assert "✗ report  cannot run\n  ancestor use did not complete" in out
+    assert re.search(r"Would execute 2 step\(s\):\n  p-fresh  \S+\n  p-stale  ", out)
+
+
 GLOB_SOURCE = """\
 ---
 title: "Parts"
