@@ -6,7 +6,7 @@
 
 Covers the paper's **logical and evidential** dimension: do claims follow from the evidence, are causal claims backed by identification, are alternative explanations ruled out, is the rhetoric calibrated to the evidence. Out of scope: derivation correctness (`consistency/math.md`), numerical text-table match (`consistency/numerical.md`), citations (`consistency/citations.md`).
 
-**The reviewer flags logical gaps; the researcher decides how to close them** (`SKILL.md §Preserve substance, polish prose`). Report with specific evidence and a recommended direction; do not rewrite claims.
+**The reviewer flags logical gaps; the researcher decides how to close them** ([Substance is the author's](../../SKILL.md#substance-is-the-authors)). Report with specific evidence and a recommended direction; do not rewrite claims.
 
 ## How-To
 
@@ -83,7 +83,7 @@ One hedge per claim; no stacking (`../style.md` §Single-hedge-per-claim). Per h
 - `[BLOCKING]` **Causal claims** state an identification strategy and name its assumptions.
 - `[BLOCKING]` **Plausible alternative explanations** addressed by the paper or flagged as gaps.
 - `[BLOCKING]` **Overclaiming flagged** — causal verbs on correlational evidence, generalizations beyond sample scope.
-- `[BLOCKING]` **No silent claim rewrites.** Gaps reported with specific evidence; the researcher decides (`SKILL.md §Preserve substance, polish prose`).
+- `[BLOCKING]` **No silent claim rewrites.** Gaps reported with specific evidence; the researcher decides ([Substance is the author's](../../SKILL.md#substance-is-the-authors)).
 - `[BLOCKING]` **Tests of testable identifying assumptions** reported (pre-trends, overid, McCrary, as appropriate).
 - `[ADVISORY]` **Underclaiming flagged** — findings stronger than the paper admits.
 - `[ADVISORY]` **Hedging calibrated** — one hedge per claim, proportional to evidence strength.

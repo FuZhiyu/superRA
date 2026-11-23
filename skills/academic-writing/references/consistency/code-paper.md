@@ -32,13 +32,15 @@ Per key regression or analysis:
 - **Standard errors.** Clustering level stated, matching the code call.
 - **Weights.** Defined in both places, matching.
 
+Report a specification difference between exhibits the paper presents as one only as a request to the researcher for a code fix. See [Where displaced material goes](../../SKILL.md#where-displaced-material-goes).
+
 ### Variable definitions
 
 Per key variable:
 
 - **Construction.** The paper's verbal / mathematical description matches what the code computes.
 - **Log / level / growth / share.** Explicitly named; matches.
-- **Winsorization / trimming.** Threshold and side stated; matches.
+- **Winsorization / trimming.** A stated threshold and side must match what the code uses. An unstated threshold follows the omission rule in [Sample construction](#sample-construction).
 - **Missing-value handling.** Drop vs impute vs zero-fill — stated; matches.
 
 **Red flags for silent drift:**
@@ -49,7 +51,7 @@ Per key variable:
 
 ### Sample construction
 
-Walk the code's data prep from raw inputs to the regression sample, comparing each filter against the paper's description side by side.
+Walk the code's data prep from raw inputs to the regression sample, comparing each filter against the paper's description side by side. Distinguish a contradiction, where the paper states a different rule, from an omission. An omission is a finding only when it changes how a reader would read a result. Log other omissions per [Material consistency findings](../review.md#material-consistency-findings).
 
 Sample-size match:
 
@@ -72,13 +74,13 @@ Sample-size match:
 - `[BLOCKING]` **Table → code mapping assembled** for the edited / reviewed sections.
 - `[BLOCKING]` **Main specification matches** — regression form, controls, fixed effects, SE clustering, sample, weights.
 - `[BLOCKING]` **Variable definitions match** for every key variable (dependent, main independent, key controls).
-- `[BLOCKING]` **Sample construction filters match** — same filters, same order, in paper and code.
+- `[BLOCKING]` **Sample described correctly.** Flag contradictions. Flag omissions only when they change how a reader would read a result.
 - `[BLOCKING]` **Sample size matches** within small rounding / tie-break differences; larger mismatches flagged.
 - `[BLOCKING]` **Headline numbers reproduce from code**, or committed output files match paper values when the code is not run.
 - `[BLOCKING]` **Discrepancies reported, not silently fixed** — the researcher decides whether paper or code is authoritative.
 - `[ADVISORY]` **Secondary specifications** (robustness tables) also match.
 - `[ADVISORY]` **Code and paper version-dates** compared; large gaps flagged.
-- `[ADVISORY]` **Undocumented code filters flagged** — in the code, unmentioned in the paper.
+- **Undocumented code filters** that leave the message intact get one log line without a proposed manuscript edit.
 
 ## Output format
 

@@ -29,7 +29,7 @@ Twenty to thirty terms is usually enough — focus on the ones carrying the argu
 
 ### Check for the four patterns
 
-**Same concept, different names.** `grep` each key entity's variant names. Report every alternate naming alongside the canonical one, and recommend a single canonical form; do not silently rewrite unless the request authorizes it (`SKILL.md §Preserve substance, polish prose`).
+**Same concept, different names.** `grep` each key entity's variant names. Report every alternate naming alongside the canonical one, and recommend a single canonical form; do not silently rewrite unless the request authorizes it ([Substance is the author's](../../SKILL.md#substance-is-the-authors)).
 
 **Different concepts, same name.** Flag words doing double duty ("effect" = coefficient *and* causal mechanism; "model" = econometric specification *and* theoretical framework) and recommend a disambiguated pair ("estimate" vs "effect", "specification" vs "model").
 
@@ -68,7 +68,7 @@ Each key term's definition is **explicit** (stated, not left to the reader), **p
 - `[BLOCKING]` **Same concept, different names flagged.** Every identified alias for a key entity is reported with source locations even if not fixed.
 - `[BLOCKING]` **Different concepts, same name flagged.** Any word doing double duty on a key argument is reported with both usages cited.
 - `[BLOCKING]` **Term drift across sections flagged.** Any mid-paper rename of a key concept is reported with earlier and later locations.
-- `[BLOCKING]` **No silent cross-scope rewrites.** For consistency-*check* tasks, mismatches are reported, not rewritten beyond scope (`SKILL.md §Preserve substance, polish prose`).
+- `[BLOCKING]` **No silent cross-scope rewrites.** For consistency-*check* tasks, mismatches are reported, not rewritten beyond scope ([Substance is the author's](../../SKILL.md#substance-is-the-authors)).
 - `[BLOCKING]` **Variable-name drift across text and tables flagged.** Every variable used inconsistently between prose and tables is reported.
 - `[ADVISORY]` **Terminology index recorded** — key terms, canonical forms, observed variants.
 - `[ADVISORY]` **Glossary audit** performed if a glossary exists — orphan and unglossed-but-critical terms reported.
