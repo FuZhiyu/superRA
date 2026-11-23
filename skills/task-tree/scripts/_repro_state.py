@@ -84,6 +84,7 @@ class RunnerPaths:
     project_root: Path
     state_dir: Path
     records_dir: Path | None = None  # `<task root>/.repro`; None while the records sit at the project root
+    home: Path | None = None  # `<task root>/.repro` whichever layout is in use; unset on a hand-built instance
 
     @property
     def logs_dir(self) -> Path:
@@ -113,6 +114,19 @@ class RunnerPaths:
         if self.records_dir is not None:
             return self.records_dir / layout.TREE_ACCEPTANCE_DIRNAME
         return self.project_root / layout.ROOT_ACCEPTANCE_DIRNAME
+
+    @property
+    def tree_lock_file(self) -> Path:
+        """Where the lock sits once the records are in the task root, whichever layout is in use now."""
+        return (self.home or layout.repro_home(self.project_root)) / layout.TREE_LOCK_FILENAME
+
+    def current(self) -> bool:
+        """Whether the records and state still sit where these paths say; a `migrate` may have moved them."""
+        if self.home is None:
+            return True
+        plan_root = self.home.parent
+        return (layout.records_dir(self.project_root, plan_root) == self.records_dir
+                and layout.state_dir(self.project_root, plan_root) == self.state_dir)
 
     def ref(self, path: Path) -> str:
         """*path* relative to the project root — what reports and records carry."""
@@ -146,7 +160,7 @@ def runner_paths(project_root: Path, plan_root: Path | None = None) -> RunnerPat
     """The project's records and state where `_repro_layout` finds them; *plan_root* defaults to `superRA/`."""
     root = Path(project_root)
     return RunnerPaths(project_root=root, state_dir=layout.state_dir(root, plan_root),
-                       records_dir=layout.records_dir(root, plan_root))
+                       records_dir=layout.records_dir(root, plan_root), home=layout.repro_home(root, plan_root))
 
 
 def adopt_root_state(project_root: Path, plan_root: Path | None = None) -> None:
@@ -162,34 +176,14 @@ def adopt_root_state(project_root: Path, plan_root: Path | None = None) -> None:
         return
     from _repro_acceptance import mutation_lock  # deferred: _repro_acceptance imports this module
     try:
-        with mutation_lock(RunnerPaths(project_root=root, state_dir=legacy)):  # no build may start in it meanwhile
+        with mutation_lock(RunnerPaths(project_root=root, state_dir=legacy)):  # hand-built: no layout check; no build starts in it meanwhile
             home.mkdir(parents=True, exist_ok=True)
             os.rename(legacy, home / layout.LOCAL_DIRNAME)
     except (ReproStateError, OSError):  # a running build, or a read-only checkout, keeps using it where it is
         pass
 
 
-def dropbox_ignore(path: Path) -> None:
-    """Set Dropbox's ignore flag, so each machine keeps its own copy; inert outside Dropbox."""
-    try:
-        if hasattr(os, "setxattr"):  # Linux
-            try:
-                if os.getxattr(path, "user.com.dropbox.ignored") == b"1":
-                    return
-            except OSError:
-                pass
-            os.setxattr(path, "user.com.dropbox.ignored", b"1")
-        elif sys.platform == "darwin":
-            import ctypes
-            libc = ctypes.CDLL(None, use_errno=True)
-            args = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint32, ctypes.c_int]
-            libc.getxattr.argtypes, libc.getxattr.restype = args, ctypes.c_ssize_t
-            libc.setxattr.argtypes, libc.setxattr.restype = args, ctypes.c_int
-            name, raw = b"com.dropbox.ignored", os.fsencode(path)
-            if libc.getxattr(raw, name, None, 0, 0, 0) < 0:
-                libc.setxattr(raw, name, b"1", 1, 0, 0)
-    except (OSError, AttributeError):  # no xattr support: nothing to sync away from
-        pass
+dropbox_ignore = layout.dropbox_ignore
 
 
 def ensure_state_dir(paths: RunnerPaths) -> None:
@@ -321,6 +315,9 @@ class HashCache:
         self._dirty = False
         self._fresh: set[str] = set()  # stored here since the file was last read or written
         self._saved: tuple | None = None  # the file's (size, mtime_ns) when last read or written
+        # superRA's own records and state, which every build rewrites, are never part of a dependency.
+        self._own = (os.path.realpath(path.parent.parent) if path is not None and path.parent.name == layout.LOCAL_DIRNAME
+                     and path.parent.parent.name == layout.REPRO_DIRNAME else None)
         self._flush_lock = threading.Lock()
         self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
         if path is not None:
@@ -445,7 +442,7 @@ class HashCache:
         # The loop below returns at the first file it cannot hash, so the walk ends there too:
         # nothing past it is listed or read, and the first problem met wins.
         files = []
-        for found in _tree_files(path, unreadable, glob):
+        for found in _tree_files(path, unreadable, glob, self._own):
             files.append(found)
             state = found if unread(found) else self._known(*found)
             if unread(state) or (state is _MISS and not os.access(found[0], os.R_OK)):
@@ -504,7 +501,7 @@ class HashCache:
         if split:
             key = f"{split[0]}/{split[1]}"
             if walk and key not in self._online and split[0].is_dir():
-                self._online[key] = _holds_online_only(*split)
+                self._online[key] = _holds_online_only(*split, skip=self._own)
             return self._online.get(key, False), None
         try:
             info = path.stat()
@@ -514,7 +511,7 @@ class HashCache:
             if file_flags(info) & SF_DATALESS:
                 return True, None
             if walk and str(path) not in self._online:
-                self._online[str(path)] = _holds_online_only(path)
+                self._online[str(path)] = _holds_online_only(path, skip=self._own)
             return self._online.get(str(path), False), None
         if not stat.S_ISREG(info.st_mode):
             return False, None
@@ -655,13 +652,14 @@ def _save_lock(path: Path):
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
+def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None, skip: str | None = None):
     """Each regular file under a directory with its `stat`, in hashing order.
 
     A walk that cannot continue ends with the `Unread` saying why: an
     online-only subdirectory, which is never listed, or a broken link. With
     *glob* (a pattern relative to *path*), only matching files are yielded and
-    only directories a match could lie in are entered.
+    only directories a match could lie in are entered. *skip* is the real path
+    of the one directory never entered: the project's own `.repro`.
     """
     visited: set[tuple[int, int]] = set()
     enter, keep = glob_filters(str(path), glob) if glob else (None, None)
@@ -671,8 +669,9 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
-        # superRA's own records and state, which every build rewrites, are never part of a dependency.
-        dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME]
+        if skip:
+            dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME
+                           or os.path.realpath(os.path.join(parent, d)) != skip]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]
@@ -727,7 +726,7 @@ def glob_filters(root: str, glob: str):
             lambda parent, name: match(rel(parent, name)) is not None)
 
 
-def _holds_online_only(path: Path, glob: str | None = None) -> bool:
+def _holds_online_only(path: Path, glob: str | None = None, skip: str | None = None) -> bool:
     """Whether a directory or anything under it is online-only, from `stat` alone.
 
     Each directory's flag is checked before it is listed. With *glob*, only
@@ -746,7 +745,9 @@ def _holds_online_only(path: Path, glob: str | None = None) -> bool:
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
-        dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME]
+        if skip:
+            dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME
+                           or os.path.realpath(os.path.join(parent, d)) != skip]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]

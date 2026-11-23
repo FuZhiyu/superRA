@@ -196,9 +196,11 @@ HISTORY_VERSION = 1
 
 
 def lock_refs(paths) -> tuple[str, ...]:
-    """Project-relative paths a lock revision may sit at: the task-root lock, then the root-level ones."""
-    tree = (paths.ref(paths.lock_file),) if paths.records_dir is not None else ()
-    return (*tree, LOCK_FILENAME, LEGACY_LOCK_FILENAME)
+    """Project-relative paths a lock revision may sit at: the task-root lock, then the root-level ones.
+
+    Both layouts, whichever the checkout uses: another branch may have built on the other.
+    """
+    return (paths.ref(paths.tree_lock_file), LOCK_FILENAME, LEGACY_LOCK_FILENAME)
 
 _HEAD_WALK, _OTHER_WALK = ['HEAD'], ['--branches', '--remotes', '--not', 'HEAD']
 
@@ -222,7 +224,7 @@ class History:
             return
         head = git.text('rev-parse', 'HEAD') or ''
         refs = git.text('for-each-ref', '--format=%(objectname) %(refname)', 'refs/heads', 'refs/remotes') or ''
-        key = hashlib.sha256(f'{head}\n{refs}'.encode()).hexdigest()
+        key = hashlib.sha256(f'{head}\n{refs}\n{" ".join(lock_refs(paths))}'.encode()).hexdigest()
         try:
             cached = json.loads(self.file.read_text(encoding='utf-8'))
         except (OSError, ValueError):

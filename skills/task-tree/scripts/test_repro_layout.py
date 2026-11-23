@@ -5,9 +5,11 @@ import json
 import os
 import re
 
+import pytest
+
 import _repro_layout
 from _repro_acceptance import mutation_lock
-from _repro_state import STATE_DIRNAME, RunnerPaths, adopt_root_state, runner_paths
+from _repro_state import STATE_DIRNAME, ReproStateError, RunnerPaths, adopt_root_state, runner_paths
 from test_repro_runner import CHAIN, Project, project  # noqa: F401
 
 
@@ -113,6 +115,8 @@ def test_a_project_whose_task_root_is_dot_plan_keeps_hook_and_runner_state_there
     assert (state / ".gitignore").read_text() == "*\n"  # git lists nothing the hook wrote
     assert not (proj / "superRA").exists()
     assert task_hook._repro_plan_root_for_file(proj / "Code" / "a.sh") == proj / ".plan"
+    from test_repro_acceptance import _dropbox_ignored
+    assert _dropbox_ignored(state)  # a marker created the folder: Dropbox must leave it alone too
 
 
 WHOLE_TREE = """\
@@ -147,3 +151,149 @@ def test_a_directory_dep_covering_the_task_root_leaves_the_records_and_state_out
     assert project.states("04-all") == {"tree": "fresh"}
     assert project.run("build", "03-x") == 0  # rewrites the lock, a log, and a run record
     assert project.states("04-all") == {"tree": "fresh"}
+
+
+def test_hooks_and_runner_agree_on_the_task_root_that_holds_tasks(tmp_path):
+    """A valid `.plan/` beside an empty `superRA/`: the runner picks `.plan/`, so the hooks must too."""
+    import task_hook
+    proj = tmp_path / "proj"
+    (proj / "superRA").mkdir(parents=True)
+    (proj / ".plan").mkdir()
+    (proj / ".plan" / "task.md").write_text("---\ntitle: Root\nstatus: not-started\n---\n")
+    assert _repro_layout.task_root(proj) == proj / ".plan"
+    assert task_hook._repro_plan_root_for_file(proj / "Code" / "a.sh") == proj / ".plan"
+    task_hook._record_mention(proj, "s1", "Code/a.sh")
+    assert (proj / ".plan" / ".repro" / "local" / ".gitignore").is_file()
+    assert list((proj / "superRA").iterdir()) == []
+
+
+def test_root_level_records_use_root_level_state_whatever_else_exists(project):
+    """An older superRA sharing the checkout writes its run records and stamps at the root."""
+    assert project.run("build", *CHAIN) == 0
+    _to_root_layout(project)
+    (project.plan_root / ".repro" / "local" / "stamps").mkdir(parents=True)  # left by a migrated branch
+    paths = runner_paths(project.root)
+    assert paths.records_dir is None and paths.state_dir == project.root / STATE_DIRNAME
+    assert set(project.states(*CHAIN).values()) == {"fresh"}
+
+
+def test_a_command_that_resolved_its_paths_before_a_migration_is_refused(project):
+    assert project.run("build", *CHAIN) == 0
+    _to_root_layout(project)
+    stale = runner_paths(project.root)
+    assert project.run("migrate") == 0
+    with pytest.raises(ReproStateError, match="moved while this command was starting"):
+        with mutation_lock(stale):
+            pass
+    assert not (project.root / STATE_DIRNAME).exists() and not (project.root / "repro-lock.json").exists()
+
+
+DOT_REPRO = """\
+---
+title: "Raw"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Read a folder that holds its own .repro directory.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: raw
+    cmd: cat raw/.repro/a.txt > output/raw.txt
+    deps:
+      - raw
+    outs:
+      - output/raw.txt
+```
+"""
+
+
+def test_a_dot_repro_folder_inside_a_dependency_is_still_hashed(project):
+    """Only the project's own `.repro` is left out of a directory dep."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("raw/.repro/a.txt", "one\n")
+    project.write("superRA/05-raw/task.md", DOT_REPRO)
+    assert project.run("build", "05-raw") == 0
+    assert project.states("05-raw") == {"raw": "fresh"}
+    project.write("raw/.repro/a.txt", "two\n")
+    assert project.states("05-raw") == {"raw": "stale"}
+
+
+def _accepted_root_project(project) -> None:
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
+    assert project.run("accept", "01-a", "--reason", "Comment-only edit") == 0
+    _to_root_layout(project)
+    assert set(project.states(*CHAIN).values()) == {"fresh"}
+
+
+def test_migrate_refuses_an_unreadable_legacy_ledger_and_moves_nothing(project, capsys):
+    _accepted_root_project(project)
+    project.write("repro-acceptance.json", "{not json")
+    capsys.readouterr()
+    assert project.run("migrate") == 1
+    assert "repro-acceptance.json cannot be read" in capsys.readouterr().err
+    assert project.read("repro-acceptance.json") == "{not json"
+    assert (project.root / "repro-lock.json").is_file() and not (project.plan_root / ".repro").exists()
+
+
+def test_a_migration_that_fails_part_way_is_undone(project, monkeypatch, capsys):
+    _accepted_root_project(project)
+    import _repro_migrate
+    real = os.rename
+
+    def rename(source, target):
+        if str(source).endswith("build-a.json"):
+            raise OSError("disk full")
+        real(source, target)
+
+    monkeypatch.setattr(_repro_migrate.os, "rename", rename)
+    capsys.readouterr()
+    assert project.run("migrate") == 1  # the lock had already moved when the record's move failed
+    assert "disk full" in capsys.readouterr().err
+    monkeypatch.undo()
+    assert (project.root / "repro-lock.json").is_file() and (project.root / "repro-acceptance" / "build-a.json").is_file()
+    assert not (project.plan_root / ".repro").exists()
+    project.paths = runner_paths(project.root)
+    assert set(project.states(*CHAIN).values()) == {"fresh"}
+
+
+def test_records_split_by_a_merge_are_flagged_everywhere_and_migrate_reunites_them(project):
+    """One branch moved the lock; another made its first acceptance at the root. Git keeps both."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
+    assert project.run("accept", "01-a", "--reason", "Comment-only edit") == 0
+    os.rename(project.paths.acceptance_dir, project.root / "repro-acceptance")
+    assert project.states("01-a") == {"build-a": "stale"}  # the acceptance is out of reach
+    [finding] = [f for f in project.graph().findings if "repro-acceptance" in f.message]
+    assert finding.severity == "warning" and "superra repro migrate" in finding.message  # task check, dashboard
+    assert project.run("migrate") == 0
+    assert not (project.root / "repro-acceptance").exists()
+    assert project.states("01-a") == {"build-a": "fresh"}
+    assert not [f for f in project.graph().findings if "project root" in f.message]
+
+
+def test_migrate_quotes_the_paths_in_the_staging_command(tmp_path):
+    from _repro_migrate import migrate
+    root = tmp_path / "proj"
+    plan = root / "Research Tasks"
+    plan.mkdir(parents=True)
+    (root / "repro-lock.json").write_text('{"version": 2, "steps": {}}\n')
+    lines, code = migrate(root, plan)
+    assert code == 0
+    assert ("`git rm -r -q --cached --ignore-unmatch -- repro-lock.json "
+            "&& git add -- 'Research Tasks/.repro'`") in "\n".join(lines)
+
+
+def test_explain_searches_the_lock_at_both_locations_in_either_layout(project):
+    from _repro_provenance import lock_refs
+    assert project.run("build", *CHAIN) == 0
+    both = ("superRA/.repro/lock.json", "repro-lock.json")
+    assert lock_refs(project.paths)[:2] == both
+    _to_root_layout(project)
+    assert lock_refs(project.paths)[:2] == both

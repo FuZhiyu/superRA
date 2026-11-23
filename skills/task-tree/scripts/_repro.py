@@ -26,7 +26,7 @@ from typing import Any, Callable
 from _task_io import VALID_STATUSES, Task, parse_body_sections, walk_plan
 from _task_dependencies import Dependencies, archived_paths, compose, cycle_path, cyclic_components, within
 from _task_validate import Finding
-from _repro_layout import stamps_ref
+from _repro_layout import project_ref, repro_home, root_leftovers, stamps_ref
 
 
 REPRO_SECTION = "Reproduction"
@@ -1290,6 +1290,11 @@ def build_graph(
             )
         )
 
+    leftovers = root_leftovers(project_root, plan_root)
+    if leftovers:
+        _finding("", "warning", f"{', '.join(leftovers)} at the project root: not read, since the reproduction records "
+                 f"live in {project_ref(project_root, repro_home(project_root, plan_root))}/. Run `superra repro "
+                 "migrate` to move what it can, then remove the rest.")
     raw_config, config_errors = load_project_config(plan_root)
     for message in config_errors:
         _finding("", "error", message)

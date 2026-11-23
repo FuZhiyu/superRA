@@ -336,12 +336,17 @@ Agent-facing summary: [task-file contract §Records](task-file-contract.md#recor
 `_repro_layout.py` decides where the records sit; the paths in this file are the task-root ones.
 
 - **Task root (default):** `superRA/.repro/lock.json`, `superRA/.repro/acceptance/`, and this machine's state in `superRA/.repro/local/`, which holds its own `.gitignore` and Dropbox's ignore flag.
-- **Project root:** any of `repro-lock.json`, `repro-acceptance/`, `repro-acceptance.json`, `pytask.lock`, or `repro-builds.json` there keeps the records at the root, with state in `.superra-repro/` and its `.gitignore` line. `superra repro migrate` renames all three into the task root.
+- **Project root:** any of `repro-lock.json`, `repro-acceptance/`, `repro-acceptance.json`, `pytask.lock`, or `repro-builds.json` there keeps the records at the root. Their state is `.superra-repro/` with its `.gitignore` line, whatever else exists, so an older superRA sharing the checkout reads the same run records and stamps.
+- **`superra repro migrate`** renames all three into the task root. It checks everything that can refuse before the first move (a clashing task-root record, an unreadable or unconvertible legacy ledger, a running build) and undoes a move that fails part-way.
 - **State follows the records:** once the records are in the task root, the next `superra repro` command moves a root-level `.superra-repro/` there under the mutation lock, so never while a build runs.
-- **No task root given** (the hooks, `step_durations`): `superRA/`, or a legacy `.plan/` when that is the one present.
+- **Paths resolved before a move are refused:** `mutation_lock` rechecks the layout before it creates anything and again once it holds the lock, so a build or acceptance that started before a `migrate` exits with "run it again" instead of writing a second lock.
+- **No task root given** (the hooks, `step_durations`): the `superRA/` or legacy `.plan/` that holds tasks, as the runner discovers it; else the one that exists.
 - **A check stamp's lock id stays `.superra-repro/stamps/<step>.stamp`** in both layouts; `Step.stamp` is the file. Moving the state therefore stales no check.
-- **Root-level records beside task-root ones** are never read; every `superra repro` command warns until they are removed.
-- **A `.repro` folder is never part of a dependency:** directory deps skip it, and globs skip every dot-folder.
+- **Root-level records beside task-root ones** are never read. Every `superra repro` command warns, and the graph carries a warning finding that `task check` and the dashboard show, until they are removed; `migrate` moves in the acceptance records that do not clash.
+- **The project's own `.repro/` is never part of a dependency:** directory deps skip it, and globs skip every dot-folder. A `.repro` folder anywhere else is hashed like any other.
+- **Every writer that may create the state folder calls `self_ignore`,** which sets Dropbox's ignore flag and then writes the `.gitignore`.
+- **`explain` searches the lock at both locations** in either layout, since another branch may have built on the other one.
+- **The dashboard's graph cache is keyed on the state folder,** because a check step's stamp path is fixed when the graph is built.
 
 ### The lock
 

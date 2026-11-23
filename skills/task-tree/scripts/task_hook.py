@@ -195,12 +195,13 @@ def _repro_plan_root_for_file(file_path: Path) -> Path | None:
     file resolves to the same project regardless of where the hook subprocess
     was launched from.
     """
+    _ensure_scripts_on_path()
+    from _repro_layout import task_root
     current = file_path.parent
     while True:
-        for dirname in TASK_ROOT_DIRNAMES:
-            candidate = current / dirname
-            if candidate.is_dir():
-                return candidate
+        candidate = task_root(current)  # the one the state helpers below resolve
+        if candidate.is_dir():
+            return candidate
         parent = current.parent
         if parent == current:
             return None

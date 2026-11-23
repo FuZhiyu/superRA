@@ -7149,6 +7149,17 @@ class TestReproLockWatch:
         plan_dashboard._worktree_watchers.clear()
         plan_dashboard._worktree_locks.clear()
 
+    def test_the_graph_cache_follows_the_state_directory(self, tmp_path):
+        """A check step's stamp path is fixed when the graph is built; a moved state directory must rebuild it."""
+        self._reset()
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        state = plan_dashboard._build_worktree_state("wt-a", root)
+        before = plan_dashboard._repro_tree_signature(state)
+        (tmp_path / ".superra-repro").mkdir()  # the state is now the root-level folder, until the runner moves it
+        assert plan_dashboard._repro_tree_signature(state) != before
+
     @pytest.mark.parametrize("lock_ref", ["superRA/.repro/lock.json", "repro-lock.json"])
     def test_lock_change_broadcasts_repro_updated(self, tmp_path, lock_ref):
         import watchfiles

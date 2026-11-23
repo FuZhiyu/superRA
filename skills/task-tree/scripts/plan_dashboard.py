@@ -53,7 +53,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _artifacts as artifacts
 import _repro_state
 from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
-from _repro_layout import LOCAL_DIRNAME, REPRO_DIRNAME
+from _repro_layout import LOCAL_DIRNAME, REPRO_DIRNAME, state_dir as _repro_state_dir
 from _repro_state import (
     SF_DATALESS,
     STATUSES,
@@ -1576,6 +1576,8 @@ def _repro_tree_signature(state: WorktreeState) -> tuple:
     tasks = [root, *collect_all_tasks(root)] if root is not None else []
     return (
         str(state.plan_root),
+        # A check step's stamp path is fixed when the graph is built, so a moved state directory rebuilds it.
+        str(_repro_state_dir(Path(state.project_root), state.plan_root)),
         _mtime(state.plan_root / "config.yaml"),
         tuple((t.path, _mtime(t.dir_path / "task.md")) for t in tasks),
     )

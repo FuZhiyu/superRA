@@ -54,8 +54,15 @@ def atomic_text(path, text):
 
 @contextmanager
 def mutation_lock(paths):
-    """Reject concurrent builds/record changes, releasing even after interruption."""
+    """Reject concurrent builds/record changes, releasing even after interruption.
+
+    Paths resolved before a `migrate` moved the records are refused once the
+    lock is held, so no command writes a second lock where the records were.
+    """
     import fcntl
+    moved = 'the reproduction records moved while this command was starting; run it again'
+    if not paths.current():  # before creating anything where the records were
+        raise ReproStateError(moved)
     paths.state_dir.mkdir(parents=True, exist_ok=True)
     dropbox_ignore(paths.state_dir)
     with (paths.state_dir / 'mutation.lock').open('a+') as handle:
@@ -69,6 +76,8 @@ def mutation_lock(paths):
             raise ReproStateError('another reproduction build or acceptance mutation is running'
                                   + (f' (process {pid})' if pid.isdigit() else '')) from None
         try:
+            if not paths.current():  # again under the lock: a migrate may have held it until now
+                raise ReproStateError(moved)
             handle.truncate(0)
             handle.write(str(os.getpid()))
             handle.flush()
