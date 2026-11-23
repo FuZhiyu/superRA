@@ -28,7 +28,7 @@ Each `consistency/<dim>.md` output block names this section as the source of leg
 
 ## Material consistency findings
 
-**Report a manuscript finding when the paper is wrong or would mislead a reader about a result.** For each discrepancy where silence or approximation leaves the message intact, log one line without proposing a manuscript edit. Put it in the editor's `## Results`, the reviewer's return for the orchestrator to fold into `## Results`, or the reply when there is no task.
+**Report a manuscript finding when the paper is wrong or would mislead a reader about a result.** For each discrepancy where silence or approximation leaves the message intact, log one line without proposing a manuscript edit. A log line carries no severity marker or `Fix:` tier. Put it in the editor's `## Results`, the reviewer's return for the orchestrator to fold into `## Results`, or the reply when there is no task.
 
 ## Thoroughness
 
