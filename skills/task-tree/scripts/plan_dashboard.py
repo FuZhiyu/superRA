@@ -2201,12 +2201,14 @@ def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool
     return job
 
 
-def _build_summary(log_text: str) -> tuple[str, list[str]]:
+def _build_summary(log_text: str, head: str = "") -> tuple[str, list[str]]:
     """The line of a build log that says how it ended, and the lines that explain it.
 
     After an `Error:` summary, the lines that follow it; after a step count, each
     failed or blocked block (the download gate's file list, and a step blocked at
-    its start, name the files needed), at most BUILD_DETAIL_LINES.
+    its start, name the files needed), at most BUILD_DETAIL_LINES. The gate prints
+    before any step runs, so on a long build its block is taken from *head*, the
+    log's opening lines.
     """
     lines = [line.rstrip() for line in log_text.splitlines() if line.strip()]
     for at in range(len(lines) - 1, -1, -1):
@@ -2220,6 +2222,13 @@ def _build_summary(log_text: str) -> tuple[str, list[str]]:
                 inside = row.startswith(("✗ ", "⊘ ")) or (inside and row[:1].isspace())
                 if inside:
                     failed.append(row)
+            gate, inside = [], False
+            for row in head.splitlines():
+                inside = (row.startswith("⊘ ") and "cannot run here" in row) or (inside and row[:1].isspace())
+                if inside:
+                    gate.append(row.rstrip())
+            if gate and gate[0] not in failed:
+                failed = gate + failed
             if len(failed) > BUILD_DETAIL_LINES:
                 failed = failed[:BUILD_DETAIL_LINES] + [f"… {len(failed) - BUILD_DETAIL_LINES} more line(s) in the log"]
             return line, failed
@@ -2236,7 +2245,8 @@ def _build_state_sync(state: WorktreeState) -> dict:
         job["alive"] = _job_alive(job, holder)
         running = running or job["alive"]
         tail = _log_tail(paths.logs_dir / BUILD_LOG_FILENAME, BUILD_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES)
-        job["summary"], job["detail"] = ("", []) if job["alive"] else _build_summary(tail)
+        job["summary"], job["detail"] = ("", []) if job["alive"] else _build_summary(
+            tail, _log_head(paths.logs_dir / BUILD_LOG_FILENAME, BUILD_LOG_TAIL_LINES, REPRO_LOG_TAIL_BYTES))
         job["log_tail"] = tail
     steps = []
     if running and paths.runs_dir.is_dir():
@@ -3833,6 +3843,16 @@ def serve_background(
         file=sys.stderr,
     )
     return 1
+
+
+def _log_head(log_path: Path, lines: int, max_bytes: int) -> str:
+    """Return the first *lines* lines of the log file, reading at most *max_bytes*, or '' if unreadable."""
+    try:
+        with log_path.open("rb") as handle:
+            text = handle.read(max_bytes).decode("utf-8", errors="replace")
+    except OSError:
+        return ""
+    return "\n".join(text.splitlines()[:lines])
 
 
 def _log_tail(log_path: Path, lines: int = 20, max_bytes: int | None = None) -> str:

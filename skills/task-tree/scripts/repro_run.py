@@ -179,6 +179,19 @@ def _missing_inputs(build: Build, step: Step) -> str | None:
     return "\n".join([f"{len(rows)} input(s) not on this machine:", *lines])
 
 
+def _unwritten_inputs(build: Build, step: Step) -> str:
+    """Dry run, below a step that would execute: the absent inputs no such step writes, as a blocked step's detail."""
+    outputs = output_nodes(build.graph)
+    written = [node[0] for name, (outcome, _) in build.outcomes.items() if outcome == "would execute"
+               for node in step_nodes(build.graph.step(name), outputs)[1]]
+    rows = [row for row in _unreadable_inputs(build, step) if row[1] == "missing"
+            and not any(row[0] == out or row[0].startswith(f"{out}/") for out in written)]
+    if not rows:
+        return ""
+    return "\n".join([f"{len(rows)} input(s) not on this machine:",
+                      *unread_file_lines(rows, build.command("status", "--json"))])
+
+
 def _run_step(build: Build, step: Step, entry) -> str:
     """Execute one step; returns the outcome (`executed` / `unchanged` / `would execute`)."""
     graph, paths = build.graph, build.paths
@@ -373,7 +386,10 @@ def _schedule(build: Build, n_workers: int) -> None:
                         build.outcomes[name] = ("skipped", f"ancestor {culprit} did not complete")
                         pending.remove(name)
                     elif build.dry_run and "would execute" in states and name not in build.gated:
-                        build.outcomes[name] = ("would execute", "")
+                        if not all(parent in build.outcomes for parent in parents[name]):
+                            continue  # a producer still to settle may fail, or leave an input unwritten
+                        unwritten = _unwritten_inputs(build, build.graph.step(name))
+                        build.outcomes[name] = ("blocked", unwritten) if unwritten else ("would execute", "")
                         pending.remove(name)
                     elif all(parent in build.outcomes for parent in parents[name]) and not build.stopping.is_set():
                         step = build.graph.step(name)

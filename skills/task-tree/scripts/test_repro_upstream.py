@@ -204,6 +204,34 @@ def test_a_blocked_step_whose_last_run_failed_skips_the_steps_below_it(fan, caps
     assert out.strip().endswith("4 step(s): 2 unchanged, 1 failed, 1 skipped")
 
 
+def test_a_dry_run_never_costs_a_step_whose_input_no_running_step_writes(fan, capsys):
+    """`use` sits below a producer that would run and a blocked one whose output is gone."""
+    _block_p_unv(fan)
+    (fan.root / "output/unv.txt").unlink()
+    fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
+    capsys.readouterr()
+    assert fan.run("build", "02-use", "--dry-run") == 1
+    out = capsys.readouterr().out
+    assert re.search(r"⊘ use  blocked\n  1 input\(s\) not on this machine:\n\s+output/unv.txt\s+-\s+missing\n", out)
+    assert re.search(r"Would execute 1 step\(s\):\n  p-stale  ", out)
+    before = fan.run_times()
+    assert fan.run("build", "02-use") == 1  # the real build agrees
+    assert _changed(before, fan.run_times()) == {"p-stale"}
+
+
+def test_a_dry_run_waits_for_every_producer_before_costing_a_step(fan, capsys):
+    """With `-j`, a runnable producer can settle before the blocked one whose last run failed."""
+    fan.write("Code/unv.sh", "exit 1\n")
+    assert fan.run("build", "02-use") == 1
+    fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
+    fan.offline.evict("Code/unv.sh")
+    capsys.readouterr()
+    assert fan.run("build", "02-use", "--dry-run", "-j", "3") == 1
+    out = capsys.readouterr().out
+    assert "✗ use  cannot run\n  ancestor p-unv did not complete" in out
+    assert re.search(r"Would execute 1 step\(s\):\n  p-stale  ", out)
+
+
 def test_a_dry_run_costs_the_steps_that_run_then_lists_the_blocked_files_and_exits_1(fan, capsys):
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
     fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")

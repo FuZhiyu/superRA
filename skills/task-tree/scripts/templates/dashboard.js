@@ -3245,15 +3245,29 @@ function reproBuildEstimate(target, mode) {
     var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0, stopped = {}, all = run.length;
     sized.forEach(function(f) { bytes += f.size; });
     gate.forEach(function(f) { stopped[f.node] = true; });
-    var isBlocked = function(entry) { return (entry && entry.files || []).some(function(f) { return f.role === 'dependency' && stopped[f.node]; }); };
-    /* A blocked step whose last run failed skips every step below it. */
-    var below = {}, queue = run.filter(function(entry) { return isBlocked(entry) && reproChannels(entry).own === 'failed'; }).map(function(entry) { return entry.name; });
+    var blockedNames = {}, writers = {};
+    run.forEach(function(entry) {
+      (entry && entry.files || []).forEach(function(f) {
+        if (f.role === 'output') writers[f.node] = entry.name;
+        else if (f.role === 'dependency' && stopped[f.node]) blockedNames[entry.name] = true;
+      });
+    });
+    /* A step is blocked too when an input is absent and the step that writes it is blocked. */
+    for (var grew = true; grew;) {
+      grew = false;
+      run.forEach(function(entry) {
+        if (!entry || blockedNames[entry.name]) return;
+        if ((entry.files || []).some(function(f) { return f.role === 'dependency' && f.outcome === 'absent' && blockedNames[writers[f.node]]; })) blockedNames[entry.name] = grew = true;
+      });
+    }
+    /* A blocked step whose last run failed skips every step below it in the build. */
+    var below = {}, queue = run.filter(function(entry) { return entry && blockedNames[entry.name] && reproChannels(entry).own === 'failed'; }).map(function(entry) { return entry.name; });
     while (queue.length) {
       var at = queue.pop();
-      (_reproData.graph.step_edges || []).forEach(function(e) { if (e.from === at && !below[e.to]) { below[e.to] = true; queue.push(e.to); } });
+      (_reproData.graph.step_edges || []).forEach(function(e) { if (e.from === at && scope.has(e.to) && !below[e.to]) { below[e.to] = true; queue.push(e.to); } });
     }
-    all = run.filter(isBlocked).length;
-    run = run.filter(function(entry) { return !isBlocked(entry) && !(entry && below[entry.name]); });
+    all = Object.keys(blockedNames).length;
+    run = run.filter(function(entry) { return !(entry && (blockedNames[entry.name] || below[entry.name])); });
     blocked = (run.length ? ' · ' + all + ' blocked: ' : 'Would run nothing: ')
       + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
       + (sized.length ? ' (' + formatArtifactBytes(bytes) + ')' : '') + ': '

@@ -6998,6 +6998,15 @@ class TestReproBuildRoutes:
         assert plan_dashboard._build_summary(stopped) == ("3 step(s): 1 executed, 1 blocked, 1 failed", [
             "⊘ join  blocked", "  1 input(s) not on this machine:",
             "    Data/vendor.csv  2.4 MB  online-only here", "✗ report  failed", "  boom"])
+        # The gate prints before any step runs: on a long build it is read from the log's opening lines.
+        gate = ["⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine. Steps …",
+                "  Data/vendor.csv  2.4 MB  online-only here  (read by join)"]
+        long_log = ["Execution scope: 42 step(s): …", *gate, *(f"✓ s{i}  executed" for i in range(41)),
+                    "42 step(s): 41 executed, 1 blocked"]
+        assert plan_dashboard._build_summary("\n".join(long_log[-40:]), "\n".join(long_log[:40])) == (
+            "42 step(s): 41 executed, 1 blocked", gate)
+        short_log = "\n".join([*gate, "1 step(s): 1 blocked"])
+        assert plan_dashboard._build_summary(short_log, short_log) == ("1 step(s): 1 blocked", gate)
         many = "".join(f"✗ s{i}  failed\n  boom\n" for i in range(10)) + "10 step(s): 10 failed\n"
         detail = plan_dashboard._build_summary(many)[1]
         assert len(detail) == plan_dashboard.BUILD_DETAIL_LINES + 1 and detail[-1] == "… 8 more line(s) in the log"
@@ -7103,6 +7112,17 @@ class TestReproBuildRoutes:
             # Last, since it rewrites a: its last run failed and it reads the online-only file.
             "failedBelow:(function(){var a=_reproData.status.steps[0];a.status='failed';a.files=[{node:'D/cloud.csv',"
             "role:'dependency',outcome:'unknown',online_only:true,size:2048}];return reproBuildEstimate('t2#b','force');})(),"
+            # A never-built producer blocked on absent data: its consumer's input is absent too.
+            "absentBelow:(function(){_reproData={graph:{steps:[{name:'p',task:'t'},{name:'c',task:'t'}],step_edges:[{from:'p',to:'c'}]},"
+            "status:{steps:[{name:'p',status:'missing',duration:null,files:[{node:'D/ext.csv',role:'dependency',outcome:'unknown'},"
+            "{node:'o/p.txt',role:'output',outcome:'absent'}]},{name:'c',status:'missing',duration:null,files:["
+            "{node:'o/p.txt',role:'dependency',outcome:'absent'},{node:'o/c.txt',role:'output',outcome:'absent'}]}]}};"
+            "return reproBuildEstimate('t','');})(),"
+            # --only selects A and C of A -> B -> C: A's failure reaches C only through B, which the build leaves out.
+            "onlyChain:(function(){_reproData={graph:{steps:[{name:'A',task:'t1'},{name:'B',task:'t2'},{name:'C',task:'t1'}],"
+            "step_edges:[{from:'A',to:'B'},{from:'B',to:'C'}]},status:{steps:[{name:'A',status:'failed',duration:1,"
+            + cloud + "},{name:'B',status:'fresh',duration:1},{name:'C',status:'stale',duration:5}]}};"
+            "return reproBuildEstimate('t1','only');})(),"
             "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
@@ -7119,6 +7139,9 @@ class TestReproBuildRoutes:
         assert out["forceX"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
         # A blocked step whose last run failed skips the forced step below it.
         assert out["failedBelow"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
+        assert out["absentBelow"] == "Would run nothing: 1 file not on this machine: D/ext.csv"
+        assert out["onlyChain"] == ("1 step would run · ~5.0s by last runs"
+                                    " · 1 blocked: 1 file not on this machine (2.0 KiB): D/cloud.csv")
         assert out["forceB"] == "2 steps would run · ~3.0s by last runs"
         assert out["writtenFirst"] == []
         assert out["cmd"] == "superra repro build 't2#b' --only"
