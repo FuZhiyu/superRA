@@ -3245,19 +3245,30 @@ function reproBuildEstimate(target, mode) {
     var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0, stopped = {}, all = run.length;
     sized.forEach(function(f) { bytes += f.size; });
     gate.forEach(function(f) { stopped[f.node] = true; });
-    var blockedNames = {}, writers = {};
+    var blockedNames = {}, writers = {}, running = {}, edges = _reproData.graph.step_edges || [];
     run.forEach(function(entry) {
-      (entry && entry.files || []).forEach(function(f) {
+      if (!entry) return;
+      running[entry.name] = true;
+      (entry.files || []).forEach(function(f) {
         if (f.role === 'output') writers[f.node] = entry.name;
         else if (f.role === 'dependency' && stopped[f.node]) blockedNames[entry.name] = true;
       });
     });
-    /* A step is blocked too when an input is absent and the step that writes it is blocked. */
+    /* A step is blocked too when an input is not on this machine and no step that runs writes it.
+       The graph's edges say which steps write an input, a glob or a file under a directory out included. */
+    var producersOf = function(name, node) {
+      var found = edges.filter(function(e) { return e.to === name && e.via === node; }).map(function(e) { return e.from; });
+      return found.length ? found : writers[node] ? [writers[node]] : [];
+    };
     for (var grew = true; grew;) {
       grew = false;
       run.forEach(function(entry) {
         if (!entry || blockedNames[entry.name]) return;
-        if ((entry.files || []).some(function(f) { return f.role === 'dependency' && f.outcome === 'absent' && blockedNames[writers[f.node]]; })) blockedNames[entry.name] = grew = true;
+        if ((entry.files || []).some(function(f) {
+          if (f.role !== 'dependency' || !(f.outcome === 'absent' || f.outcome === 'unknown' || f.online_only)) return false;
+          var producers = producersOf(entry.name, f.node);
+          return producers.length && !producers.some(function(p) { return running[p] && !blockedNames[p]; });
+        })) blockedNames[entry.name] = grew = true;
       });
     }
     /* A blocked step whose last run failed skips every step below it in the build. */

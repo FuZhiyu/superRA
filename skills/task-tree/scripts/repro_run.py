@@ -180,12 +180,18 @@ def _missing_inputs(build: Build, step: Step) -> str | None:
 
 
 def _unwritten_inputs(build: Build, step: Step) -> str:
-    """Dry run, below a step that would execute: the absent inputs no such step writes, as a blocked step's detail."""
+    """Dry run, below a step that would execute: the inputs not on this machine that no such step writes.
+
+    Which step writes an input is the graph's answer (`step_edges`), so a glob or a
+    directory is supplied by the steps the graph links it to. The result is a blocked step's detail.
+    """
+    would = {name for name, (outcome, _) in build.outcomes.items() if outcome == "would execute"}
+    supplied = {via for source, consumer, via in build.graph.step_edges if consumer == step.name and source in would}
     outputs = output_nodes(build.graph)
-    written = [node[0] for name, (outcome, _) in build.outcomes.items() if outcome == "would execute"
-               for node in step_nodes(build.graph.step(name), outputs)[1]]
-    rows = [row for row in _unreadable_inputs(build, step) if row[1] == "missing"
-            and not any(row[0] == out or row[0].startswith(f"{out}/") for out in written)]
+    dep_of = {outputs.get(dep.resolved, (dep.logical,))[0]: dep.logical for dep in step.deps}
+    owner = {out.path.logical: producer.name for producer in build.graph.steps for out in producer.outs}
+    rows = [row for row in _unreadable_inputs(build, step)
+            if dep_of.get(row[0]) not in supplied and owner.get(row[0]) not in would]
     if not rows:
         return ""
     return "\n".join([f"{len(rows)} input(s) not on this machine:",

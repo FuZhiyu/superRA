@@ -7123,6 +7123,21 @@ class TestReproBuildRoutes:
             "step_edges:[{from:'A',to:'B'},{from:'B',to:'C'}]},status:{steps:[{name:'A',status:'failed',duration:1,"
             + cloud + "},{name:'B',status:'fresh',duration:1},{name:'C',status:'stale',duration:5}]}};"
             "return reproBuildEstimate('t1','only');})(),"
+            # A directory out: the consumer of parts/a.csv is tied to the blocked producer by the graph's edge alone.
+            "dirOut:(function(){_reproData={graph:{steps:[{name:'P',task:'t'},{name:'C',task:'t'}],"
+            "step_edges:[{from:'P',to:'C',via:'parts/a.csv'}]},status:{steps:[{name:'P',status:'missing',duration:null,files:["
+            "{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},{node:'parts',role:'output',outcome:'absent'}]},"
+            "{name:'C',status:'missing',duration:null,files:[{node:'parts/a.csv',role:'dependency',outcome:'absent'}]}]}};"
+            "return reproBuildEstimate('t','');})(),"
+            # A fan-in: the blocked producer's output is online-only here, so the join cannot run either.
+            "fanIn:(function(){_reproData={graph:{steps:[{name:'A',task:'t'},{name:'B',task:'t'},{name:'J',task:'t'}],"
+            "step_edges:[{from:'A',to:'J',via:'o/a.txt'},{from:'B',to:'J',via:'o/b.txt'}]},status:{steps:["
+            "{name:'A',status:'stale',duration:2,files:[{node:'o/a.txt',role:'output',outcome:'matches'}]},"
+            "{name:'B',status:'stale',duration:1,files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048},"
+            "{node:'o/b.txt',role:'output',outcome:'unknown',online_only:true}]},"
+            "{name:'J',status:'stale',duration:4,files:[{node:'o/a.txt',role:'dependency',outcome:'matches'},"
+            "{node:'o/b.txt',role:'dependency',outcome:'unknown',online_only:true}]}]}};"
+            "return reproBuildEstimate('t','');})(),"
             "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
@@ -7140,6 +7155,9 @@ class TestReproBuildRoutes:
         # A blocked step whose last run failed skips the forced step below it.
         assert out["failedBelow"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
         assert out["absentBelow"] == "Would run nothing: 1 file not on this machine: D/ext.csv"
+        assert out["dirOut"] == "Would run nothing: 1 file not on this machine: D/vendor.csv"
+        assert out["fanIn"] == ("1 step would run · ~2.0s by last runs"
+                                " · 2 blocked: 1 file not on this machine (2.0 KiB): D/cloud.csv")
         assert out["onlyChain"] == ("1 step would run · ~5.0s by last runs"
                                     " · 1 blocked: 1 file not on this machine (2.0 KiB): D/cloud.csv")
         assert out["forceB"] == "2 steps would run · ~3.0s by last runs"

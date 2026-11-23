@@ -219,6 +219,80 @@ def test_a_dry_run_never_costs_a_step_whose_input_no_running_step_writes(fan, ca
     assert _changed(before, fan.run_times()) == {"p-stale"}
 
 
+def test_a_dry_run_blocks_a_step_below_a_blocked_producer_whose_output_is_online_only(fan, capsys):
+    (fan.root / "Code/unv.sh").unlink()  # forced, p-unv cannot run without its script
+    fan.offline.evict("output/unv.txt")
+    capsys.readouterr()
+    assert fan.run("build", ".", "--force", "--dry-run", "-j", "2") == 1
+    out = capsys.readouterr().out
+    assert re.search(r"⊘ use  blocked\n  1 input\(s\) not on this machine:\n\s+output/unv.txt\s+\S+ B\s+online-only here\n", out)
+    assert re.search(r"Would execute 2 step\(s\):\n  p-fresh  \S+\n  p-stale  ", out)
+
+
+GLOB_SOURCE = """\
+---
+title: "Parts"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Write a part.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: part
+    cmd: mkdir -p output/parts && echo a > output/parts/a.csv
+    outs:
+      - output/parts/a.csv
+```
+"""
+
+GLOB_READERS = """\
+---
+title: "Readers"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Read the parts by glob and by folder.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: by-glob
+    cmd: cat output/parts/*.csv > output/glob.txt
+    deps:
+      - output/parts/*.csv
+    outs:
+      - output/glob.txt
+  - name: by-folder
+    cmd: cat output/parts/a.csv > output/folder.txt
+    deps:
+      - output/parts
+    outs:
+      - output/folder.txt
+```
+"""
+
+
+def test_a_dry_run_on_a_clean_checkout_costs_readers_of_a_generated_glob_or_folder(tmp_path, capsys):
+    proj = Project(tmp_path / "globs")
+    proj.write("superRA/config.yaml", CONFIG)
+    proj.write("superRA/01-parts/task.md", GLOB_SOURCE)
+    proj.write("superRA/02-readers/task.md", GLOB_READERS)
+    capsys.readouterr()
+    assert proj.run("build", ".", "--dry-run") == 0
+    assert "Would execute 3 step(s):" in capsys.readouterr().out
+    assert proj.run("build", ".") == 0
+
+
 def test_a_dry_run_waits_for_every_producer_before_costing_a_step(fan, capsys):
     """With `-j`, a runnable producer can settle before the blocked one whose last run failed."""
     fan.write("Code/unv.sh", "exit 1\n")
