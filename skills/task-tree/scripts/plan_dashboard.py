@@ -2204,9 +2204,9 @@ def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool
 def _build_summary(log_text: str) -> tuple[str, list[str]]:
     """The line of a build log that says how it ended, and the lines that explain it.
 
-    After an `Error:` summary, the lines that follow it (the download gate's file
-    list); after a step count, each failed step's block (a step stopped at its
-    start names the files it needs), at most BUILD_DETAIL_LINES.
+    After an `Error:` summary, the lines that follow it; after a step count, each
+    failed or blocked block (the download gate's file list, and a step blocked at
+    its start, name the files needed), at most BUILD_DETAIL_LINES.
     """
     lines = [line.rstrip() for line in log_text.splitlines() if line.strip()]
     for at in range(len(lines) - 1, -1, -1):
@@ -2217,7 +2217,7 @@ def _build_summary(log_text: str) -> tuple[str, list[str]]:
                 or re.match(r"\d+ step\(s\): ", line)):
             failed, inside = [], False
             for row in lines[:at]:
-                inside = row.startswith("✗ ") or (inside and row[:1].isspace())
+                inside = row.startswith(("✗ ", "⊘ ")) or (inside and row[:1].isspace())
                 if inside:
                     failed.append(row)
             if len(failed) > BUILD_DETAIL_LINES:

@@ -3228,8 +3228,8 @@ function reproBuildScope(graph, target, producers) {
    steps whose own state is stale, missing, or failed, plus the forced targets.
    A step stale only through upstream reruns if its inputs change; an
    `unverified` one then needs its online-only files, and otherwise never runs.
-   Mirrors the runner's download gate: when a step that will run reads a file
-   not on this machine that no running step writes first, nothing runs. */
+   Mirrors the runner's download gate: a step that will run and reads a file
+   not on this machine that no running step writes first is blocked; the rest run. */
 function reproBuildEstimate(target, mode) {
   var statuses = reproStatusIndex(_reproData), targets = new Set(reproBuildScope(_reproData.graph, target, false));
   var scope = new Set(reproBuildScope(_reproData.graph, target, mode !== 'only'));
@@ -3240,17 +3240,21 @@ function reproBuildEstimate(target, mode) {
     else if (ch.own === 'unverified') { if (upstream) needs++; else online++; }
     else if (upstream) maybe++;
   });
-  var gate = reproGatedFiles(run);
+  var gate = reproGatedFiles(run), blocked = '';
   if (gate.length) {
-    var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0;
+    var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0, stopped = {}, all = run.length;
     sized.forEach(function(f) { bytes += f.size; });
-    return 'Would run nothing: ' + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
+    gate.forEach(function(f) { stopped[f.node] = true; });
+    run = run.filter(function(entry) { return !(entry && entry.files || []).some(function(f) { return f.role === 'dependency' && stopped[f.node]; }); });
+    blocked = (run.length ? ' · ' + (all - run.length) + ' blocked: ' : 'Would run nothing: ')
+      + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
       + (sized.length ? ' (' + formatArtifactBytes(bytes) + ')' : '') + ': '
       + gate.slice(0, 3).map(function(f) { return f.node; }).join(', ') + (gate.length > 3 ? ', +' + (gate.length - 3) + ' more' : '');
+    if (!run.length) return blocked;
   }
   var tail = (maybe ? ' · ' + maybe + ' more if their inputs change' : '')
     + (needs ? ' · ' + needs + ' need online-only files if their inputs change' : '')
-    + (online ? ' · ' + online + ' online-only, not run' : '');
+    + (online ? ' · ' + online + ' online-only, not run' : '') + blocked;
   if (!run.length) return 'Nothing stale' + tail;
   run.forEach(function(entry) { if (entry && entry.duration != null) total += entry.duration; else unknown++; });
   return run.length + ' step' + (run.length === 1 ? '' : 's') + ' would run'

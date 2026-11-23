@@ -97,6 +97,10 @@ class NotStarted(Exception):
     """The build was interrupted before this step's attempt began."""
 
 
+class Blocked(Exception):
+    """A step that must run reads a file not on this machine; the build leaves it as it is."""
+
+
 # ---------------------------------------------------------------------------
 # Execution
 # ---------------------------------------------------------------------------
@@ -114,7 +118,7 @@ class Build:
     requested: set[str] = field(default_factory=set)  # the steps the targets select themselves
     targets: list[str] = field(default_factory=list)  # as typed, for the commands a message names
     only: bool = False
-    gated: set[str] = field(default_factory=set)  # steps the download gate stopped
+    gated: set[str] = field(default_factory=set)  # steps the download gate found blocked, listed before anything runs
     completed: dict[str, LockEntry] = field(default_factory=dict)
     outcomes: dict[str, tuple[str, str]] = field(default_factory=dict)  # name -> (outcome, detail)
     notes: dict[str, list[str]] = field(default_factory=dict)  # name -> warnings from a successful run
@@ -166,8 +170,8 @@ def _unreadable_inputs(build: Build, step: Step) -> list[tuple[str, str, int | N
     return rows
 
 
-def _missing_inputs(build: Build, step: Step, entry) -> str | None:
-    """Why the step cannot start: the download gate, rechecked when the step starts."""
+def _missing_inputs(build: Build, step: Step) -> str | None:
+    """Why the step is blocked: the download gate, rechecked when the step starts."""
     rows = _unreadable_inputs(build, step)
     if not rows:
         return None
@@ -187,16 +191,13 @@ def _run_step(build: Build, step: Step, entry) -> str:
         return "unchanged"
     if not forced and entry.status == "unverified":
         return "unverified"  # never run on files this machine cannot check; its outputs are used as they are
-    if build.dry_run:
-        blocked = None if step.name in build.gated else _missing_inputs(build, step, entry)
-        if blocked:
-            raise ReproStateError(f"step {step.name!r} cannot start: {blocked}")
-        return "would execute"
-    if build.stopping.is_set():  # before supersede and the run record touch anything
+    if build.stopping.is_set() and not build.dry_run:  # before supersede and the run record touch anything
         raise NotStarted
-    blocked = _missing_inputs(build, step, entry)
+    blocked = _missing_inputs(build, step)
     if blocked:
-        raise ReproStateError(f"step {step.name!r} cannot start: {blocked}")
+        raise Blocked("" if step.name in build.gated else blocked)  # the gate already listed a gated step's files
+    if build.dry_run:
+        return "would execute"
     # A rerun an acceptance or an unverified saved input required stays owed
     # if it fails, like a forced one: restored bytes must not read as fresh.
     must_retry = forced or bool(entry.acceptance_invalid) or any(c.kind == "boundary" for c in entry.changes)
@@ -371,7 +372,7 @@ def _schedule(build: Build, n_workers: int) -> None:
                     if culprit is not None:
                         build.outcomes[name] = ("skipped", f"ancestor {culprit} did not complete")
                         pending.remove(name)
-                    elif build.dry_run and "would execute" in states:
+                    elif build.dry_run and "would execute" in states and name not in build.gated:
                         build.outcomes[name] = ("would execute", "")
                         pending.remove(name)
                     elif all(parent in build.outcomes for parent in parents[name]) and not build.stopping.is_set():
@@ -431,7 +432,15 @@ def _interrupt_on_termination():
 def _attempt(build: Build, step: Step) -> tuple[str, str]:
     try:
         entry = _decide(build, step)
-        outcome = _run_step(build, step, entry)
+        try:
+            outcome = _run_step(build, step, entry)
+        except Blocked as exc:
+            if entry.status != "failed":
+                return "blocked", str(exc)
+            # Outputs a failed run left behind are never built on.
+            return "failed", "\n".join(filter(None, [
+                "its last run failed and it cannot rerun here, so the steps that read its outputs are skipped",
+                str(exc)]))
         return outcome, "\n".join(build.notes.get(step.name, ()))
     except NotStarted:
         return "skipped", "build interrupted"
@@ -439,13 +448,14 @@ def _attempt(build: Build, step: Step) -> tuple[str, str]:
         return "failed", f"{type(exc).__name__}: {exc}"
 
 
-_MARKS = {"executed": "✓", "unchanged": "·", "unverified": "○", "would execute": "~", "failed": "✗", "skipped": "-"}
+_MARKS = {"executed": "✓", "unchanged": "·", "unverified": "○", "blocked": "⊘", "would execute": "~", "failed": "✗",
+          "skipped": "-"}
 
 
 def _report(build: Build, name: str) -> None:
     outcome, detail = build.outcomes[name]
-    if build.dry_run or outcome in ("unchanged", "unverified"):
-        return  # a step that did not run is only counted
+    if build.dry_run or outcome in ("unchanged", "unverified") or (outcome == "blocked" and not detail):
+        return  # a step that did not run is only counted; the gate already listed a gated step's files
     print(f"{_MARKS[outcome]} {name}  {outcome}"
           + "".join(f"\n  {line}" for line in detail.splitlines()), flush=True)
 
@@ -479,9 +489,9 @@ def _scope_line(build: Build, report: StatusReport) -> str:
 
 
 def _gate(build: Build, will_run: list[str]) -> str | None:
-    """Why the build runs nothing: a step that will run reads a file not on disk that no step in it writes first.
+    """The steps blocked from the start: each must run and reads a file not on disk that no step in the build writes first.
 
-    Records the gated steps in `build.gated`, whose own start-time check a dry run then skips.
+    Records them in `build.gated`; the build leaves them as they are and runs the rest.
     """
     outputs = output_nodes(build.graph)
     written = {node[0] for name in will_run for node in step_nodes(build.graph.step(name), outputs)[1]}
@@ -493,11 +503,9 @@ def _gate(build: Build, will_run: list[str]) -> str | None:
     if not rows:
         return None
     build.gated = {name for row in rows.values() for name in row[3]}
-    ran = "the build would run nothing" if build.dry_run else "nothing was run"
-    exit_line = ("Download them first, or narrow the targets to steps that do not read them." if build.only
-                 else "To build the steps that do not read them, select those steps with --only.")
-    return "\n".join([f"{len(rows)} file(s) the build reads are not on this machine, so {ran}:",
-                      *unread_file_lines(list(rows.values()), build.command("status", "--json"), then=[exit_line])])
+    return "\n".join([f"{_MARKS['blocked']} {len(build.gated)} step(s) cannot run here: {len(rows)} file(s) they read are "
+                      "not on this machine. Steps that read their outputs use the files already on disk.",
+                      *unread_file_lines(list(rows.values()), build.command("status", "--json"))])
 
 
 def _preview(build: Build, will_run: list[str]) -> None:
@@ -526,7 +534,7 @@ def run_build(
     targets: list[str] | None = None,
     only: bool = False,
 ) -> int:
-    """Run every stale selected step; 0 when none failed, else 1.
+    """Run every stale selected step; 0 when none failed or was blocked, else 1.
 
     *requested* is the steps the targets select themselves (default: *names*);
     the rest are added producers, run only when their state calls for it.
@@ -563,10 +571,10 @@ def run_build(
             will_run, report = _will_run(build)
             print(_scope_line(build, report))
             gate = _gate(build, will_run)
-            if gate and not dry_run:
-                raise ReproStateError(gate)
             if not dry_run:
-                _preview(build, will_run)
+                if gate:
+                    print(gate, flush=True)
+                _preview(build, [name for name in will_run if name not in build.gated])
             try:
                 _schedule(build, n_workers)
             except KeyboardInterrupt:
@@ -578,27 +586,32 @@ def run_build(
         cache.flush()
     if dry_run:
         pending = [name for name in names if build.outcomes.get(name, ("",))[0] == "would execute"]
-        blocked = [name for name in names if build.outcomes.get(name, ("",))[0] in ("failed", "skipped")]
-        for name in blocked:
-            print(f"{_MARKS['failed']} {name}  cannot run"
-                  + "".join(f"\n  {line}" for line in build.outcomes[name][1].splitlines()))
-        if pending or not blocked:
+        stopped = [name for name in names if build.outcomes.get(name, ("",))[0] in ("blocked", "failed", "skipped")]
+        for name in stopped:
+            outcome, detail = build.outcomes[name]
+            if outcome == "blocked" and not detail:
+                continue  # listed with the gate's files below
+            print((f"{_MARKS['blocked']} {name}  blocked" if outcome == "blocked"
+                   else f"{_MARKS['failed']} {name}  cannot run")
+                  + "".join(f"\n  {line}" for line in detail.splitlines()))
+        if pending or not stopped:
             print(format_cost(pending, paths))
         if gate:
             print(gate)
-        return 1 if blocked or gate else 0
+        return 1 if stopped else 0
     counts = {}
     for outcome, _ in build.outcomes.values():
         counts[outcome] = counts.get(outcome, 0) + 1
     print(f"{len(names)} step(s): " + ", ".join(
-        f"{counts[k]} {k}" for k in ("executed", "unchanged", "unverified", "failed", "skipped") if counts.get(k)))
+        f"{counts[k]} {k}" for k in ("executed", "unchanged", "unverified", "blocked", "failed", "skipped")
+        if counts.get(k)))
     if interrupted:
         print("Interrupted: running steps were stopped and recorded as failed.", file=sys.stderr)
     legacy = [p.name for p in (paths.legacy_lock_file, paths.legacy_builds_file) if p.is_file()]
     if paths.lock_file.is_file() and legacy:
         print(f"{LOCK_FILENAME} now holds the build records; {', '.join(legacy)} no longer read. "
               f"Remove with `git rm {' '.join(legacy)}`.")
-    return 1 if interrupted or counts.get("failed") or counts.get("skipped") else 0
+    return 1 if interrupted or counts.get("blocked") or counts.get("failed") or counts.get("skipped") else 0
 
 
 # ---------------------------------------------------------------------------
@@ -672,6 +685,8 @@ Steps belong to tasks: a task's `## Reproduction` section registers its steps.
 A step is fresh when the content hashes of its deps, definition, and outs match
 its last successful build or its reviewed acceptance. A step whose files this
 machine cannot check without a download is unverified; `build` never runs it.
+A step that must run but reads a file not on this machine is blocked: `build`
+leaves it as it is, runs the rest on its existing outputs, and exits 1.
 Targets scope every command: a task path selects its own and descendant steps,
 `task#step` or a unique step name selects one step, `.` selects the whole active tree.
 `build` and `status` also take in the targets' producer chain, and `build` runs

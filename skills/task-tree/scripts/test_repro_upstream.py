@@ -1,4 +1,4 @@
-"""Commands take in the targets' producer chain, gate downloads, and report online-only data.
+"""Commands take in the targets' producer chain, block steps that need a download, and report online-only data.
 
 Fixtures run real shell steps; `run_times` shows which commands executed.
 """
@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from _repro_state import DOWNLOAD_NOTES, OUTPUT_CAP, read_run_record, write_run_record
+from _repro_state import DOWNLOAD_NOTES, OUTPUT_CAP, compute_status, read_run_record, write_run_record
 from _task_snapshot import frontier_rows
 from test_repro_online import Offline, _clear_cache
 from test_repro_runner import CHAIN, CONFIG, Project, project  # noqa: F401
@@ -141,7 +141,7 @@ def test_the_scope_line_names_failed_and_interrupted_steps_and_prints_on_a_dry_r
 
 
 @pytest.mark.parametrize("loss", ["online-only", "absent"])
-def test_the_gate_runs_nothing_when_a_step_that_must_run_reads_a_file_not_on_disk(fan, capsys, loss):
+def test_a_step_that_must_read_a_file_not_on_disk_is_blocked_and_the_rest_builds(fan, capsys, loss):
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
     fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
     if loss == "online-only":
@@ -151,19 +151,59 @@ def test_the_gate_runs_nothing_when_a_step_that_must_run_reads_a_file_not_on_dis
     before = fan.run_times()
     capsys.readouterr()
     assert fan.run("build", "02-use") == 1
-    assert fan.run_times() == before  # not even the stale producer ran
-    err = capsys.readouterr().err
-    assert "1 file(s) the build reads are not on this machine, so nothing was run:" in err
+    assert _changed(before, fan.run_times()) == {"p-stale"}  # the stale producer reads none of them
+    out = capsys.readouterr().out
+    assert "⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine." in out
     line = (r"Data/ext.csv\s+4 B\s+online-only here" if loss == "online-only"
             else r"Data/ext.csv\s+-\s+not on disk, and no step produces it")
-    assert re.search(line + r"  \(read by use\)", err)
-    assert "To build the steps that do not read them, select those steps with --only." in err
-    assert (DOWNLOAD_NOTES in err) == (loss == "online-only")
-    assert fan.run("build", "01-src", "--only") == 0  # the rest still builds
-    assert _changed(before, fan.run_times()) == {"p-stale"}
+    assert re.search(line + r"  \(read by use\)", out)
+    assert (DOWNLOAD_NOTES in out) == (loss == "online-only")
+    assert "use  blocked" not in out  # the list above already names it
+    assert out.strip().endswith("4 step(s): 1 executed, 2 unchanged, 1 blocked")
+    assert read_run_record(fan.paths, "use")["outcome"] == "success"  # no failed run recorded
 
 
-def test_a_gated_dry_run_prints_its_plan_with_costs_then_the_files_and_exits_1(fan, capsys):
+def _block_p_unv(fan) -> None:
+    """p-unv must rerun, since its script's size changed, and cannot: the script is online-only."""
+    fan.write("Code/unv.sh", "mkdir -p output\necho unverified > output/unv.txt\n")
+    fan.offline.evict("Code/unv.sh")
+    _clear_cache(fan)
+
+
+def test_steps_below_a_blocked_step_build_on_its_existing_outputs(fan, capsys):
+    _block_p_unv(fan)
+    fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
+    before = fan.run_times()
+    capsys.readouterr()
+    assert fan.run("build", "02-use") == 1
+    assert _changed(before, fan.run_times()) == {"use"}
+    out = capsys.readouterr().out
+    assert re.search(r"⊘ 1 step\(s\) cannot run here: 1 file\(s\) they read are not on this machine\. .*\n\s+Code/unv.sh\s+\S+ B\s+online-only here  \(read by p-unv\)", out)
+    assert out.strip().endswith("4 step(s): 1 executed, 2 unchanged, 1 blocked")
+    report = compute_status(fan.graph(), fan.paths, targets=["02-use"], upstream=True)
+    use = report.entry("use")
+    assert (use.status, use.local_status, use.origin) == ("stale", "fresh", "p-unv")
+
+    before = fan.run_times()  # stale only through the blocked producer: nothing to rerun
+    assert fan.run("build", "02-use") == 1
+    assert fan.run_times() == before
+
+
+def test_a_blocked_step_whose_last_run_failed_skips_the_steps_below_it(fan, capsys):
+    fan.write("Code/unv.sh", "exit 1\n")
+    assert fan.run("build", "02-use") == 1
+    fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
+    fan.offline.evict("Code/unv.sh")
+    before = fan.run_times()
+    capsys.readouterr()
+    assert fan.run("build", "02-use") == 1
+    assert fan.run_times() == before
+    out = capsys.readouterr().out
+    assert "✗ p-unv  failed\n  its last run failed and it cannot rerun here" in out
+    assert out.strip().endswith("4 step(s): 2 unchanged, 1 failed, 1 skipped")
+
+
+def test_a_dry_run_costs_the_steps_that_run_then_lists_the_blocked_files_and_exits_1(fan, capsys):
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
     fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
     (fan.root / "Data/ext.csv").unlink()
@@ -172,22 +212,11 @@ def test_a_gated_dry_run_prints_its_plan_with_costs_then_the_files_and_exits_1(f
     assert fan.run("build", "02-use", "--dry-run") == 1
     assert fan.run_times() == before
     out = capsys.readouterr().out
-    assert re.search(r"Would execute 2 step\(s\):\n  p-stale  \d+\.\ds\n  use      \d+\.\ds\n"
+    assert re.search(r"Would execute 1 step\(s\):\n  p-stale  \d+\.\ds\n"
                      r"Last recorded cost: .*\n.*\n"
-                     r"1 file\(s\) the build reads are not on this machine, so the build would run nothing:\n"
-                     r"\s+Data/ext.csv\s+-\s+not on disk, and no step produces it  \(read by use\)\n"
-                     r"To build the steps that do not read them, select those steps with --only.$", out.strip())
-    assert "cannot run" not in out
-
-
-def test_under_only_the_gate_names_downloading_or_narrowing_the_targets(fan, capsys):
-    fan.write("Code/use.sh", fan.read("Code/use.sh") + "# edited\n")
-    fan.offline.evict("Data/ext.csv")
-    capsys.readouterr()
-    assert fan.run("build", "02-use", "--only") == 1
-    err = capsys.readouterr().err
-    assert "Download them first, or narrow the targets to steps that do not read them." in err
-    assert "--only" not in err
+                     r"⊘ 1 step\(s\) cannot run here: 1 file\(s\) they read are not on this machine\. .*\n"
+                     r"\s+Data/ext.csv\s+-\s+not on disk, and no step produces it  \(read by use\)$", out.strip())
+    assert "✗" not in out
 
 
 def test_steps_that_did_not_run_are_only_counted(fan, capsys):
@@ -198,15 +227,15 @@ def test_steps_that_did_not_run_are_only_counted(fan, capsys):
     assert out.strip().endswith("4 step(s): 4 unchanged")
 
 
-def test_a_step_stale_only_after_its_producer_ran_is_stopped_at_its_start(fan, capsys):
-    fan.offline.evict("Data/ext.csv")  # cached: `use` still reads fresh, so the gate lets the build start
+def test_a_step_stale_only_after_its_producer_ran_is_blocked_at_its_start(fan, capsys):
+    fan.offline.evict("Data/ext.csv")  # cached: `use` still reads fresh, so the gate does not list it
     fan.write("Code/stale.sh", "mkdir -p output\necho stale2 > output/stale.txt\n")
     before = fan.run_times()
     capsys.readouterr()
     assert fan.run("build", "02-use") == 1  # Offline fails the test if anything opens Data/ext.csv
     assert _changed(before, fan.run_times()) == {"p-stale"}
     out = capsys.readouterr().out
-    assert re.search(r"✗ use  failed\n  ReproStateError: step 'use' cannot start: 1 input\(s\) not on this machine:\n"
+    assert re.search(r"⊘ use  blocked\n  1 input\(s\) not on this machine:\n"
                      r"  \s+Data/ext.csv\s+4 B\s+online-only here\n  " + re.escape(DOWNLOAD_NOTES), out)
     assert read_run_record(fan.paths, "use")["outcome"] == "success"  # no failed run recorded
 

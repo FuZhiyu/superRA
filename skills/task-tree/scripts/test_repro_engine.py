@@ -233,14 +233,14 @@ def test_build_exit_codes(project, capsys):
     assert project.run("build") == 2           # argparse usage error
 
 
-def test_a_missing_input_fails_the_step_before_its_command_runs(project, capsys):
+def test_a_missing_input_blocks_the_step_before_its_command_runs(project, capsys):
     project.write("superRA/01-a/task.md", project.read("superRA/01-a/task.md").replace(
         "      - Code/a.sh\n", "      - Code/a.sh\n      - output/produced-by-nobody.txt\n"))
     capsys.readouterr()
     assert project.run("build", "01-a") == 1
-    err = capsys.readouterr().err
-    assert "1 file(s) the build reads are not on this machine, so nothing was run:" in err
-    assert re.search(r"output/produced-by-nobody.txt\s+-\s+not on disk, and no step produces it", err)
+    out = capsys.readouterr().out
+    assert "⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine." in out
+    assert re.search(r"output/produced-by-nobody.txt\s+-\s+not on disk, and no step produces it", out)
     assert not project.paths.run_file("build-a").exists()
 
 

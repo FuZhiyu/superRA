@@ -239,14 +239,14 @@ def test_build_menu_sends_only_and_shows_a_gated_builds_files(browser, states):
     menu = page.locator('#rp-build-menu')
     assert menu.locator('[data-mode=only] code').inner_text() == 'superra repro build 02-panel-model --only'
     assert menu.locator('[data-mode=""] code').inner_text() == 'superra repro build 02-panel-model'
-    assert menu.locator('[data-mode=force] .rp-build-est').inner_text() == (
-        'Would run nothing: 1 file not on this machine (2.3 MiB): Data/vendor.csv')
+    assert menu.locator('[data-mode=force] .rp-build-est').inner_text().endswith(
+        ' · 1 blocked: 1 file not on this machine (2.3 MiB): Data/vendor.csv')
     menu.locator('[data-mode=only]').click()
     page.wait_for_function('() => _reproBuild.error')
     assert sent == [{'target': '02-panel-model', 'only': True, 'force': False}]
     detail = page.evaluate("""() => { _reproBuild.error = ''; _reproBuild.wt = ACTIVE_WT;
-      _reproBuild.job = {ended_at: Date.now() / 1000, returncode: 1, summary: 'Error: 1 file(s) the build reads are not on this machine, so nothing was run:',
-        detail: ['  Data/vendor.csv  2.3 MB  online-only here  (read by vendor-join)'], log_tail: ''};
+      _reproBuild.job = {ended_at: Date.now() / 1000, returncode: 1, summary: '2 step(s): 1 unchanged, 1 blocked',
+        detail: ['⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine.', '  Data/vendor.csv  2.3 MB  online-only here  (read by vendor-join)'], log_tail: ''};
       reproPaintBuild(); return document.querySelector('.rp-build-detail').textContent; }""")
     assert 'Data/vendor.csv' in detail and 'online-only here' in detail
     page.close()

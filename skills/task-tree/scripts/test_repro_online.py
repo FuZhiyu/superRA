@@ -318,16 +318,16 @@ def test_a_stale_step_never_starts_on_an_online_only_input_even_a_cached_one(pro
     before = project.run_times()
     capsys.readouterr()
     assert project.run("build", "02-b#build-b") == 1
-    err = capsys.readouterr().err
-    assert "1 file(s) the build reads are not on this machine, so nothing was run:" in err
-    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here  \(read by build-b\)", err)
-    assert DOWNLOAD_NOTES in err
+    out = capsys.readouterr().out
+    assert "⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine." in out
+    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here  \(read by build-b\)", out)
+    assert DOWNLOAD_NOTES in out
     assert project.run_times()["build-b"] == before["build-b"]
     from _repro_state import read_run_record
     assert read_run_record(project.paths, "build-b").get("outcome") == "success"  # no failed run recorded
 
 
-def test_forcing_an_unverified_step_refuses_and_runs_nothing(project, offline, capsys):
+def test_forcing_an_unverified_step_is_blocked_and_runs_nothing(project, offline, capsys):
     assert project.run("build", *CHAIN) == 0
     before = project.run_times()
     offline.evict("Code/a.sh")
@@ -335,7 +335,7 @@ def test_forcing_an_unverified_step_refuses_and_runs_nothing(project, offline, c
     assert project.status("01-a").entry("build-a").status == "unverified"
     capsys.readouterr()
     assert project.run("build", "01-a#build-a", "--force") == 1
-    assert re.search(r"Code/a.sh\s+\S+ B\s+online-only here  \(read by build-a\)", capsys.readouterr().err)
+    assert re.search(r"Code/a.sh\s+\S+ B\s+online-only here  \(read by build-a\)", capsys.readouterr().out)
     assert project.run_times() == before
 
 
@@ -364,7 +364,7 @@ def test_a_stale_step_never_starts_on_an_input_it_cannot_hash(project, offline, 
     assert project.status(*CHAIN).entry("build-b").local_status == "stale"
     capsys.readouterr()
     assert project.run("build", "02-b#build-b") == 1
-    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here", capsys.readouterr().err)
+    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here", capsys.readouterr().out)
 
 
 # ---------------------------------------------------------------------------

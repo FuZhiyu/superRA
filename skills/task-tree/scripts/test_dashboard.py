@@ -6972,9 +6972,9 @@ class TestReproBuildRoutes:
         assert status["fetch-crsp"]["status"] == "fresh"
         assert status["fetch-crsp"]["duration"] is not None
 
-    def test_only_request_scopes_the_build_and_a_gated_build_lists_its_files(self, plan):
-        """`only` reaches the runner as `--only`; a build the download gate stops
-        returns the gate's file list as `detail`, not only its first line."""
+    def test_only_request_scopes_the_build_and_a_blocked_build_lists_its_files(self, plan):
+        """`only` reaches the runner as `--only`; a build whose step the download gate
+        blocks returns the gate's file list as `detail`."""
         (plan.parent / "code" / "fetch.sh").unlink()
         with self._client(plan) as c:
             r = c.post("/api/repro/build", json={"target": "01-ingest#fetch-crsp", "only": True})
@@ -6983,20 +6983,21 @@ class TestReproBuildRoutes:
             assert r.json()["only"] is True
             job = self._finish(c)["job"]
         assert job["returncode"] == 1
-        assert job["summary"].startswith("Error: 1 file(s) the build reads are not on this machine")
-        assert job["detail"][0].split() [:2] == ["code/fetch.sh", "-"]
-        assert "no step produces it" in job["detail"][0]
+        assert job["summary"] == "1 step(s): 1 blocked"
+        assert job["detail"][0].startswith("⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine.")
+        assert job["detail"][1].split()[:2] == ["code/fetch.sh", "-"]
+        assert "no step produces it" in job["detail"][1]
 
-    def test_build_summary_keeps_an_errors_lines_and_each_failed_steps_block(self):
+    def test_build_summary_keeps_an_errors_lines_and_each_failed_or_blocked_block(self):
         log = "Execution scope: 1 step(s): a\nError: 2 file(s) are gone:\n  x.csv  1 B\n  y.csv  2 B\nTry --only.\n"
         assert plan_dashboard._build_summary(log) == (
             "Error: 2 file(s) are gone:", ["  x.csv  1 B", "  y.csv  2 B", "Try --only."])
         assert plan_dashboard._build_summary("✓ a  executed\n1 step(s): 1 executed\n") == ("1 step(s): 1 executed", [])
-        stopped = ("✓ clean  executed\n✗ join  failed\n  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:\n"
-                   "    Data/vendor.csv  2.4 MB  online-only here\n✓ report  executed\n3 step(s): 2 executed, 1 failed\n")
-        assert plan_dashboard._build_summary(stopped) == ("3 step(s): 2 executed, 1 failed", [
-            "✗ join  failed", "  ReproStateError: step 'join' cannot start: 1 input(s) not on this machine:",
-            "    Data/vendor.csv  2.4 MB  online-only here"])
+        stopped = ("✓ clean  executed\n⊘ join  blocked\n  1 input(s) not on this machine:\n"
+                   "    Data/vendor.csv  2.4 MB  online-only here\n✗ report  failed\n  boom\n3 step(s): 1 executed, 1 blocked, 1 failed\n")
+        assert plan_dashboard._build_summary(stopped) == ("3 step(s): 1 executed, 1 blocked, 1 failed", [
+            "⊘ join  blocked", "  1 input(s) not on this machine:",
+            "    Data/vendor.csv  2.4 MB  online-only here", "✗ report  failed", "  boom"])
         many = "".join(f"✗ s{i}  failed\n  boom\n" for i in range(10)) + "10 step(s): 10 failed\n"
         detail = plan_dashboard._build_summary(many)[1]
         assert len(detail) == plan_dashboard.BUILD_DETAIL_LINES + 1 and detail[-1] == "… 8 more line(s) in the log"
@@ -7096,7 +7097,7 @@ class TestReproBuildRoutes:
             "console.log(JSON.stringify({"
             "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
             "only:reproBuildEstimate('t2#b','only'), chain:reproBuildEstimate('t2#b',''), task:reproBuildEstimate('t2',''),"
-            "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'),"
+            "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'), forceX:reproBuildEstimate('t2#x','force'),"
             "writtenFirst:reproGatedFiles([{files:[{node:'o',role:'output'}]},{files:[{node:'o',role:'dependency',outcome:'unknown',online_only:true}]}]),"
             "cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
             "root:reproBuildCommand('.','force')}));"
@@ -7109,8 +7110,10 @@ class TestReproBuildRoutes:
         assert out["chain"] == "1 step would run · ~2.0s by last runs · 1 more if their inputs change"
         assert out["task"] == ("2 steps would run · ~2.0s by last runs · 1 never ran · 1 more if their inputs change"
                                " · 1 need online-only files if their inputs change · 1 online-only, not run")
-        # The runner's gate: forced x and y read D/cloud.csv, so the build runs nothing.
-        assert out["force"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
+        # The runner's gate: forced x and y read D/cloud.csv, so they are blocked and the rest run.
+        assert out["force"] == ("3 steps would run · ~3.0s by last runs · 1 never ran"
+                                " · 2 blocked: 1 file not on this machine (2.0 KiB): D/cloud.csv")
+        assert out["forceX"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
         assert out["forceB"] == "2 steps would run · ~3.0s by last runs"
         assert out["writtenFirst"] == []
         assert out["cmd"] == "superra repro build 't2#b' --only"
