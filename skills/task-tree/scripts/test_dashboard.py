@@ -7100,6 +7100,9 @@ class TestReproBuildRoutes:
             "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'), forceX:reproBuildEstimate('t2#x','force'),"
             "writtenFirst:reproGatedFiles([{files:[{node:'o',role:'output'}]},{files:[{node:'o',role:'dependency',outcome:'unknown',online_only:true}]}]),"
             "cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
+            # Last, since it rewrites a: its last run failed and it reads the online-only file.
+            "failedBelow:(function(){var a=_reproData.status.steps[0];a.status='failed';a.files=[{node:'D/cloud.csv',"
+            "role:'dependency',outcome:'unknown',online_only:true,size:2048}];return reproBuildEstimate('t2#b','force');})(),"
             "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
@@ -7114,6 +7117,8 @@ class TestReproBuildRoutes:
         assert out["force"] == ("3 steps would run · ~3.0s by last runs · 1 never ran"
                                 " · 2 blocked: 1 file not on this machine (2.0 KiB): D/cloud.csv")
         assert out["forceX"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
+        # A blocked step whose last run failed skips the forced step below it.
+        assert out["failedBelow"] == "Would run nothing: 1 file not on this machine (2.0 KiB): D/cloud.csv"
         assert out["forceB"] == "2 steps would run · ~3.0s by last runs"
         assert out["writtenFirst"] == []
         assert out["cmd"] == "superra repro build 't2#b' --only"

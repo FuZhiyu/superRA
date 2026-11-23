@@ -3245,8 +3245,16 @@ function reproBuildEstimate(target, mode) {
     var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0, stopped = {}, all = run.length;
     sized.forEach(function(f) { bytes += f.size; });
     gate.forEach(function(f) { stopped[f.node] = true; });
-    run = run.filter(function(entry) { return !(entry && entry.files || []).some(function(f) { return f.role === 'dependency' && stopped[f.node]; }); });
-    blocked = (run.length ? ' · ' + (all - run.length) + ' blocked: ' : 'Would run nothing: ')
+    var isBlocked = function(entry) { return (entry && entry.files || []).some(function(f) { return f.role === 'dependency' && stopped[f.node]; }); };
+    /* A blocked step whose last run failed skips every step below it. */
+    var below = {}, queue = run.filter(function(entry) { return isBlocked(entry) && reproChannels(entry).own === 'failed'; }).map(function(entry) { return entry.name; });
+    while (queue.length) {
+      var at = queue.pop();
+      (_reproData.graph.step_edges || []).forEach(function(e) { if (e.from === at && !below[e.to]) { below[e.to] = true; queue.push(e.to); } });
+    }
+    all = run.filter(isBlocked).length;
+    run = run.filter(function(entry) { return !isBlocked(entry) && !(entry && below[entry.name]); });
+    blocked = (run.length ? ' · ' + all + ' blocked: ' : 'Would run nothing: ')
       + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
       + (sized.length ? ' (' + formatArtifactBytes(bytes) + ')' : '') + ': '
       + gate.slice(0, 3).map(function(f) { return f.node; }).join(', ') + (gate.length > 3 ? ', +' + (gate.length - 3) + ' more' : '');

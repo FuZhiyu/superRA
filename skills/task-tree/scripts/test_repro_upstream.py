@@ -199,6 +199,7 @@ def test_a_blocked_step_whose_last_run_failed_skips_the_steps_below_it(fan, caps
     assert fan.run("build", "02-use") == 1
     assert fan.run_times() == before
     out = capsys.readouterr().out
+    assert "not on this machine. Their last run failed, so the steps that read their outputs are skipped." in out
     assert "✗ p-unv  failed\n  its last run failed and it cannot rerun here" in out
     assert out.strip().endswith("4 step(s): 2 unchanged, 1 failed, 1 skipped")
 

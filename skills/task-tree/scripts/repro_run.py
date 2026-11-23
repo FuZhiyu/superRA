@@ -488,7 +488,7 @@ def _scope_line(build: Build, report: StatusReport) -> str:
     return f"Execution scope: {len(build.names)} step(s): " + "; ".join(parts)
 
 
-def _gate(build: Build, will_run: list[str]) -> str | None:
+def _gate(build: Build, will_run: list[str], report: StatusReport) -> str | None:
     """The steps blocked from the start: each must run and reads a file not on disk that no step in the build writes first.
 
     Records them in `build.gated`; the build leaves them as they are and runs the rest.
@@ -503,8 +503,12 @@ def _gate(build: Build, will_run: list[str]) -> str | None:
     if not rows:
         return None
     build.gated = {name for row in rows.values() for name in row[3]}
+    failed = sum(report.entry(name).local_status == "failed" for name in build.gated)
+    readers = ("Their last run failed, so the steps that read their outputs are skipped." if failed == len(build.gated)
+               else "Steps that read their outputs use the files already on disk"
+               + (f", except below the {failed} whose last run failed." if failed else "."))
     return "\n".join([f"{_MARKS['blocked']} {len(build.gated)} step(s) cannot run here: {len(rows)} file(s) they read are "
-                      "not on this machine. Steps that read their outputs use the files already on disk.",
+                      f"not on this machine. {readers}",
                       *unread_file_lines(list(rows.values()), build.command("status", "--json"))])
 
 
@@ -570,7 +574,7 @@ def run_build(
         with mutation_lock(paths), _interrupt_on_termination():
             will_run, report = _will_run(build)
             print(_scope_line(build, report))
-            gate = _gate(build, will_run)
+            gate = _gate(build, will_run, report)
             if not dry_run:
                 if gate:
                     print(gate, flush=True)
