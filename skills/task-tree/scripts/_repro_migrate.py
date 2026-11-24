@@ -52,6 +52,10 @@ def _ledger_records(ledger: Path) -> dict[str, dict]:
     return records
 
 
+_MARKER_STAYS = ("Error: the move is complete, but its marker {marker}/ could not be removed, and commands refuse "
+                 "while it is there. Remove it by hand, or make its folder writable and rerun.")
+
+
 def _discard_lock_only(directory: Path) -> None:
     """Remove a state folder that holds nothing but its lock. Call it with that lock held.
 
@@ -86,6 +90,8 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
         # A run interrupted after its last move left only its marker. No other one may still be finishing.
         with mutation_lock(new) if had[1] else ExitStack():
             shutil.rmtree(staging, ignore_errors=True)
+        if staging.exists():
+            return [_MARKER_STAYS.format(marker=new.ref(staging))], 1
         return [f"Finished an interrupted migration: the records and state were already in {new.ref(home)}/."], 0
     if dry_run:
         return _migrate(root, home, old, new, root_layout, *had, dry_run=True)
@@ -218,6 +224,8 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     if new.state_dir.is_dir():
         ensure_state_dir(new)
     shutil.rmtree(staging, ignore_errors=True)  # the migration is whole: readers may read again
+    if staging.exists():
+        return [*lines, _MARKER_STAYS.format(marker=ref(staging))], 1
 
     gone = [name for name, moved in ((ref(old.lock_file), lock is not None and not converted),
                                      (ref(old.acceptance_dir), bool(records)),

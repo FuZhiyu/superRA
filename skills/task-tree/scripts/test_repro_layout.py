@@ -507,3 +507,13 @@ def test_an_interrupted_conversion_of_a_legacy_lock_is_finished_by_a_rerun(tmp_p
     (root / "repro-lock.json").write_text(published)  # what an interrupted run leaves beside it
     lines, code = migrate(root, plan)
     assert code == 0 and not (root / "repro-lock.json").exists()
+
+
+def test_migrate_does_not_report_success_while_its_marker_stays(project, monkeypatch, capsys):
+    assert project.run("build", *CHAIN) == 0
+    (project.plan_root / ".repro.migrating").mkdir()  # a move already whole, interrupted before its last step
+    import _repro_migrate
+    monkeypatch.setattr(_repro_migrate.shutil, "rmtree", lambda *a, **k: None)
+    capsys.readouterr()
+    assert project.run("migrate") == 1
+    assert "its marker superRA/.repro.migrating/ could not be removed" in capsys.readouterr().err
