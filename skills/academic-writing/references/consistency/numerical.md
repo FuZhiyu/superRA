@@ -22,7 +22,7 @@ Numerical failures come in six patterns:
 Per quantitative claim in prose:
 
 - **Source identified.** Table / figure / explicit calculation / cited paper. None of these → the number is floating; report it.
-- **An exact value matches its source** within stated rounding. An approximate one ("about", "roughly") is a finding only once it drifts more than about one rounding step ([Proofread](../proofread.md)).
+- **An exact value matches its source** within stated rounding. An approximate one ("about", "roughly") is a finding only when the [Proofread rule](../proofread.md) would correct it.
 - **Units and scale match.**
 
 Build a small table while auditing: `text_claim | text_value | source_location | source_value | match?`.

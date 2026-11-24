@@ -139,7 +139,7 @@ The rules below are **heuristics in service of the reader**, not must-rewrite ma
 
 **Topic sentence first.** Every paragraph carries its main message in its first sentence, which should (1) state that message, (2) be recognizably linked to the overall story, (3) provoke follow-up questions the rest of the paragraph answers. (Chaubey p. 137, 141.) *No exceptions — structural norm for academic prose.*
 
-**One idea per paragraph.** RAP paragraphs run 5–6 sentences (Chaubey p. 158). An idea needing more is probably two ideas — split. An idea buried at the bottom means the paragraph is backward — move it up. *Do NOT split a single claim plus its immediate qualification.*
+**One idea per paragraph.** RAP paragraphs run 5–6 sentences (Chaubey p. 158). An idea needing more is probably two ideas — split. An idea buried at the bottom means the paragraph is backward — surface the reorder as `authorial` per [Fix tiers](review.md#fix-tiers). *Do NOT split a single claim plus its immediate qualification.*
 
 **Transitions at paragraph start.** Place transition words (`however`, `moreover`, `in contrast`, `consequently`) near the start of the paragraph or of the pivoting sentence, not buried mid-sentence. *No exceptions — structural norm.*
 
@@ -177,7 +177,7 @@ This checklist names candidate problems. Apply a rule only where it fixes a read
 ### Paragraph-level rules
 
 - Each paragraph's first sentence carries the main message (Chaubey p. 137).
-- One idea per paragraph; a paragraph that buries the idea at the bottom is surfaced for reordering as `authorial` (Chaubey p. 160).
+- One idea per paragraph; a buried idea surfaced per §One idea per paragraph (Chaubey p. 160).
 - Transitions placed near paragraph start.
 - First-sentence link test: first sentences of consecutive paragraphs form a coherent storyline (Chaubey p. 128).
 

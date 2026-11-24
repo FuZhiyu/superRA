@@ -22,7 +22,7 @@ Shared apply-discipline vocabulary at two call sites: review-mode findings stamp
 
 Each `consistency/<dim>.md` output block names this section as the source of legal values.
 
-- **Proofread** corrects anything wrong or misleading, whatever its tier, and lists other `mechanical` items in the return.
+- **Proofread** applies `mechanical` and `conventional` items that correct something wrong or misleading, and lists other `mechanical` items in the return.
 - **Polish** applies `mechanical` and `conventional` items.
 - Both modes surface `authorial` items.
 
@@ -40,7 +40,7 @@ Infer thoroughness from scope; ask via `AskUserQuestion` only when ambiguous.
 
 ## Multi-lane reviews
 
-Scope spanning more than one lane (language/style, structure, any consistency dimension): dispatch **one reviewer per lane in parallel**, each loading only its lane file — `style.md`, `structure.md`, `handbook.md`, or one `consistency/*.md`. One generalist loaded with every lane produces shallower findings, and runs slower. N > 1: load `long-form-review.md` for the review task-tree protocol.
+Scope spanning more than one lane (language/style, structure, handbook, any consistency dimension): dispatch **one reviewer per lane in parallel**, each loading only its lane file — `style.md`, `structure.md`, `handbook.md`, or one `consistency/*.md`. One generalist loaded with every lane produces shallower findings, and runs slower. N > 1: load `long-form-review.md` for the review task-tree protocol.
 
 ## Review-as-planning
 
