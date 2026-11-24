@@ -44,9 +44,9 @@ Apply [the reader test](../SKILL.md#the-reader-test) using these examples. See [
 
 ### When an estimate changes
 
-- **Before** — The draft says “A batch uses about 64 kilowatt-hours.” After the estimate moves to 64.3, the proposed edit says “A batch uses about 64.3 kilowatt-hours.”
-- **After** — Retain “A batch uses about 64 kilowatt-hours.” The updated estimate still rounds to 64.
-- **Keep** — If the estimate reaches 67.8, correct the sentence to “A batch uses about 68 kilowatt-hours.”
+- **Before** — The draft says “A charge lasts approximately 4.5 hours.” After the estimate moves to 4.6, the proposed edit says “A charge lasts approximately 4.6 hours.”
+- **After** — Retain “A charge lasts approximately 4.5 hours.” The new value is one rounding step away and the message is the same.
+- **Keep** — If the estimate reaches 5.3, correct the sentence to “A charge lasts approximately 5.3 hours.”
 
 ## Hedging a result the exhibit supports
 
