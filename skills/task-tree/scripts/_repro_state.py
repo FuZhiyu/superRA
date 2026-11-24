@@ -30,11 +30,11 @@ from pathlib import Path
 from typing import Iterable
 
 if __package__:
-    from ._repro import Graph, Step, _glob_has_match, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
+    from ._repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from ._task_validate import OUTPUT_CAP
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
-    from _repro import Graph, Step, _glob_has_match, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
+    from _repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from _task_validate import OUTPUT_CAP
 
 try:  # Python 3.11+
@@ -750,8 +750,8 @@ def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "Ha
     """(node, why, size) per input the step cannot read here without a download.
 
     Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
-    With *read* off nothing is hashed and no folder is walked for online-only content: the answer comes
-    from metadata alone, cheap enough for every step of a status payload.
+    With *read* off nothing is hashed: whether an input is there is answered by the walk hashing would
+    make, from metadata alone, cheap enough for every step of a status payload.
     """
     root = paths.project_root
     deps, _ = step_nodes(step, output_nodes(graph))
@@ -760,12 +760,12 @@ def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "Ha
     rows = []
     for node in deps:
         path = absolute(root, node[2] or node[1])
-        online, size = cache.probe(path, walk=read, glob=node_glob(node))
+        online, size = cache.probe(path, walk=True, glob=node_glob(node))
         if online:
             value = Unread("online-only")
         elif read:
             value = dependency_state(cache, root, node)
-        elif not (_glob_has_match(path) if node_glob(node) else os.path.lexists(path)):
+        elif not _on_disk(path, node_glob(node)):
             value = None
         else:
             value = "" if os.access(path, os.R_OK) or node_glob(node) else Unread("unreadable")
@@ -774,6 +774,16 @@ def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "Ha
         elif unread(value):
             rows.append((node[0], unread_phrase(value), size))
     return rows
+
+
+def _on_disk(path: Path, glob) -> bool:
+    """Whether a file, a folder, or a match of a glob is on disk, found by the walk that hashes it."""
+    if not glob:
+        return os.path.lexists(path)
+    split = glob_split(path)
+    if split is None or not split[0].is_dir():
+        return path.exists()
+    return next(iter(_tree_files(split[0], [], split[1])), None) is not None
 
 
 def input_writers(graph: Graph, step: Step):
@@ -801,7 +811,7 @@ def _unavailable(graph: Graph, step: Step, paths: "RunnerPaths", cache: "HashCac
     if not rows:
         return []
     writers = input_writers(graph, step)
-    return [{"node": node, "why": why, "producers": sorted(writers(node))} for node, why, _ in rows]
+    return [{"node": node, "why": why, "size": size, "producers": sorted(writers(node))} for node, why, size in rows]
 
 
 def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:

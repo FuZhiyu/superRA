@@ -429,3 +429,55 @@ def test_a_sidecar_read_never_opens_an_online_only_sidecar(project, offline):
     item = {"digest": HashCache().file_hash(project.root / "output/a.txt"), "provenance": "",
             "resolved": "output/a.txt"}
     assert _bytes_verified(project.graph(), project.paths, item) is False
+
+
+# ---------------------------------------------------------------------------
+# The status payload's inputs not on this machine
+# ---------------------------------------------------------------------------
+
+GLOB_TASK = """\
+---
+title: "Agg"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Aggregate.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: agg
+    cmd: cat Data/**/*.csv > output/agg.csv
+    deps:
+      - Data/**/*.csv
+    outs:
+      - output/agg.csv
+```
+"""
+
+
+def _glob_project(tmp_path) -> Project:
+    proj = Project(tmp_path / "glob")
+    proj.write("superRA/01-agg/task.md", GLOB_TASK)
+    return proj
+
+
+def test_a_never_built_glob_with_local_matches_lists_no_unavailable_input(tmp_path):
+    """Matches reached through a symlinked folder count, as they do for the runner."""
+    proj = _glob_project(tmp_path)
+    proj.write("store/a.csv", "1\n")
+    (proj.root / "Data").mkdir()
+    os.symlink(proj.root / "store", proj.root / "Data" / "linked")
+    assert proj.status(".").entry("agg").unavailable == []
+
+
+def test_an_online_only_match_of_a_never_built_glob_is_listed_unavailable(tmp_path, monkeypatch):
+    proj = _glob_project(tmp_path)
+    proj.write("Data/y2020/a.csv", "1\n")
+    Offline(monkeypatch, proj.root).evict("Data/y2020/a.csv")
+    [row] = proj.status(".").entry("agg").unavailable
+    assert (row["node"], row["why"], row["producers"]) == ("Data/**/*.csv", "online-only here", [])

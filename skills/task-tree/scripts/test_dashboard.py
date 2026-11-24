@@ -7096,7 +7096,9 @@ class TestReproBuildRoutes:
         ])
         # a (stale) -> b (fresh, stale through a) and y (unverified, stale through a); c missing; x unverified.
         # x and y read the online-only D/cloud.csv; nothing writes it.
-        cloud = "files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048}]"
+        # `unavailable` is the server's list of a step's inputs not on this machine, each with the steps that write it.
+        cloud = ("files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048}],"
+                 "unavailable:[{node:'D/cloud.csv',why:'not on this machine',size:2048,producers:[]}]")
         harness = (
             "var _reproData={graph:{steps:[{name:'a',task:'t1'},{name:'b',task:'t2'},{name:'c',task:'t2/sub'},{name:'x',task:'t2'},{name:'y',task:'t2'}],"
             "step_edges:[{from:'a',to:'b'},{from:'a',to:'y'}]},status:{steps:[{name:'a',status:'stale',duration:2},"
@@ -7107,14 +7109,14 @@ class TestReproBuildRoutes:
             "scope:reproBuildScope(_reproData.graph,'t2',false).sort(), up:reproBuildScope(_reproData.graph,'t2#b',true).sort(),"
             "only:reproBuildEstimate('t2#b','only'), chain:reproBuildEstimate('t2#b',''), task:reproBuildEstimate('t2',''),"
             "force:reproBuildEstimate('t2','force'), forceB:reproBuildEstimate('t2#b','force'), forceX:reproBuildEstimate('t2#x','force'),"
-            "writtenFirst:reproGatedFiles([{files:[{node:'o',role:'output'}]},{files:[{node:'o',role:'dependency',outcome:'unknown',online_only:true}]}]),"
+            "writtenFirst:reproGatedFiles([{name:'p'},{name:'c',unavailable:[{node:'o',why:'online-only here',producers:['p']}]}]),"
             "cmd:reproBuildCommand('t2#b','only'), plain:reproBuildCommand('t2',''),"
             # Last, since it rewrites a: its last run failed and it reads the online-only file.
-            "failedBelow:(function(){var a=_reproData.status.steps[0];a.status='failed';a.files=[{node:'D/cloud.csv',"
-            "role:'dependency',outcome:'unknown',online_only:true,size:2048}];return reproBuildEstimate('t2#b','force');})(),"
+            "failedBelow:(function(){var a=_reproData.status.steps[0];a.status='failed';"
+            "a.unavailable=[{node:'D/cloud.csv',why:'not on this machine',size:2048,producers:[]}];return reproBuildEstimate('t2#b','force');})(),"
             # A never-built producer blocked on absent data: its consumer's input is absent too.
             "absentBelow:(function(){_reproData={graph:{steps:[{name:'p',task:'t'},{name:'c',task:'t'}],step_edges:[{from:'p',to:'c'}]},"
-            "status:{steps:[{name:'p',status:'missing',duration:null,files:[{node:'D/ext.csv',role:'dependency',outcome:'unknown'},"
+            "status:{steps:[{name:'p',status:'missing',duration:null,unavailable:[{node:'D/ext.csv',why:'not on this machine',size:null,producers:[]}],files:[{node:'D/ext.csv',role:'dependency',outcome:'unknown'},"
             "{node:'o/p.txt',role:'output',outcome:'absent'}]},{name:'c',status:'missing',duration:null,files:["
             "{node:'o/p.txt',role:'dependency',outcome:'absent'},{node:'o/c.txt',role:'output',outcome:'absent'}],"
             "unavailable:[{node:'o/p.txt',why:'missing',producers:['p']}]}]}};"
@@ -7124,10 +7126,9 @@ class TestReproBuildRoutes:
             "step_edges:[{from:'A',to:'B'},{from:'B',to:'C'}]},status:{steps:[{name:'A',status:'failed',duration:1,"
             + cloud + "},{name:'B',status:'fresh',duration:1},{name:'C',status:'stale',duration:5}]}};"
             "return reproBuildEstimate('t1','only');})(),"
-            # `unavailable` is the server's list of a step's inputs not on this machine, each with the steps that write it.
             # A directory out: the consumer of parts/a.csv waits on the blocked producer.
             "dirOut:(function(){_reproData={graph:{steps:[{name:'P',task:'t'},{name:'C',task:'t'}],"
-            "step_edges:[{from:'P',to:'C',via:'parts/a.csv'}]},status:{steps:[{name:'P',status:'missing',duration:null,files:["
+            "step_edges:[{from:'P',to:'C',via:'parts/a.csv'}]},status:{steps:[{name:'P',status:'missing',duration:null,unavailable:[{node:'D/vendor.csv',why:'not on this machine',size:null,producers:[]}],files:["
             "{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},{node:'parts',role:'output',outcome:'absent'}]},"
             "{name:'C',status:'missing',duration:null,files:[{node:'parts/a.csv',role:'dependency',outcome:'absent'}],"
             "unavailable:[{node:'parts/a.csv',why:'missing',producers:['P']}]}]}};"
@@ -7136,7 +7137,7 @@ class TestReproBuildRoutes:
             "fanIn:(function(){_reproData={graph:{steps:[{name:'A',task:'t'},{name:'B',task:'t'},{name:'J',task:'t'}],"
             "step_edges:[{from:'A',to:'J',via:'o/a.txt'},{from:'B',to:'J',via:'o/b.txt'}]},status:{steps:["
             "{name:'A',status:'stale',duration:2,files:[{node:'o/a.txt',role:'output',outcome:'matches'}]},"
-            "{name:'B',status:'stale',duration:1,files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048},"
+            "{name:'B',status:'stale',duration:1,unavailable:[{node:'D/cloud.csv',why:'not on this machine',size:2048,producers:[]}],files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048},"
             "{node:'o/b.txt',role:'output',outcome:'unknown',online_only:true}]},"
             "{name:'J',status:'stale',duration:4,files:[{node:'o/a.txt',role:'dependency',outcome:'matches'},"
             "{node:'o/b.txt',role:'dependency',outcome:'unknown',online_only:true}],"
@@ -7144,14 +7145,14 @@ class TestReproBuildRoutes:
             "return reproBuildEstimate('t','');})(),"
             # A glob reader: its own row for the literal wildcard reads absent, but the blocked producer's file is on disk.
             "globSaved:(function(){_reproData={graph:{steps:[{name:'P',task:'t'},{name:'C',task:'t'}],"
-            "step_edges:[{from:'P',to:'C',via:'parts/*.csv'}]},status:{steps:[{name:'P',status:'missing',duration:null,files:["
+            "step_edges:[{from:'P',to:'C',via:'parts/*.csv'}]},status:{steps:[{name:'P',status:'missing',duration:null,unavailable:[{node:'D/vendor.csv',why:'not on this machine',size:null,producers:[]}],files:["
             "{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},{node:'parts/a.csv',role:'output',outcome:null}]},"
             "{name:'C',status:'missing',duration:null,files:[{node:'parts/*.csv',role:'dependency',outcome:'absent'}]}]}};"
             "return reproBuildEstimate('t','');})(),"
             # Two producers behind one glob: the blocked one's file is gone, so the reader cannot run though the other can.
             "globMixed:(function(){_reproData={graph:{steps:[{name:'P1',task:'t'},{name:'P2',task:'t'},{name:'C',task:'t'}],"
             "step_edges:[{from:'P1',to:'C',via:'parts/*.csv'},{from:'P2',to:'C',via:'parts/*.csv'}]},status:{steps:["
-            "{name:'P1',status:'missing',duration:null,files:[{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},"
+            "{name:'P1',status:'missing',duration:null,unavailable:[{node:'D/vendor.csv',why:'not on this machine',size:null,producers:[]}],files:[{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},"
             "{node:'parts/a.csv',role:'output',outcome:'absent'}]},"
             "{name:'P2',status:'stale',duration:2,files:[{node:'parts/b.csv',role:'output',outcome:'matches'}]},"
             "{name:'C',status:'stale',duration:4,files:[{node:'parts/*.csv',role:'dependency',outcome:'changed'}],"

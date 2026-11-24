@@ -3240,36 +3240,30 @@ function reproBuildEstimate(target, mode) {
     else if (ch.own === 'unverified') { if (upstream) needs++; else online++; }
     else if (upstream) maybe++;
   });
-  var gate = reproGatedFiles(run), blocked = '';
-  if (gate.length) {
-    var sized = gate.filter(function(f) { return f.size != null; }), bytes = 0, stopped = {}, all = run.length;
-    sized.forEach(function(f) { bytes += f.size; });
-    gate.forEach(function(f) { stopped[f.node] = true; });
-    var blockedNames = {}, running = {};
+  /* Which steps are blocked is the server's answer. Each step's `unavailable` lists its inputs not on
+     this machine with the steps that write them, by the runner's own check; a step that runs is blocked
+     when one of those inputs has no producer that runs. */
+  var blockedNames = {}, running = {}, blocked = '';
+  run.forEach(function(entry) { if (entry) running[entry.name] = true; });
+  for (var grew = true; grew;) {
+    grew = false;
     run.forEach(function(entry) {
-      if (!entry) return;
-      running[entry.name] = true;
-      if ((entry.files || []).some(function(f) { return f.role === 'dependency' && stopped[f.node]; })) blockedNames[entry.name] = true;
+      if (!entry || blockedNames[entry.name]) return;
+      if ((entry.unavailable || []).some(function(input) {
+        return !(input.producers || []).some(function(p) { return running[p] && !blockedNames[p]; });
+      })) blockedNames[entry.name] = grew = true;
     });
-    /* A step is blocked too when an input is not on this machine and no step that runs writes it.
-       `unavailable` is the runner's own check, made by the server for each step: the inputs it cannot
-       read here, each with the steps that write it. */
-    for (var grew = true; grew;) {
-      grew = false;
-      run.forEach(function(entry) {
-        if (!entry || blockedNames[entry.name]) return;
-        if ((entry.unavailable || []).some(function(input) {
-          return !(input.producers || []).some(function(p) { return running[p] && !blockedNames[p]; });
-        })) blockedNames[entry.name] = grew = true;
-      });
-    }
+  }
+  var all = Object.keys(blockedNames).length;
+  if (all) {
+    var gate = reproGatedFiles(run), sized = gate.filter(function(f) { return f.size != null; }), bytes = 0;
+    sized.forEach(function(f) { bytes += f.size; });
     /* A blocked step whose last run failed skips every step below it in the build. */
     var below = {}, queue = run.filter(function(entry) { return entry && blockedNames[entry.name] && reproChannels(entry).own === 'failed'; }).map(function(entry) { return entry.name; });
     while (queue.length) {
       var at = queue.pop();
       (_reproData.graph.step_edges || []).forEach(function(e) { if (e.from === at && scope.has(e.to) && !below[e.to]) { below[e.to] = true; queue.push(e.to); } });
     }
-    all = Object.keys(blockedNames).length;
     run = run.filter(function(entry) { return !(entry && (blockedNames[entry.name] || below[entry.name])); });
     blocked = (run.length ? ' · ' + all + ' blocked: ' : 'Would run nothing: ')
       + gate.length + ' file' + (gate.length === 1 ? '' : 's') + ' not on this machine'
@@ -3286,14 +3280,14 @@ function reproBuildEstimate(target, mode) {
     + (run.length > unknown ? ' · ~' + reproDuration(total) + ' by last runs' : '')
     + (unknown ? ' · ' + unknown + ' never ran' : '') + tail;
 }
-/* The inputs the runner's gate stops on: online-only, or absent with no
-   producer (`unknown`), and written first by no step in *run*. */
+/* The files the runner's gate lists: the inputs not on this machine that no step in *run* writes,
+   read from each step's `unavailable`. */
 function reproGatedFiles(run) {
-  var written = new Set(), gated = {};
-  run.forEach(function(entry) { (entry && entry.files || []).forEach(function(f) { if (f.role === 'output') written.add(f.node); }); });
+  var running = {}, gated = {};
+  run.forEach(function(entry) { if (entry) running[entry.name] = true; });
   run.forEach(function(entry) {
-    (entry && entry.files || []).forEach(function(f) {
-      if (f.role === 'dependency' && (f.online_only || f.outcome === 'unknown') && !written.has(f.node)) gated[f.node] = f;
+    (entry && entry.unavailable || []).forEach(function(input) {
+      if (!(input.producers || []).some(function(p) { return running[p]; })) gated[input.node] = input;
     });
   });
   return Object.keys(gated).sort().map(function(node) { return gated[node]; });
