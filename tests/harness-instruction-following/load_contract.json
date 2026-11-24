@@ -401,13 +401,16 @@
       "area": "domain-academic-writing",
       "source_paths": [
         "skills/using-superra/SKILL.md#L61-L61",
-        "skills/academic-writing/SKILL.md#L58-L86"
+        "skills/academic-writing/SKILL.md#L21-L30"
       ],
-      "trigger": "Task drafts, polishes, proofreads, reviews, or otherwise edits reader-facing .md/.tex prose.",
+      "trigger": "Task works on a .tex source by default or on publication-quality writing in another format, such as manuscript Markdown.",
       "expected_evidence": [
         "structured table parse confirms the domain is present in the manifest",
-        "fixture Markdown/prose task should lead transcript to load academic-writing",
-        "reference loads depend on Review/Polish/Draft classification rather than all files at once"
+        "fixture manuscript Markdown task should lead transcript to load academic-writing",
+        "Proofread loads references/proofread.md and references/handbook.md",
+        "Polish loads references/polish.md, references/style.md, and references/handbook.md, with references/structure.md for authorized restructuring",
+        "Draft loads references/draft.md, references/structure.md, references/style.md, and references/handbook.md",
+        "Review loads references/review.md and the references for the requested lanes"
       ],
       "classification": [
         "ci_safe_static",
@@ -423,7 +426,7 @@
         "manual_live_claude": [
           "domain_loads_live.py DOMAIN_ROWS[academic-writing] + multi-domain (theory-modeling + academic-writing) every-match canary"
         ],
-        "notes": "Claude live-verified: prose task loads academic-writing, including as a member of the multi-domain every-match set. Review/Polish/Draft sub-reference routing is static-only."
+        "notes": "The Claude transcript verifies the academic-writing skill load, including as a member of the multi-domain every-match set. The mode-to-reference routes are recorded for static inspection."
       }
     },
     {

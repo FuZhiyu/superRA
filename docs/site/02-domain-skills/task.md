@@ -12,7 +12,7 @@ A domain skill is the methodology for one kind of research. The agent loads it a
 |---|---|---|
 | [econ-data-analysis](#/02-domain-skills/01-econ-data-analysis) | merges, filters, variables, regressions, and figures on economic or financial data | a one-to-many merge fan-out or missing returns coded as zero, at the step that caused it |
 | [theory-modeling](#/02-domain-skills/02-theory-modeling) | first-order conditions, equilibria, proofs, comparative statics | one symbol meaning two things; an assumption back-filled after the algebra needs it |
-| [academic-writing](#/02-domain-skills/03-academic-writing) | reviewing, polishing, or drafting manuscript text | an "improve the writing" pass that rewrites your argument, claims, or terminology |
+| [academic-writing](#/02-domain-skills/03-academic-writing) | proofreading, polishing, drafting, or reviewing a paper — `.tex` by default, other formats when publication-quality | an update pass that rewrites sentences still true, or adds caveats and construction detail you later delete |
 | [slide-design](#/02-domain-skills/04-slide-design) | creating, revising, or reviewing slide decks | slides crammed with derivations and caveats instead of the takeaway |
 
 ## Literature review is next
