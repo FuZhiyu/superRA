@@ -6786,7 +6786,7 @@ class TestReproRoutes:
             c.get("/api/repro/graph")
             body = c.get("/api/repro/status").json()
         # A dashboard GET writes no runner state into the project.
-        assert not (repro_plan.parent / ".superra-repro").exists()
+        assert not (repro_plan.parent / ".superra-repro").exists() and not (repro_plan / ".repro").exists()
         assert not (repro_plan.parent / ".gitignore").exists()
         assert body["summary"] == {
             "fresh": 0, "stale": 0, "missing": 3, "failed": 0, "unverified": 0,
@@ -7082,7 +7082,7 @@ class TestReproBuildRoutes:
         assert [s["name"] for s in task.json()["steps"]] == ["merge-panel"]
         assert step.status_code == 200 and step.json()["steps"][0]["status"] == "missing"
         assert path.status_code == 400 and unknown.status_code == 400
-        assert not (plan.parent / ".superra-repro").exists()
+        assert not (plan.parent / ".superra-repro").exists() and not (plan / ".repro").exists()
 
 
     # --- Client estimate (node-backed) ------------------------------------
@@ -7210,9 +7210,10 @@ class TestReproExportSnapshot:
         assert status["summary"]["missing"] == 3
 
 class TestReproLockWatch:
-    """A build rewrites `repro-lock.json` at the project root, outside the watched
-    plan root, so the watcher adds that one file and turns a change to it into
-    the `repro-updated` broadcast the view refreshes on."""
+    """A build rewrites the committed lock, which in a project not yet migrated
+    sits at the project root, outside the watched plan root. The watcher adds
+    that one file and turns a change to it into the `repro-updated` broadcast
+    the view refreshes on."""
 
     def _reset(self):
         plan_dashboard._worktree_cache.clear()
@@ -7220,7 +7221,25 @@ class TestReproLockWatch:
         plan_dashboard._worktree_watchers.clear()
         plan_dashboard._worktree_locks.clear()
 
-    def test_lock_change_broadcasts_repro_updated(self, tmp_path):
+    def test_the_graph_cache_follows_the_state_directory(self, tmp_path):
+        """A check step's stamp path is fixed when the graph is built; a moved state directory must rebuild it."""
+        self._reset()
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started", objective="seed")
+        state = plan_dashboard._build_worktree_state("wt-a", root)
+        before = plan_dashboard._repro_tree_signature(state)
+        (tmp_path / ".superra-repro").mkdir()  # the state is now the root-level folder, until the runner moves it
+        moved = plan_dashboard._repro_tree_signature(state)
+        assert moved != before
+        # A merge brings a root-level record in beside task-root ones: the graph carries a finding for it.
+        (root / ".repro").mkdir()
+        (root / ".repro" / "lock.json").write_text('{"version": 2, "steps": {}}\n', encoding="utf-8")
+        (tmp_path / "repro-acceptance").mkdir()
+        assert ("repro-acceptance",) in plan_dashboard._repro_tree_signature(state)
+
+    @pytest.mark.parametrize("lock_ref", ["superRA/.repro/lock.json", "repro-lock.json"])
+    def test_lock_change_broadcasts_repro_updated(self, tmp_path, lock_ref):
         import watchfiles
 
         loop = asyncio.new_event_loop()
@@ -7236,7 +7255,9 @@ class TestReproLockWatch:
 
         async def _test():
             state = plan_dashboard._worktree_cache["wt-a"]
-            lock = tmp_path / "repro-lock.json"
+            lock = tmp_path / lock_ref
+            lock.parent.mkdir(parents=True, exist_ok=True)
+            lock.write_text('{"version": 2, "steps": {}}\n', encoding="utf-8")
             await plan_dashboard._rebuild_and_broadcast(
                 state, {(watchfiles.Change.modified, str(lock))}
             )

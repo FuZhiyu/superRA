@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from _checkout_scope import is_foreign
+from _repro_layout import self_ignore as _self_ignore, state_dir as _state_dir
 from _task_io import SKIP_DIRS
 
 TASK_ROOT_DIRNAME = "superRA"
@@ -215,13 +216,8 @@ def _load(state_path: Path) -> dict | None:
 
 def _save(state_path: Path, payload: dict) -> None:
     """Atomic replace: a concurrent hook reads the old or the new baseline whole."""
-    state_dir = state_path.parent.parent
+    _self_ignore(state_path.parent.parent)
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    ignore = state_dir / ".gitignore"
-    if not ignore.exists():
-        ignore.write_text("*\n", encoding="utf-8")
-        from _repro_state import dropbox_ignore  # the runner re-flags the folder whenever it opens it
-        dropbox_ignore(state_dir)
     tmp = state_path.with_name(f"{state_path.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
     os.replace(tmp, state_path)
@@ -263,7 +259,7 @@ def detect(
     that did not exist in the previous baseline.
     """
     plan_root = plan_root.resolve()
-    baseline_dir = plan_root.parent / STATE_DIRNAME / BASELINE_SUBDIR
+    baseline_dir = _state_dir(plan_root.parent, plan_root) / BASELINE_SUBDIR
     state_path = baseline_dir / f"{session_key}.json"
     if seed_only and state_path.exists():
         return []

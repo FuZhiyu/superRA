@@ -7,7 +7,7 @@ import pytest
 from test_repro_runner import CHAIN, project, _use_a_sidecar  # noqa: F401
 from _repro_acceptance import (
     accept, preview, read_ledger, receipt_path,
-    ReproStateError, LEDGER,
+    ReproStateError,
 )
 from _repro_state import HashCache, compute_status, read_lock, read_run_record
 
@@ -116,7 +116,7 @@ def test_cli_preview_accept_explain_revoke_and_scope(project, capsys):
     assert project.run(*args, '--dry-run') == 0
     proposal = json.loads(capsys.readouterr().out)
     assert [row['step'] for row in proposal['steps']] == ['build-a']
-    assert not (project.root / LEDGER).exists()
+    assert not project.paths.acceptance_dir.exists()
     assert project.run(*args) == 0
     capsys.readouterr()
     assert project.run('explain', '01-a#build-a', '--json') == 0
@@ -214,8 +214,7 @@ def _portable_project(root):
 
 
 def committed_records(proj):
-    files = [p for p in sorted(proj.root.glob('repro-*')) if p.is_file()]
-    files += sorted((proj.root / 'repro-acceptance').glob('*.json'))
+    files = [proj.paths.lock_file, *sorted(proj.paths.acceptance_dir.glob('*.json'))]
     return {p.relative_to(proj.root).as_posix(): p.read_bytes() for p in files}
 
 
@@ -299,10 +298,10 @@ def test_accept_writes_small_records_only_for_steps_that_changed(project):
     assert project.run('build', '.') == 0
     project.write('Code/a.sh', project.read('Code/a.sh') + '# harmless\n')
     assert project.run('accept', '01-a', '--reason', 'Comment-only edit') == 0
-    record = project.root / LEDGER / 'build-a.json'
+    record = project.paths.acceptance_dir / 'build-a.json'
     before = record.read_bytes(), record.stat().st_mtime_ns
     assert project.run('accept', '.', '--reason', 'Everything reviewed') == 0
-    assert sorted(p.name for p in (project.root / LEDGER).iterdir()) == ['build-a.json']
+    assert sorted(p.name for p in project.paths.acceptance_dir.iterdir()) == ['build-a.json']
     assert (record.read_bytes(), record.stat().st_mtime_ns) == before
     assert set(json.loads(before[0])) == {'basis', 'boundary_inputs', 'id', 'lock', 'reason', 'reviews', 'state'}
     assert len(before[0]) < 1500

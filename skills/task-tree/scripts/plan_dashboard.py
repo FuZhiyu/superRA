@@ -53,8 +53,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 import _artifacts as artifacts
 import _repro_state
 from _repro import CONFIG_FILENAME, REPRO_SECTION, build_graph, graph_to_dict
+from _repro_layout import LOCAL_DIRNAME, REPRO_DIRNAME, root_leftovers, state_dir as _repro_state_dir
 from _repro_state import (
-    LOCK_FILENAME,
     SF_DATALESS,
     STATUSES,
     ReproStateError,
@@ -408,6 +408,11 @@ async def _broadcast(event: str, data: str, wt: str) -> None:
 # parameterizes which worktree it operates on.
 
 
+def _is_lock(path: Path, lock_file: Path) -> bool:
+    """Whether a watched change is the committed lock, however the watcher spells the project root."""
+    return path.name == lock_file.name and path.parent.name == lock_file.parent.name
+
+
 async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     """Apply a batch of filesystem *changes* to *state* and broadcast fragments.
 
@@ -424,13 +429,15 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
     repro_lock_changed = False
     repro_graph_changed = False
     _invalidate_repro_status(state.wt_id)
+    lock_file = runner_paths(Path(state.project_root), state.plan_root).lock_file
 
     for change_type, file_path_str in changes:
         fp = Path(file_path_str)
         name = fp.name
 
-        # A build rewrote the committed lock, so every step's freshness moved.
-        if name == LOCK_FILENAME:
+        # A build rewrote the committed lock, or an acceptance record changed,
+        # so step freshness moved.
+        if _is_lock(fp, lock_file) or REPRO_DIRNAME in fp.parts:
             repro_lock_changed = True
             continue
 
@@ -606,7 +613,16 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     # not see the next build on an inode-based backend. Closing that watch drops
     # a write that lands before the next one opens, so the reopened watch ticks
     # once and compares the lock with what the last refresh read.
-    lock_file = Path(state.project_root) / LOCK_FILENAME
+    def _lock_file() -> Path:
+        return runner_paths(Path(state.project_root), state.plan_root).lock_file
+
+    lock_file = _lock_file()
+    default_filter = watchfiles.DefaultFilter()
+    local_state = f"{os.sep}{REPRO_DIRNAME}{os.sep}{LOCAL_DIRNAME}{os.sep}"
+
+    def _watch_filter(change, path: str) -> bool:
+        """Drop this machine's reproduction state, which a status check itself rewrites."""
+        return local_state not in path + os.sep and default_filter(change, path)
 
     def _lock_signature():
         try:
@@ -617,12 +633,13 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
 
     refreshed = None  # the lock's signature when a lock change last re-armed the watch
     while not stop_event.is_set():
+        lock_file = _lock_file()  # `repro migrate` moves it
         watching_lock = lock_file.is_file()
         watch_paths = [state.plan_root] + ([lock_file] if watching_lock else [])
         rearm = False
         first_only = watching_lock and refreshed is not None  # the timeout yield serves only the first check
         watcher = watchfiles.awatch(
-            *watch_paths, stop_event=stop_event,
+            *watch_paths, stop_event=stop_event, watch_filter=_watch_filter,
             yield_on_timeout=not watching_lock or refreshed is not None,
         )
         try:
@@ -642,7 +659,7 @@ async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
                     await asyncio.sleep(0.2)
                     lock_read = _lock_signature()
                     await _rebuild_and_broadcast(state, changes)
-                    if watching_lock and any(Path(path).name == LOCK_FILENAME for _, path in changes):
+                    if watching_lock and any(_is_lock(Path(path), lock_file) for _, path in changes):
                         refreshed = lock_read
                         rearm = True
                         break
@@ -1559,6 +1576,10 @@ def _repro_tree_signature(state: WorktreeState) -> tuple:
     tasks = [root, *collect_all_tasks(root)] if root is not None else []
     return (
         str(state.plan_root),
+        # A check step's stamp path is fixed when the graph is built, so a moved state directory rebuilds it.
+        str(_repro_state_dir(Path(state.project_root), state.plan_root)),
+        # Root-level records beside task-root ones are a graph finding; a merge can bring one in.
+        tuple(root_leftovers(Path(state.project_root), state.plan_root)),
         _mtime(state.plan_root / "config.yaml"),
         tuple((t.path, _mtime(t.dir_path / "task.md")) for t in tasks),
     )
@@ -1674,7 +1695,7 @@ def _repro_status_payload(state: WorktreeState) -> dict:
     """
     project_root = Path(state.project_root)
     graph = _repro_graph(state)
-    paths = runner_paths(project_root)
+    paths = runner_paths(project_root, state.plan_root)
     try:
         report = compute_status(graph, paths, upstream=True, live_build=lock_holder(paths))
         report.selected = {e.step.name for e in report.entries}
@@ -2168,9 +2189,10 @@ def _reap_build(proc: subprocess.Popen, paths, job: dict) -> None:
 
 def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool) -> dict:
     """Spawn one `superra repro build` for the page's worktree; refuse a second."""
-    from _repro_state import ensure_state_dir
+    from _repro_state import adopt_root_state, ensure_state_dir
     project_root = Path(state.project_root)
-    paths = runner_paths(project_root)
+    adopt_root_state(project_root, state.plan_root)
+    paths = runner_paths(project_root, state.plan_root)
     args = _build_args(target, only, force)
     with _build_start_lock:
         holder = lock_holder(paths)
@@ -2194,7 +2216,7 @@ def _start_build_sync(state: WorktreeState, target: str, only: bool, force: bool
             "command": "superra repro build " + " ".join(
                 a if a.startswith("--") else shlex.quote(a) for a in args if a != "--"),
             "started_at": time.time(),
-            "log": f"{paths.state_dir.name}/logs/{BUILD_LOG_FILENAME}",
+            "log": f"{paths.ref(paths.state_dir)}/logs/{BUILD_LOG_FILENAME}",
         }
         _write_job(paths, job)
     threading.Thread(target=_reap_build, args=(proc, paths, job), daemon=True).start()
@@ -2237,7 +2259,7 @@ def _build_summary(log_text: str, head: str = "") -> tuple[str, list[str]]:
 
 def _build_state_sync(state: WorktreeState) -> dict:
     """Whether a build is running here, the page's last build, and the executing steps."""
-    paths = runner_paths(Path(state.project_root))
+    paths = runner_paths(Path(state.project_root), state.plan_root)
     holder = lock_holder(paths)
     job = _read_job(paths)
     running = holder is not None
@@ -2262,7 +2284,7 @@ def _build_state_sync(state: WorktreeState) -> dict:
 
 
 def _stop_build_sync(state: WorktreeState) -> dict:
-    paths = runner_paths(Path(state.project_root))
+    paths = runner_paths(Path(state.project_root), state.plan_root)
     job = _read_job(paths)
     if not _job_alive(job, lock_holder(paths)):
         raise HTTPException(status_code=409, detail="No build started from the dashboard is running")
@@ -2322,7 +2344,7 @@ def _repro_explain_sync(state: WorktreeState, target: str, diff: bool = False) -
     from _repro_state import HashCache
     project_root = Path(state.project_root)
     graph = _repro_graph(state)
-    paths = runner_paths(project_root)
+    paths = runner_paths(project_root, state.plan_root)
     try:
         kind, value = resolve_target(graph, target, project_root)
     except ReproStateError as exc:

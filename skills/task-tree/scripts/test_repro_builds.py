@@ -1,4 +1,4 @@
-"""What each step was built on — `built_on` in `repro-lock.json` — and its place in `repro explain` rows."""
+"""What each step was built on — `built_on` in the lock — and its place in `repro explain` rows."""
 from __future__ import annotations
 
 import getpass
@@ -11,7 +11,7 @@ from test_repro_runner import CHAIN, project  # noqa: F401
 
 def test_record_is_written_on_success_only(project):
     assert project.run("build", *CHAIN) == 0
-    text = project.read("repro-lock.json")
+    text = project.read("superRA/.repro/lock.json")
     lock = json.loads(text)
     for name in ("build-a", "build-b", "check-b"):
         assert set(lock["steps"][name]) == {"spec", "deps", "outs", "built_on", "sizes"}
@@ -20,12 +20,12 @@ def test_record_is_written_on_success_only(project):
 
     # An identical rebuild leaves the lock byte-identical: no timestamp churn.
     assert project.run("build", *CHAIN, "--force") == 0
-    assert project.read("repro-lock.json") == text
+    assert project.read("superRA/.repro/lock.json") == text
 
     before = lock["steps"]["build-a"]
     project.write("Code/a.sh", "exit 3\n")
     assert project.run("build", "01-a") != 0
-    assert json.loads(project.read("repro-lock.json"))["steps"]["build-a"] == before
+    assert json.loads(project.read("superRA/.repro/lock.json"))["steps"]["build-a"] == before
 
 
 def test_explain_compares_the_lock_builders_environment(clones, capsys, monkeypatch):

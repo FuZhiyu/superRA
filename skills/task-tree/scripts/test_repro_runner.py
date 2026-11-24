@@ -546,7 +546,7 @@ def test_first_build_runs_every_step(project):
     assert project.run("build", *CHAIN) == 0
     assert project.read("output/a.txt") == "hello\n"
     assert project.read("output/b.txt") == "hello\nhello\n"
-    assert (project.root / STATE_DIRNAME / "stamps" / "check-b.stamp").is_file()
+    assert (project.paths.stamps_dir / "check-b.stamp").is_file()
     assert project.states(*CHAIN) == {
         "build-a": "fresh",
         "build-b": "fresh",
@@ -554,10 +554,12 @@ def test_first_build_runs_every_step(project):
     }
 
 
-def test_state_directory_is_created_and_gitignored(project):
+def test_state_directory_is_created_in_the_task_root_and_ignores_itself(project):
     project.run("build", *CHAIN)
-    assert (project.root / STATE_DIRNAME / "logs" / "build-a.log").is_file()
-    assert f"{STATE_DIRNAME}/" in project.read(".gitignore").split()
+    assert project.paths.state_dir == project.plan_root / ".repro" / "local"
+    assert (project.paths.logs_dir / "build-a.log").is_file()
+    assert (project.paths.state_dir / ".gitignore").read_text() == "*\n"
+    assert not (project.root / ".gitignore").exists() and not (project.root / STATE_DIRNAME).exists()
 
 
 def test_lock_ids_stay_in_logical_form(project):
@@ -634,8 +636,8 @@ def test_a_failing_step_stops_its_descendants_and_exits_non_zero(project):
     assert project.run("build", *CHAIN) == 1
     entry = project.status(*CHAIN).entry("build-b")
     assert entry.status == "failed"
-    assert f"{STATE_DIRNAME}/logs/build-b.log" in entry.reason
-    assert "boom" in project.read(f"{STATE_DIRNAME}/logs/build-b.log")
+    assert project.paths.log_ref("build-b") in entry.reason
+    assert "boom" in project.read(project.paths.log_ref("build-b"))
     assert project.states(*CHAIN)["check-b"] == "stale"
 
 
@@ -1362,7 +1364,7 @@ def test_a_failing_step_reports_its_message_without_python_frames(project, capsy
 
     out = capsys.readouterr().out
     assert "StepFailed: step 'build-b' exited 3" in out
-    assert f"{STATE_DIRNAME}/logs/build-b.log" in out
+    assert project.paths.log_ref("build-b") in out
     assert "_run_step" not in out
     assert "repro_run.py" not in out
 
