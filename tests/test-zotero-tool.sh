@@ -132,7 +132,7 @@ assert_rc "bibtex invalid --library exits 1" 1
 #    importing the module — no Zotero/BBT/library access. These helpers back the
 #    --bib master sync and are reused by the citation features in sibling tasks.
 SYNC_TMP="$(mktemp -d)"
-SYNC_OUT="$(BIBDIR="$SYNC_TMP" uv run --quiet --with pyzotero==1.13.0 python - "$SCRIPT_ABS" <<'PY' 2>/tmp/zt_sync_err
+SYNC_OUT="$(BIBDIR="$SYNC_TMP" python3 - "$SCRIPT_ABS" <<'PY' 2>/tmp/zt_sync_err
 import importlib.util, os, sys
 from pathlib import Path
 spec = importlib.util.spec_from_file_location("zt", sys.argv[1])
@@ -197,7 +197,7 @@ assert_rc "bibliography without a selection exits 1" 1
 #     hardened split_bib_entries (a "@type{...}" token inside a field value must
 #     NOT become a phantom entry — the helper backing every reused .bib write).
 UNIT_TMP="$(mktemp -d)"
-UNIT_OUT="$(WORKDIR="$UNIT_TMP" uv run --quiet --with pyzotero==1.13.0 python - "$SCRIPT_ABS" <<'PY' 2>/tmp/zt_unit_err
+UNIT_OUT="$(WORKDIR="$UNIT_TMP" python3 - "$SCRIPT_ABS" <<'PY' 2>/tmp/zt_unit_err
 import importlib.util, os, sys
 from pathlib import Path
 spec = importlib.util.spec_from_file_location("zt", sys.argv[1])

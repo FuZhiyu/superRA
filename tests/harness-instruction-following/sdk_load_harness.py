@@ -39,8 +39,8 @@ load instruction and is covered by the static load-instruction contract in
 This module is the *only* place ``claude_agent_sdk`` is imported, and the import
 is deferred into :func:`run_skill_load_session`. The default CI path imports
 :mod:`sdk_load_evidence` (and its unit test) instead, which never touches this
-module, so the SDK dependency stays off the CI-safe path. Supply it on the live
-path via ``uv run --no-project --with claude-agent-sdk==0.2.165``.
+module, so the SDK dependency stays off the CI-safe path. The locked
+``tests/run_claude_smoke.py`` runner supplies the SDK.
 
 Gating mirrors the existing smokes:
 
@@ -55,8 +55,8 @@ harness, not raw SDK calls.
 
 Run standalone for a smoke check:
 
-    RUN_LIVE_HARNESS=1 uv run --no-project --with claude-agent-sdk==0.2.165 \\
-      python tests/harness-instruction-following/sdk_load_harness.py
+    RUN_LIVE_HARNESS=1 uv run --script tests/run_claude_smoke.py \\
+      tests/harness-instruction-following/sdk_load_harness.py
 """
 
 from __future__ import annotations
@@ -324,8 +324,7 @@ def _main() -> int:
         print(
             "SKIP  RUN_LIVE_HARNESS is not set to 1 — the SDK skill-load "
             "harness is opt-in and never runs in CI.\n"
-            "      Set RUN_LIVE_HARNESS=1 (with claude-agent-sdk installed via "
-            "uv run --with) to run it."
+            "      Set RUN_LIVE_HARNESS=1 and run via uv run --script tests/run_claude_smoke.py."
         )
         return 0
 

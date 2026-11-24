@@ -372,8 +372,7 @@ def _main() -> int:
         print(
             "SKIP  RUN_LIVE_HARNESS is not set to 1 — the per-stage skill-load "
             "canary is opt-in and never runs in CI.\n"
-            "      Set RUN_LIVE_HARNESS=1 (with claude-agent-sdk installed via "
-            "uv run --with) to run it."
+            "      Set RUN_LIVE_HARNESS=1 and run via uv run --script tests/run_claude_smoke.py."
         )
         return 0
 
