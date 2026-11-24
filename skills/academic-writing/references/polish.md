@@ -5,7 +5,6 @@
 ## Input shapes
 
 - **Unstaged edits.** Use the working tree as the target, limited to diff hunks when requested. Treat the author's changes as the baseline for your diff audit.
-- **Named target.** Work within the file, section, or paragraph named in the request.
 - **Accepted review findings.** Use the accepted list or the task's bounded batch of `## Review Notes` as the scope. Surface an ambiguous or incorrect finding. Record why an accepted item was deferred.
 
 ## Edit vs propose vs ask

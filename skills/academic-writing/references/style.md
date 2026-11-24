@@ -24,7 +24,7 @@ The rules below are **heuristics in service of the reader**, not must-rewrite ma
 - *Editing-history temporal marker.* Before: *The table now defines coreAE as …* → After: *Table 2 defines coreAE as …*
 - *Audience self-reference.* Before: *In the paper-facing table, we define …* → After: *Table 2 defines …*
 - *Process-internal artifact.* Before: *Throughout, AE refers to the IMF World Economic Outlook "Advanced Economies" classification, applied via the `AE` column of `input/country_information.csv`.* → After: *Throughout, AE refers to the IMF World Economic Outlook "Advanced Economies" classification.*
-- *Conversation jargon.* Define the term once in the document's own voice at first use, or replace with the standard term the audience knows. If neither fits (no document-side equivalent, not worth defining), the surrounding argument needs rewriting, not patching — surface as `authorial` per §Triage.
+- *Conversation jargon.* Define the term once in the document's own voice at first use, or replace with the standard term the audience knows. If neither fits (no document-side equivalent, not worth defining), the surrounding argument needs rewriting, not patching — surface as `authorial` per [Fix tiers](review.md#fix-tiers).
 
 **Do NOT rewrite when:**
 
@@ -177,7 +177,7 @@ This checklist names candidate problems. Apply a rule only where it fixes a read
 ### Paragraph-level rules
 
 - Each paragraph's first sentence carries the main message (Chaubey p. 137).
-- One idea per paragraph; paragraphs that bury the idea at the bottom are re-ordered (Chaubey p. 160).
+- One idea per paragraph; a paragraph that buries the idea at the bottom is surfaced for reordering as `authorial` (Chaubey p. 160).
 - Transitions placed near paragraph start.
 - First-sentence link test: first sentences of consecutive paragraphs form a coherent storyline (Chaubey p. 128).
 
