@@ -903,6 +903,7 @@ def explain(report, paths, cache, kind, value, *, full_diff=False, plan_name='su
     result['graph_errors'] = sum(f.severity == 'error' for f in report.graph.findings)
     result['searched'] = resolver.searched()
     resolver.store.save()
+    paths.settled()  # the resolver read the lock and the ledger again: a migration may have moved them since
     return result
 
 

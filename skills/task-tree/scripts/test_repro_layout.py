@@ -463,9 +463,17 @@ def test_status_refuses_during_a_migration_and_a_rerun_finishes_one_that_was_int
     assert project.run("status", *CHAIN) == 1
     assert "run `superra repro migrate` to finish it" in capsys.readouterr().err
     assert project.run("build", *CHAIN) == 1  # nor does a build decide anything on half-moved records
+    assert project.run("explain", CHAIN[0]) == 1
+    assert project.run("revoke", CHAIN[0]) == 1  # a record written now could be undone when the migration is rerun
     assert project.run("migrate") == 0
     assert not marker.exists()
     assert project.run("status", *CHAIN) == 0
+    # Interrupted after its last move, a migration leaves only the marker: a rerun still clears it.
+    marker.mkdir()
+    capsys.readouterr()
+    assert project.run("migrate") == 0
+    assert "Finished an interrupted migration" in capsys.readouterr().out
+    assert not marker.exists() and project.run("status", *CHAIN) == 0
 
 
 def test_a_status_that_resolved_its_paths_before_a_migration_is_refused(project):

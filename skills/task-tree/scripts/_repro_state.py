@@ -128,14 +128,16 @@ class RunnerPaths:
         return (layout.records_dir(self.project_root, plan_root) == self.records_dir
                 and layout.state_dir(self.project_root, plan_root) == self.state_dir)
 
-    def settled(self) -> None:
-        """Raise when a `migrate` is moving the records, or has moved them since these paths were resolved."""
-        if self.home is None:
-            return
-        if layout.staging_dir(self.project_root, self.home.parent).exists():
+    def migrating(self) -> None:
+        """Raise while a `migrate` is moving the records, or after one was interrupted."""
+        if self.home is not None and layout.staging_dir(self.project_root, self.home.parent).exists():
             raise ReproStateError("`superra repro migrate` is moving the reproduction records; run this again when it "
                                   "has finished. If none is running, one was interrupted: run `superra repro "
                                   "migrate` to finish it.")
+
+    def settled(self) -> None:
+        """Raise when a `migrate` is moving the records, or has moved them since these paths were resolved."""
+        self.migrating()
         if not self.current():
             raise ReproStateError("the reproduction records moved while this command was running; run it again")
 

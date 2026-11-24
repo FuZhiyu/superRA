@@ -80,7 +80,13 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
     root_layout = layout.records_dir(root, plan_root) is None
     had = (old.state_dir.is_dir(), new.state_dir.is_dir())
     if not had[0] and not any(os.path.lexists(root / name) for name in layout.ROOT_RECORDS):
-        return ["Nothing to migrate: no reproduction records or state at the project root."], 0
+        staging = layout.staging_dir(root, plan_root)
+        if not staging.exists() or dry_run:
+            return ["Nothing to migrate: no reproduction records or state at the project root."], 0
+        # A run interrupted after its last move left only its marker. No other one may still be finishing.
+        with mutation_lock(new) if had[1] else ExitStack():
+            shutil.rmtree(staging, ignore_errors=True)
+        return [f"Finished an interrupted migration: the records and state were already in {new.ref(home)}/."], 0
     if dry_run:
         return _migrate(root, home, old, new, root_layout, *had, dry_run=True)
     # A writer locks the state folder its layout resolves to; that folder is locked first, made if need be,

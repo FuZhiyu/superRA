@@ -62,6 +62,7 @@ def mutation_lock(paths):
     """
     import fcntl
     moved = 'the reproduction records moved while this command was starting; run it again'
+    paths.migrating()  # an interrupted migration is finished first, or a later rerun would undo this write
     if not paths.current():  # before creating anything where the records were
         raise ReproStateError(moved)
     layout.self_ignore(paths.state_dir)  # the lock may be the first file in it
@@ -79,6 +80,7 @@ def mutation_lock(paths):
                                   + (f' (process {pid})' if pid.isdigit() else '')) from None
         try:
             # Again under the lock: a migrate may have held it until now, and moved or removed this very file.
+            paths.migrating()
             if not paths.current() or not _same_file(handle, lock_path):
                 raise ReproStateError(moved)
             handle.truncate(0)
