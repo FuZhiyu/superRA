@@ -7092,7 +7092,7 @@ class TestReproBuildRoutes:
         defs = _extract_js_defs([
             "REPRO_STATES", "REPRO_GLYPHS", "REPRO_CLOUD", "_reproBuild", "reproStatusIndex", "reproStateOf",
             "reproChannels", "reproWithin", "reproDuration", "reproShellWord", "reproBuildCommand", "reproBuildScope",
-            "reproBuildEstimate", "reproGatedFiles", "reproFeeds", "formatArtifactBytes",
+            "reproBuildEstimate", "reproGatedFiles", "formatArtifactBytes",
         ])
         # a (stale) -> b (fresh, stale through a) and y (unverified, stale through a); c missing; x unverified.
         # x and y read the online-only D/cloud.csv; nothing writes it.
@@ -7116,18 +7116,21 @@ class TestReproBuildRoutes:
             "absentBelow:(function(){_reproData={graph:{steps:[{name:'p',task:'t'},{name:'c',task:'t'}],step_edges:[{from:'p',to:'c'}]},"
             "status:{steps:[{name:'p',status:'missing',duration:null,files:[{node:'D/ext.csv',role:'dependency',outcome:'unknown'},"
             "{node:'o/p.txt',role:'output',outcome:'absent'}]},{name:'c',status:'missing',duration:null,files:["
-            "{node:'o/p.txt',role:'dependency',outcome:'absent'},{node:'o/c.txt',role:'output',outcome:'absent'}]}]}};"
+            "{node:'o/p.txt',role:'dependency',outcome:'absent'},{node:'o/c.txt',role:'output',outcome:'absent'}],"
+            "unavailable:[{node:'o/p.txt',why:'missing',producers:['p']}]}]}};"
             "return reproBuildEstimate('t','');})(),"
             # --only selects A and C of A -> B -> C: A's failure reaches C only through B, which the build leaves out.
             "onlyChain:(function(){_reproData={graph:{steps:[{name:'A',task:'t1'},{name:'B',task:'t2'},{name:'C',task:'t1'}],"
             "step_edges:[{from:'A',to:'B'},{from:'B',to:'C'}]},status:{steps:[{name:'A',status:'failed',duration:1,"
             + cloud + "},{name:'B',status:'fresh',duration:1},{name:'C',status:'stale',duration:5}]}};"
             "return reproBuildEstimate('t1','only');})(),"
-            # A directory out: the consumer of parts/a.csv is tied to the blocked producer by the graph's edge alone.
+            # `unavailable` is the server's list of a step's inputs not on this machine, each with the steps that write it.
+            # A directory out: the consumer of parts/a.csv waits on the blocked producer.
             "dirOut:(function(){_reproData={graph:{steps:[{name:'P',task:'t'},{name:'C',task:'t'}],"
             "step_edges:[{from:'P',to:'C',via:'parts/a.csv'}]},status:{steps:[{name:'P',status:'missing',duration:null,files:["
             "{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},{node:'parts',role:'output',outcome:'absent'}]},"
-            "{name:'C',status:'missing',duration:null,files:[{node:'parts/a.csv',role:'dependency',outcome:'absent'}]}]}};"
+            "{name:'C',status:'missing',duration:null,files:[{node:'parts/a.csv',role:'dependency',outcome:'absent'}],"
+            "unavailable:[{node:'parts/a.csv',why:'missing',producers:['P']}]}]}};"
             "return reproBuildEstimate('t','');})(),"
             # A fan-in: the blocked producer's output is online-only here, so the join cannot run either.
             "fanIn:(function(){_reproData={graph:{steps:[{name:'A',task:'t'},{name:'B',task:'t'},{name:'J',task:'t'}],"
@@ -7136,7 +7139,8 @@ class TestReproBuildRoutes:
             "{name:'B',status:'stale',duration:1,files:[{node:'D/cloud.csv',role:'dependency',outcome:'unknown',online_only:true,size:2048},"
             "{node:'o/b.txt',role:'output',outcome:'unknown',online_only:true}]},"
             "{name:'J',status:'stale',duration:4,files:[{node:'o/a.txt',role:'dependency',outcome:'matches'},"
-            "{node:'o/b.txt',role:'dependency',outcome:'unknown',online_only:true}]}]}};"
+            "{node:'o/b.txt',role:'dependency',outcome:'unknown',online_only:true}],"
+            "unavailable:[{node:'o/b.txt',why:'online-only here',producers:['B']}]}]}};"
             "return reproBuildEstimate('t','');})(),"
             # A glob reader: its own row for the literal wildcard reads absent, but the blocked producer's file is on disk.
             "globSaved:(function(){_reproData={graph:{steps:[{name:'P',task:'t'},{name:'C',task:'t'}],"
@@ -7150,10 +7154,9 @@ class TestReproBuildRoutes:
             "{name:'P1',status:'missing',duration:null,files:[{node:'D/vendor.csv',role:'dependency',outcome:'unknown'},"
             "{node:'parts/a.csv',role:'output',outcome:'absent'}]},"
             "{name:'P2',status:'stale',duration:2,files:[{node:'parts/b.csv',role:'output',outcome:'matches'}]},"
-            "{name:'C',status:'stale',duration:4,files:[{node:'parts/*.csv',role:'dependency',outcome:'changed'}]}]}};"
+            "{name:'C',status:'stale',duration:4,files:[{node:'parts/*.csv',role:'dependency',outcome:'changed'}],"
+            "unavailable:[{node:'parts/a.csv',why:'missing',producers:['P1']}]}]}};"
             "return reproBuildEstimate('t','');})(),"
-            "feeds:[reproFeeds('parts/a.csv','parts/*.csv'),reproFeeds('parts/x.txt','parts/*.csv'),reproFeeds('parts','parts/*.csv'),"
-            "reproFeeds('out/y2020/p.parquet','out/**/*.parquet'),reproFeeds('other/a.csv','parts/*.csv'),reproFeeds('parts','parts/a.csv')],"
             "root:reproBuildCommand('.','force')}));"
         )
         proc = subprocess.run([_NODE, "-e", defs + "\n" + harness], capture_output=True, text=True, timeout=20)
@@ -7175,7 +7178,6 @@ class TestReproBuildRoutes:
         assert out["globSaved"] == "1 step would run · 1 never ran · 1 blocked: 1 file not on this machine: D/vendor.csv"
         assert out["globMixed"] == ("1 step would run · ~2.0s by last runs"
                                     " · 2 blocked: 1 file not on this machine: D/vendor.csv")
-        assert out["feeds"] == [True, False, True, True, False, True]
         assert out["fanIn"] == ("1 step would run · ~2.0s by last runs"
                                 " · 2 blocked: 1 file not on this machine (2.0 KiB): D/cloud.csv")
         assert out["onlyChain"] == ("1 step would run · ~5.0s by last runs"

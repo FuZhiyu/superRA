@@ -814,7 +814,7 @@ def test_status_json_matches_the_documented_shape(project, capsys):
     assert set(step) == {
         "name", "task", "kind", "cmd", "status", "reason", "changes",
         "duration", "last_run", "log", "deps", "outs", "acceptance",
-        "local_status", "local_reason", "boundary_inputs", "external_consumers",
+        "local_status", "local_reason", "boundary_inputs", "external_consumers", "unavailable",
         "running", "started_at", "origin", "files",
     }
     assert step["running"] is False

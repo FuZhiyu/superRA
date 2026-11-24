@@ -30,11 +30,11 @@ from pathlib import Path
 from typing import Iterable
 
 if __package__:
-    from ._repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
+    from ._repro import Graph, Step, _glob_has_match, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from ._task_validate import OUTPUT_CAP
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
-    from _repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
+    from _repro import Graph, Step, _glob_has_match, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from _task_validate import OUTPUT_CAP
 
 try:  # Python 3.11+
@@ -745,6 +745,65 @@ def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[N
     return deps, [outputs[o.path.resolved] for o in step.outs]
 
 
+def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "HashCache", *,
+                      read: bool = True) -> list[tuple[str, str, int | None]]:
+    """(node, why, size) per input the step cannot read here without a download.
+
+    Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
+    With *read* off nothing is hashed and no folder is walked for online-only content: the answer comes
+    from metadata alone, cheap enough for every step of a status payload.
+    """
+    root = paths.project_root
+    deps, _ = step_nodes(step, output_nodes(graph))
+    deps += directory_dep_nodes(graph, step)
+    externals = {e.path.logical for e in graph.external_inputs}
+    rows = []
+    for node in deps:
+        path = absolute(root, node[2] or node[1])
+        online, size = cache.probe(path, walk=read, glob=node_glob(node))
+        if online:
+            value = Unread("online-only")
+        elif read:
+            value = dependency_state(cache, root, node)
+        elif not (_glob_has_match(path) if node_glob(node) else os.path.lexists(path)):
+            value = None
+        else:
+            value = "" if os.access(path, os.R_OK) or node_glob(node) else Unread("unreadable")
+        if value is None:
+            rows.append((node[0], "missing" if node[0] not in externals else unread_phrase(value), size))
+        elif unread(value):
+            rows.append((node[0], unread_phrase(value), size))
+    return rows
+
+
+def input_writers(graph: Graph, step: Step):
+    """node -> the steps that write that input of *step*, by the graph's own edges; empty when no step does.
+
+    A glob or a folder is written by every step the graph links it to, and a file
+    under a directory out by that out's step, however either side spells the path.
+    """
+    outputs = output_nodes(graph)
+    dep_of = {outputs.get(dep.resolved, (dep.logical,))[0]: dep.logical for dep in step.deps}
+    owner = {out.path.logical: producer.name for producer in graph.steps for out in producer.outs}
+    by_dep: dict[str, set[str]] = {}
+    for source, consumer, via in graph.step_edges:
+        if consumer == step.name:
+            by_dep.setdefault(via, set()).add(source)
+
+    def writers(node: str) -> set[str]:
+        return by_dep.get(dep_of.get(node), set()) | ({owner[node]} if node in owner else set())
+    return writers
+
+
+def _unavailable(graph: Graph, step: Step, paths: "RunnerPaths", cache: "HashCache") -> list[dict]:
+    """Per input of *step* not on this machine: why, and the steps that write it. The dashboard's Build estimate reads it."""
+    rows = unreadable_inputs(graph, step, paths, cache, read=False)
+    if not rows:
+        return []
+    writers = input_writers(graph, step)
+    return [{"node": node, "why": why, "producers": sorted(writers(node))} for node, why, _ in rows]
+
+
 def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
     """Nodes for other steps' outs that cover, or lie inside, this step's deps or globs.
 
@@ -1189,6 +1248,7 @@ class StepStatus:
     started_at: float | None = None
     files: list[dict] = field(default_factory=list)  # per dep and out: node, role, outcome, online_only, size
     origin: str | None = None  # a lifted step: the furthest-upstream producer whose own state is blocking
+    unavailable: list[dict] = field(default_factory=list)  # per input not on this machine: node, why, producers
 
     def to_dict(self) -> dict:
         return {
@@ -1202,6 +1262,7 @@ class StepStatus:
             "local_reason": self.local_reason or self.reason,
             "origin": self.origin,
             "files": self.files,
+            "unavailable": self.unavailable,
             "boundary_inputs": self.boundary_inputs,
             "external_consumers": self.external_consumers,
             "changes": [c.to_dict() for c in self.changes],
@@ -1347,6 +1408,7 @@ def compute_status(
             step, lock.get(step.name), paths, cache, outputs, externals, memo, live_build
         )
         entry.external_consumers = external_consumers(graph, step)
+        entry.unavailable = _unavailable(graph, step, paths, cache)
         report.entries.append(entry)
     from _repro_acceptance import apply_to_status, read_ledger
     from _repro_scope import boundary_inputs, check_boundary_receipt
@@ -1983,6 +2045,8 @@ __all__ = [
     "step_nodes",
     "stamp_ref",
     "unread",
+    "unreadable_inputs",
+    "input_writers",
     "unread_phrase",
     "write_run_record",
 ]

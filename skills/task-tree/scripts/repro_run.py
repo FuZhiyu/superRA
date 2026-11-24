@@ -48,7 +48,6 @@ from _repro_state import (  # noqa: E402
     OUTPUT_CAP,
     TOML_AVAILABLE,
     HashCache,
-    Unread,
     LockEntry,
     ReproStateError,
     RunnerPaths,
@@ -58,11 +57,9 @@ from _repro_state import (  # noqa: E402
     capped,
     capped_join,
     compute_status,
-    dependency_state,
     directory_dep_nodes,
     ensure_state_dir,
     format_status,
-    node_glob,
     node_sizes,
     output_nodes,
     prune_lock,
@@ -78,7 +75,8 @@ from _repro_state import (  # noqa: E402
     step_nodes,
     unread,
     unread_file_lines,
-    unread_phrase,
+    unreadable_inputs,
+    input_writers,
     write_lock_entry,
     write_run_record,
 )
@@ -155,19 +153,7 @@ def _unreadable_inputs(build: Build, step: Step) -> list[tuple[str, str, int | N
 
     Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
     """
-    root = build.paths.project_root
-    deps, _ = step_nodes(step, output_nodes(build.graph))
-    deps += directory_dep_nodes(build.graph, step)
-    externals = {e.path.logical for e in build.graph.external_inputs}
-    rows = []
-    for node in deps:
-        online, size = build.cache.probe(absolute(root, node[2] or node[1]), walk=True, glob=node_glob(node))
-        value = Unread("online-only") if online else dependency_state(build.cache, root, node)
-        if value is None:
-            rows.append((node[0], "missing" if node[0] not in externals else unread_phrase(value), size))
-        elif unread(value):
-            rows.append((node[0], unread_phrase(value), size))
-    return rows
+    return unreadable_inputs(build.graph, step, build.paths, build.cache)
 
 
 def _missing_inputs(build: Build, step: Step) -> str | None:
@@ -186,12 +172,8 @@ def _unwritten_inputs(build: Build, step: Step) -> str:
     directory is supplied by the steps the graph links it to. The result is a blocked step's detail.
     """
     would = {name for name, (outcome, _) in build.outcomes.items() if outcome == "would execute"}
-    supplied = {via for source, consumer, via in build.graph.step_edges if consumer == step.name and source in would}
-    outputs = output_nodes(build.graph)
-    dep_of = {outputs.get(dep.resolved, (dep.logical,))[0]: dep.logical for dep in step.deps}
-    owner = {out.path.logical: producer.name for producer in build.graph.steps for out in producer.outs}
-    rows = [row for row in _unreadable_inputs(build, step)
-            if dep_of.get(row[0]) not in supplied and owner.get(row[0]) not in would]
+    writers = input_writers(build.graph, step)
+    rows = [row for row in _unreadable_inputs(build, step) if not writers(row[0]) & would]
     if not rows:
         return ""
     return "\n".join([f"{len(rows)} input(s) not on this machine:",

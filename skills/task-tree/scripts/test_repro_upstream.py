@@ -12,7 +12,7 @@ import pytest
 from _repro_state import DOWNLOAD_NOTES, OUTPUT_CAP, compute_status, read_run_record, write_run_record
 from _task_snapshot import frontier_rows
 from test_repro_online import Offline, _clear_cache
-from test_repro_runner import CHAIN, CONFIG, Project, project  # noqa: F401
+from test_repro_runner import CHAIN, CONFIG, Project, dir_project, project  # noqa: F401
 
 SOURCES = """\
 ---
@@ -328,10 +328,26 @@ def test_a_dry_run_on_a_clean_checkout_costs_readers_of_a_generated_glob_or_fold
     proj.write("superRA/config.yaml", CONFIG)
     proj.write("superRA/01-parts/task.md", GLOB_SOURCE)
     proj.write("superRA/02-readers/task.md", GLOB_READERS)
+    # The status payload names each input not on this machine with the steps that write it, however it is spelled.
+    waits = {e.step.name: e.unavailable for e in proj.status(".").entries}
+    assert waits["part"] == []
+    assert {(row["node"], tuple(row["producers"])) for row in waits["by-glob"]} == {
+        ("output/parts/*.csv", ("part",)), ("output/parts/a.csv", ("part",))}
+    assert {tuple(row["producers"]) for row in waits["by-folder"]} == {("part",)}
     capsys.readouterr()
     assert proj.run("build", ".", "--dry-run") == 0
     assert "Would execute 3 step(s):" in capsys.readouterr().out
     assert proj.run("build", ".") == 0
+    assert all(e.unavailable == [] for e in proj.status(".").entries)
+
+
+def test_status_names_a_file_missing_inside_a_directory_out_with_its_producer(dir_project):
+    """`a-use` reads one file of the folder `z-gen` writes; the folder is there, that file is not."""
+    assert dir_project.run("build", ".") == 0
+    (dir_project.root / "output/parts/a.txt").unlink()
+    [row] = dir_project.status(".").entry("a-use").unavailable
+    assert (row["why"], row["producers"]) == ("missing", ["z-gen"])
+    assert dir_project.status(".").entry("z-gen").unavailable == []
 
 
 def test_a_dry_run_waits_for_every_producer_before_costing_a_step(fan, capsys):
