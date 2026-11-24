@@ -481,3 +481,23 @@ def test_an_online_only_match_of_a_never_built_glob_is_listed_unavailable(tmp_pa
     Offline(monkeypatch, proj.root).evict("Data/y2020/a.csv")
     [row] = proj.status(".").entry("agg").unavailable
     assert (row["node"], row["why"], row["producers"]) == ("Data/**/*.csv", "online-only here", [])
+
+
+def test_a_glob_with_a_dangling_match_is_listed_unavailable_as_the_build_reads_it(tmp_path):
+    proj = _glob_project(tmp_path)
+    proj.write("Data/a.csv", "1\n")
+    os.symlink(proj.root / "Data" / "gone.csv", proj.root / "Data" / "b.csv")
+    [row] = proj.status(".").entry("agg").unavailable
+    assert (row["node"], row["why"]) == ("Data/**/*.csv", "unreadable here")
+    assert proj.run("build", ".") == 1  # the build blocks the step on the same file
+
+
+def test_the_unavailable_list_reads_no_file(tmp_path, monkeypatch):
+    """Status hashes nothing for a step never built; its inputs are judged from metadata."""
+    proj = _glob_project(tmp_path)
+    proj.write("Data/a.csv", "1\n")
+    opened = []
+    real = Path.open
+    monkeypatch.setattr(Path, "open", lambda self, *a, **k: (opened.append(self.name), real(self, *a, **k))[1])
+    assert proj.status(".").entry("agg").unavailable == []
+    assert "a.csv" not in opened

@@ -241,6 +241,7 @@ HASH_THREADS_ENV = "SUPERRA_HASH_THREADS"
 MAX_HASH_THREADS = 8
 PARALLEL_BYTES = 16 << 20  # below this much uncached content, a thread pool costs more than it saves
 _MISS = object()
+_PEEK = "not-read"  # a readable file a `HashCache.peeker` did not read
 
 
 def hash_threads() -> int:
@@ -274,6 +275,7 @@ class HashCache:
         self._dirty = False
         self._fresh: set[str] = set()  # stored here since the file was last read or written
         self._saved: tuple | None = None  # the file's (size, mtime_ns) when last read or written
+        self._peek = False  # a `peeker` view: answers without reading a byte
         self._flush_lock = threading.Lock()
         self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
         if path is not None:
@@ -341,13 +343,29 @@ class HashCache:
 
     def _hashed(self, path: Path, info: os.stat_result) -> str | Unread | None:
         value = self._known(path, info)
+        if value is _MISS and self._peek:
+            return _PEEK if os.access(path, os.R_OK) else Unread("unreadable")
         return self._store(path, info, self._digest(path)) if value is _MISS else value
+
+    def peeker(self) -> "HashCache":
+        """A view that answers what hashing would find without reading a byte, and stores nothing.
+
+        A file whose hash is not cached answers a placeholder when it may be read. Every other
+        answer (absent, online-only, unreadable, a broken link in a folder or a glob) comes from
+        the code that hashes, so it cannot disagree with a build.
+        """
+        view = HashCache()
+        view._entries = self._entries
+        view._peek = True
+        return view
 
     def warm(self, files: Iterable[tuple[Path, os.stat_result]]) -> None:
         """Hash the uncached files among *files* on several threads, ahead of the reads that follow.
 
         A batch too small to gain is left to those reads.
         """
+        if self._peek:
+            return
         misses = {str(path): (path, info) for path, info in files if self._known(path, info) is _MISS}
         threads = min(hash_threads(), len(misses))
         if threads < 2 or sum(info.st_size for _, info in misses.values()) < PARALLEL_BYTES:
@@ -750,9 +768,11 @@ def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "Ha
     """(node, why, size) per input the step cannot read here without a download.
 
     Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
-    With *read* off nothing is hashed: whether an input is there is answered by the walk hashing would
-    make, from metadata alone, cheap enough for every step of a status payload.
+    With *read* off nothing is read: the cache's `peeker` answers from metadata through the same code,
+    cheap enough for every step of a status payload.
     """
+    if not read:
+        cache = cache.peeker()
     root = paths.project_root
     deps, _ = step_nodes(step, output_nodes(graph))
     deps += directory_dep_nodes(graph, step)
@@ -761,29 +781,12 @@ def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "Ha
     for node in deps:
         path = absolute(root, node[2] or node[1])
         online, size = cache.probe(path, walk=True, glob=node_glob(node))
-        if online:
-            value = Unread("online-only")
-        elif read:
-            value = dependency_state(cache, root, node)
-        elif not _on_disk(path, node_glob(node)):
-            value = None
-        else:
-            value = "" if os.access(path, os.R_OK) or node_glob(node) else Unread("unreadable")
+        value = Unread("online-only") if online else dependency_state(cache, root, node)
         if value is None:
             rows.append((node[0], "missing" if node[0] not in externals else unread_phrase(value), size))
         elif unread(value):
             rows.append((node[0], unread_phrase(value), size))
     return rows
-
-
-def _on_disk(path: Path, glob) -> bool:
-    """Whether a file, a folder, or a match of a glob is on disk, found by the walk that hashes it."""
-    if not glob:
-        return os.path.lexists(path)
-    split = glob_split(path)
-    if split is None or not split[0].is_dir():
-        return path.exists()
-    return next(iter(_tree_files(split[0], [], split[1])), None) is not None
 
 
 def input_writers(graph: Graph, step: Step):
