@@ -362,3 +362,30 @@ def test_a_symlinked_task_file_does_not_make_a_task_root(tmp_path):
     (proj / "superRA").mkdir()
     (proj / "superRA" / "task.md").symlink_to(proj / ".plan" / "task.md")
     assert _repro_layout.task_root(proj) == proj / ".plan"
+
+
+def test_migrate_takes_the_lock_of_the_layout_in_use_even_on_a_fresh_checkout(project, capsys):
+    """No state folder yet: an acceptance starting during the move must still find the lock held."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
+    assert project.run("accept", "01-a", "--reason", "Comment-only edit") == 0
+    os.rename(project.paths.acceptance_dir, project.root / "repro-acceptance")
+    import shutil
+    shutil.rmtree(project.paths.state_dir)  # a fresh checkout: records from git, no machine state
+    import _repro_migrate
+    seen = []
+    real = _repro_migrate._migrate
+
+    def watched(*args):
+        from _repro_acceptance import lock_holder
+        seen.append(lock_holder(runner_paths(project.root)))
+        return real(*args)
+
+    _repro_migrate._migrate = watched
+    try:
+        assert project.run("migrate") == 0
+    finally:
+        _repro_migrate._migrate = real
+    assert seen == [os.getpid()]  # held while the records are read, checked, and moved
+    assert (project.plan_root / ".repro" / "acceptance" / "build-a.json").is_file()
+    assert not (project.root / STATE_DIRNAME).exists()

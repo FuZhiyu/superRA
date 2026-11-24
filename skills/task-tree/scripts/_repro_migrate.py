@@ -54,16 +54,28 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
     old = RunnerPaths(project_root=root, state_dir=root / layout.ROOT_STATE_DIRNAME)
     new = RunnerPaths(project_root=root, state_dir=home / layout.LOCAL_DIRNAME, records_dir=home)
     active = runner_paths(root, plan_root)
-    # Every state folder a build or an acceptance could be running from: the layout in use, and the root-level one.
-    held = {paths.state_dir: paths for paths in (active, old) if paths.state_dir.is_dir()}
-    with ExitStack() as locks:
-        if not dry_run:
-            for paths in held.values():
-                locks.enter_context(mutation_lock(paths))  # refuses while a build or an acceptance runs
-        return _migrate(root, home, old, new, active.records_dir is None, dry_run)
+    had_root_state = old.state_dir.is_dir()
+    # The lock of the layout in use, taken even when its state folder does not exist yet, so an acceptance
+    # or a build that starts meanwhile waits; and the root-level one, which a root-level build would hold.
+    held = {active.state_dir: active}
+    if had_root_state:
+        held.setdefault(old.state_dir, old)
+    try:
+        with ExitStack() as locks:
+            if not dry_run:
+                for paths in held.values():
+                    locks.enter_context(mutation_lock(paths))  # refuses while a build or an acceptance runs
+            return _migrate(root, home, old, new, active.records_dir is None, had_root_state, dry_run)
+    finally:
+        if not had_root_state and old.state_dir.is_dir():  # made only to hold the lock
+            for leftover in (old.state_dir / "mutation.lock", old.state_dir):
+                try:
+                    leftover.unlink() if leftover.is_file() else leftover.rmdir()
+                except OSError:
+                    pass
 
 
-def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_layout: bool,
+def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_layout: bool, had_root_state: bool,
              dry_run: bool) -> tuple[list[str], int]:
     """`migrate` under its locks: what to move is read, checked, and moved with nothing else writing records."""
     ledger = root / LEGACY_LEDGER
@@ -72,16 +84,17 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     lock = old.lock_file if old.lock_file.is_file() else old.legacy_lock_file if old.legacy_lock_file.is_file() else None
     converted = lock is not None and lock != old.lock_file
     records = sorted(old.acceptance_dir.glob("*.json")) if old.acceptance_dir.is_dir() else []
-    both_states = old.state_dir.is_dir() and new.state_dir.exists()
-    state = old.state_dir.is_dir() and not both_states
+    both_states = had_root_state and new.state_dir.exists()
+    state = had_root_state and not both_states
 
     # Everything that can refuse, before the first move.
     document = read_lock_document(old.lock_file) if converted else None
     ledger_records = _ledger_records(ledger)
     if both_states and root_layout:
         return [f"Error: both {ref(old.state_dir)}/ and {ref(new.state_dir)}/ hold this machine's state. The root-level "
-                f"one belongs to the records being moved. Remove {ref(new.state_dir)}/, which another branch left "
-                "behind, and rerun. Nothing was moved."], 1
+                f"one belongs to the records being moved. {ref(new.state_dir)}/ holds the run records, logs, and check "
+                "stamps of the branches whose records are already in the task root: move it aside, rerun, and put it "
+                "back only to return to one of those branches unmigrated. Nothing was moved."], 1
     clash = [ref(new.lock_file)] if lock is not None and new.lock_file.exists() else []
     same = [record for record in records if (new.acceptance_dir / record.name).is_file()
             and (new.acceptance_dir / record.name).read_bytes() == record.read_bytes()]
