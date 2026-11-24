@@ -11,6 +11,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+import _repro_layout as layout
 from _repro import is_glob
 from _repro_state import (
     BLOCKING, RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state,
@@ -19,7 +20,7 @@ from _repro_state import (
     spec_node_id, step_nodes, unread, unread_file_lines, unread_phrase, _topological, repro_command,
 )
 
-LEDGER = 'repro-acceptance'  # one committed file per step, so branches accepting different steps merge
+LEDGER = 'repro-acceptance'  # at the project root; `paths.acceptance_dir` is where the records are
 LEGACY_LEDGER = 'repro-acceptance.json'
 SNAPSHOT_LIMIT = 128 * 1024
 HEARTBEAT_SECONDS = 10.0
@@ -54,11 +55,20 @@ def atomic_text(path, text):
 
 @contextmanager
 def mutation_lock(paths):
-    """Reject concurrent builds/record changes, releasing even after interruption."""
+    """Reject concurrent builds/record changes, releasing even after interruption.
+
+    Paths resolved before a `migrate` moved the records are refused once the
+    lock is held, so no command writes a second lock where the records were.
+    """
     import fcntl
-    paths.state_dir.mkdir(parents=True, exist_ok=True)
+    moved = 'the reproduction records moved while this command was starting; run it again'
+    paths.migrating()  # an interrupted migration is finished first, or a later rerun would undo this write
+    if not paths.current():  # before creating anything where the records were
+        raise ReproStateError(moved)
+    layout.self_ignore(paths.state_dir)  # the lock may be the first file in it
     dropbox_ignore(paths.state_dir)
-    with (paths.state_dir / 'mutation.lock').open('a+') as handle:
+    lock_path = paths.state_dir / 'mutation.lock'
+    with lock_path.open('a+') as handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -69,6 +79,10 @@ def mutation_lock(paths):
             raise ReproStateError('another reproduction build or acceptance mutation is running'
                                   + (f' (process {pid})' if pid.isdigit() else '')) from None
         try:
+            # Again under the lock: a migrate may have held it until now, and moved or removed this very file.
+            paths.migrating()
+            if not paths.current() or not _same_file(handle, lock_path):
+                raise ReproStateError(moved)
             handle.truncate(0)
             handle.write(str(os.getpid()))
             handle.flush()
@@ -77,6 +91,14 @@ def mutation_lock(paths):
             handle.truncate(0)
             handle.flush()
             fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def _same_file(handle, path) -> bool:
+    """Whether the open lock file is still the one at *path*; a lock on a replaced file excludes no one."""
+    try:
+        return os.fstat(handle.fileno()).st_ino == os.stat(path).st_ino
+    except OSError:
+        return False
 
 
 def lock_holder(paths) -> int | None:
@@ -160,6 +182,8 @@ def portable_rows(rows):
 
 
 def _read_legacy(paths):
+    if paths.records_dir is not None:
+        return None
     path = paths.project_root / LEGACY_LEDGER
     if not path.is_file():
         return None
@@ -176,7 +200,7 @@ def _read_legacy(paths):
 def read_ledger(paths):
     """Every trusted acceptance; a malformed or conflicted record is set aside alone, with a warning."""
     records = dict(_read_legacy(paths) or {})
-    for path in sorted((paths.project_root / LEDGER).glob('*.json')):
+    for path in sorted(paths.acceptance_dir.glob('*.json')):
         try:
             records[path.stem] = json.loads(path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
@@ -197,8 +221,8 @@ def _convert_legacy(paths):
     legacy = _read_legacy(paths)
     if legacy is None:
         return
-    directory = paths.project_root / LEDGER
-    directory.mkdir(exist_ok=True)
+    directory = paths.acceptance_dir
+    directory.mkdir(parents=True, exist_ok=True)
     for name, record in legacy.items():
         normalized = _normalize(record)
         if normalized is not None and not (directory / f'{name}.json').exists():
@@ -211,7 +235,7 @@ def write_record(paths, name, value):
     """Write one step's committed record, or remove it when *value* is None; equal content stays."""
     with RECORD_LOCK:
         _convert_legacy(paths)
-        path = paths.project_root / LEDGER / f'{name}.json'
+        path = paths.acceptance_dir / f'{name}.json'
         if value is None:
             path.unlink(missing_ok=True)
             return

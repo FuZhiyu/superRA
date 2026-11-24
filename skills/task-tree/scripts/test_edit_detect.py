@@ -20,6 +20,7 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _edit_detect  # noqa: E402
+import _repro_layout  # noqa: E402
 
 HEREDOC = "python3 - <<'PY'\nimport pathlib\nPY"
 
@@ -202,7 +203,7 @@ class TestBashMadeEdits:
         assert "Markdown edited" in _bash(session, command)  # the session's own tree still reconciles
         assert _dirty(foreign) == {"superRA/01-first/task.md"}
         assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
-        assert not (foreign / _edit_detect.STATE_DIRNAME).exists()
+        assert not _repro_layout.state_dir(foreign).exists()
 
     def test_a_payload_cwd_inside_the_foreign_checkout_does_not_unlock_it(self, tmp_path):
         """A session that `cd`s into another checkout keeps the anchor it started
@@ -216,7 +217,7 @@ class TestBashMadeEdits:
         assert _bash(foreign, "ls", env=env) == ""
         assert _dirty(foreign) == {"superRA/01-first/task.md"}
         assert "status: in-progress" in (foreign / "superRA" / "task.md").read_text(encoding="utf-8")
-        assert not (foreign / _edit_detect.STATE_DIRNAME).exists()
+        assert not _repro_layout.state_dir(foreign).exists()
 
 
 class TestUnfinishedMerge:
@@ -417,14 +418,21 @@ class TestCodexPayloads:
 
 
 class TestBaseline:
-    def test_state_is_self_ignored_and_outside_the_task_root(self, project):
+    def test_state_is_self_ignored_inside_the_task_root(self, project):
         _bash(project)
-        state = project / _edit_detect.STATE_DIRNAME
+        state = project / "superRA" / ".repro" / "local"
         assert (state / ".gitignore").read_text(encoding="utf-8") == "*\n"
         assert list((state / _edit_detect.BASELINE_SUBDIR).glob("*.json"))
-        assert not (project / "superRA" / _edit_detect.STATE_DIRNAME).exists()
+        assert not (project / _edit_detect.STATE_DIRNAME).exists()
         from test_repro_acceptance import _dropbox_ignored
         assert _dropbox_ignored(state)
+
+    def test_a_root_level_state_directory_keeps_the_baseline(self, project):
+        """A project not yet migrated has its state at the project root; the hook stays with it."""
+        (project / _edit_detect.STATE_DIRNAME).mkdir()
+        _bash(project)
+        assert list((project / _edit_detect.STATE_DIRNAME / _edit_detect.BASELINE_SUBDIR).glob("*.json"))
+        assert not (project / "superRA" / ".repro").exists()
 
     def test_concurrent_invocations_leave_a_readable_baseline(self, project):
         _bash(project)
@@ -437,7 +445,7 @@ class TestBaseline:
         with ThreadPoolExecutor(max_workers=6) as pool:
             assert set(pool.map(edit_and_run, range(12))) == {0}
 
-        baseline_dir = project / _edit_detect.STATE_DIRNAME / _edit_detect.BASELINE_SUBDIR
+        baseline_dir = _repro_layout.state_dir(project) / _edit_detect.BASELINE_SUBDIR
         (state_file,) = baseline_dir.glob("*.json")
         loaded = json.loads(state_file.read_text(encoding="utf-8"))
         assert str(task_md.resolve()) in loaded["files"]
@@ -446,7 +454,7 @@ class TestBaseline:
     def test_oversized_directory_is_not_watched(self, project, monkeypatch):
         monkeypatch.setattr(_edit_detect, "MAX_TREE_FILES", 2)
         assert _edit_detect.detect(project / "superRA", "s", lambda: []) == []
-        assert not (project / _edit_detect.STATE_DIRNAME).exists()
+        assert not _repro_layout.state_dir(project).exists()
 
     def test_plan_root_lookup_stops_at_a_repository_top(self, tmp_path):
         (tmp_path / "superRA").mkdir()
@@ -482,7 +490,7 @@ class TestSlowCallGuard:
         monkeypatch.setattr(task_hook, "SLOW_CALL_SECONDS", 0.0)
         self._run(project, monkeypatch, capsys)
 
-        log = project / _edit_detect.STATE_DIRNAME / task_hook.SLOW_CALL_LOG
+        log = _repro_layout.state_dir(project) / task_hook.SLOW_CALL_LOG
         (line,) = log.read_text(encoding="utf-8").splitlines()
         entry = json.loads(line)
         assert {entry["event"], entry["tool"], entry["changed"]} == {"PostToolUse", "Bash", 1}
@@ -522,7 +530,7 @@ class TestSlowCallGuard:
             (lib / env / "pkg.jl").write_text("# pkg v2\n", encoding="utf-8")
             (lib / env / "new.jl").write_text("# new\n", encoding="utf-8")
         assert _bash(var_project) == ""
-        baseline_dir = var_project / _edit_detect.STATE_DIRNAME / _edit_detect.BASELINE_SUBDIR
+        baseline_dir = _repro_layout.state_dir(var_project) / _edit_detect.BASELINE_SUBDIR
         (state_file,) = baseline_dir.glob("*.json")
         files = json.loads(state_file.read_text(encoding="utf-8"))["files"]
         assert any(path.endswith("helper.jl") for path in files)

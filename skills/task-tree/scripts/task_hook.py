@@ -195,12 +195,13 @@ def _repro_plan_root_for_file(file_path: Path) -> Path | None:
     file resolves to the same project regardless of where the hook subprocess
     was launched from.
     """
+    _ensure_scripts_on_path()
+    from _repro_layout import task_root
     current = file_path.parent
     while True:
-        for dirname in TASK_ROOT_DIRNAMES:
-            candidate = current / dirname
-            if candidate.is_dir():
-                return candidate
+        candidate = task_root(current)  # the one the state helpers below resolve
+        if candidate.is_dir():
+            return candidate
         parent = current.parent
         if parent == current:
             return None
@@ -222,9 +223,24 @@ def _repro_session_key(data: dict) -> str:
     return f"hour-{int(time.time() // 3600)}"
 
 
+def _repro_state_dir(project_root: Path) -> Path:
+    """This machine's reproduction state, wherever the project keeps it."""
+    _ensure_scripts_on_path()
+    from _repro_layout import state_dir
+    return state_dir(project_root)
+
+
+def _touch_marker(marker: Path) -> None:
+    """Write a reminder marker; the state directory it may create ignores itself in git."""
+    from _repro_layout import self_ignore
+    self_ignore(marker.parents[2])  # <state>/hook-markers/<session>/<digest>
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch()
+
+
 def _repro_marker_path(project_root: Path, session_key: str, resolved_path: str) -> Path:
     digest = hashlib.sha256(resolved_path.encode("utf-8")).hexdigest()[:32]
-    return project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR / session_key / digest
+    return _repro_state_dir(project_root) / REPRO_MARKER_SUBDIR / session_key / digest
 
 
 def _mentioned(project_root: Path, session_key: str, text: str) -> bool:
@@ -235,8 +251,7 @@ def _mentioned(project_root: Path, session_key: str, text: str) -> bool:
 def _record_mention(project_root: Path, session_key: str, text: str) -> None:
     marker = _repro_marker_path(project_root, session_key, text)
     try:
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.touch()
+        _touch_marker(marker)
     except OSError:
         pass
 
@@ -304,7 +319,7 @@ def _log_slow_call() -> None:
         import _edit_detect
         anchor = _checkout_scope.session_anchor(data)
         plan_root = _edit_detect._plan_root_above(anchor.resolve()) if anchor else None
-        state_dir = plan_root.parent / REPRO_STATE_DIRNAME if plan_root else None
+        state_dir = _repro_state_dir(plan_root.parent) if plan_root else None
         if state_dir is None or not state_dir.is_dir():
             return
         log = state_dir / SLOW_CALL_LOG
@@ -450,8 +465,7 @@ def _repro_emit(
                 )
             )
         try:
-            marker.parent.mkdir(parents=True, exist_ok=True)
-            marker.touch()
+            _touch_marker(marker)
         except OSError:
             pass
     return feedback
@@ -535,7 +549,7 @@ def _reproduction_reminder(data: dict, file_paths: list[Path]) -> list[str]:
 
 def _clear_repro_markers(project_root: Path, resolved_paths: set[str]) -> None:
     """Remove reminder markers for resolved_paths, across every session key."""
-    base = project_root / REPRO_STATE_DIRNAME / REPRO_MARKER_SUBDIR
+    base = _repro_state_dir(project_root) / REPRO_MARKER_SUBDIR
     if not base.is_dir():
         return
     digests = {
@@ -625,8 +639,7 @@ def _implemented_coverage_reminder(plan_root: Path, task_path: str) -> list[str]
     if not files:
         return []
     try:
-        marker.parent.mkdir(parents=True, exist_ok=True)
-        marker.touch()
+        _touch_marker(marker)
     except OSError:
         pass
     from _task_validate import OUTPUT_CAP as cap

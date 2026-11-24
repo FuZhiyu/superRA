@@ -12,7 +12,7 @@ Every retained result reruns from committed code through a graph of declared ste
 - **A step is one command that reads files (`deps`) and writes files (`outs`).** Each task declares its steps in its `## Reproduction` section ([schema and invalidation rules](../task-tree/references/task-file-contract.md#reproduction-section)).
   - **Producer** — a step whose `outs` include another step's `deps`.
   - **External input** — a dep no step produces: a licensed data extract, a frozen upstream artifact, a hand-curated file. The researcher agrees which inputs are external.
-- **A step is `fresh` when its deps, definition (command and `params`), and outs still match the hashes recorded at its last successful run** in the committed `repro-lock.json`. A step accepted with `superra repro accept` is also `fresh`, without rerunning.
+- **A step is `fresh` when its deps, definition (command and `params`), and outs still match the hashes recorded at its last successful run** in the committed `superRA/.repro/lock.json`. A step accepted with `superra repro accept` is also `fresh`, without rerunning.
   - Any byte change makes a step stale, even an edited comment that cannot move the result. The stale rule, not the hash, decides whether it needs a rerun.
 - **A step is `unverified` when this machine cannot check one of its files without downloading or obtaining it:** online-only and not yet hashed here, unreadable, or an absent external input. `build` never runs it and uses its outputs as they are.
 
@@ -49,7 +49,7 @@ Other flags: `superra repro <command> --help`.
 1. **Produce the result through the graph:** `superra repro build <targets>`.
    - **Outputs regenerated outside `build`, such as by an interactive run:** clean them with `superra repro normalize <targets or paths>` before recording or committing them, then [accept](references/rerun-or-accept.md#accept) any step still not `fresh`.
 2. **In `## Results`, state what the evidence covers:** the targets, the external inputs they read, the outcome of each check step, and which steps ran versus which were accepted. A result checked with `--only`, or resting on `unverified` producers, says so and names where tracing stopped: the saved inputs, or the `unverified` boundary `status` prints.
-3. **Commit the changed `repro-lock.json` and `repro-acceptance/` records with the work.**
+3. **Commit the changed records under `superRA/.repro/` with the work.**
 
 ## Where to Go Next
 

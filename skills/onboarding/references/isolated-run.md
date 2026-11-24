@@ -22,13 +22,13 @@ A worktree is a second folder holding the same git project on its own branch. Th
   - **Match** — `approved`; `## Results` adds which build reproduced it and whether bytes or values matched.
   - **Failure or divergence** — `revise`; `## Review Notes` states what failed or differed, by how much, and the fixes tried.
   - Either way, `## Results` keeps presenting the current results.
-- **Commit** the task files and `repro-lock.json` in the worktree.
+- **Commit** the task files and `superRA/.repro/lock.json` in the worktree.
 
 ## Merge back
 
-1. **Explain the merge:** the branch carries `superRA/`, `repro-lock.json`, and the code fixes. Show `git diff --stat` against the base and each fix.
+1. **Explain the merge:** the branch carries `superRA/`, the lock included, and the code fixes. Show `git diff --stat` against the base and each fix.
 2. **Merge after the researcher agrees,** with `git merge` from the project folder. A branch grown beyond minimal fixes: `superRA:superintegrate` instead.
-3. **Reconcile the outputs.** `repro-lock.json` records the rebuilt outputs, so each original that differs from its rebuild reads stale in the project folder. Offer either:
+3. **Reconcile the outputs.** The lock records the rebuilt outputs, so each original that differs from its rebuild reads stale in the project folder. Offer either:
    - copy the rebuilds over the originals with `superRA:worktree-data-sync` (`--from <worktree> --to <project>`, `--mode diff`, then `--mode apply --action overwrite --files` naming the differing declared outs) — overwrites originals, so only with consent;
    - `superra repro build` in the project folder.
 4. **Remove the worktree** per `worktree-harness-fallback.md` §Remove.

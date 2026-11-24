@@ -5,10 +5,13 @@ Stdlib only. ``repro build`` (in ``repro_run.py``) decides run-or-skip with
 the same ``compute_status`` that ``repro status`` / ``explain``, `task read`,
 and the dashboard use.
 
-The committed ``repro-lock.json`` is the record of what each step last built.
-Its node ids are the logical (``${VAR}``-form) paths this module also uses, so
-a lock written on one checkout reads on another. A project without it reads a
-legacy ``pytask.lock`` (with ``repro-builds.json``) converted in memory.
+The committed lock is the record of what each step last built. Its node ids
+are the logical (``${VAR}``-form) paths this module also uses, so a lock
+written on one checkout reads on another. ``_repro_layout`` decides where the
+lock, the acceptance records, and this machine's state sit: in the task root,
+or at the project root for a project not yet migrated. A root-level project
+without ``repro-lock.json`` reads a legacy ``pytask.lock`` (with
+``repro-builds.json``) converted in memory.
 """
 
 from __future__ import annotations
@@ -32,10 +35,12 @@ from typing import Iterable
 if __package__:
     from ._repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from ._task_validate import OUTPUT_CAP
+    from . import _repro_layout as layout
 else:  # pragma: no cover - direct-script path
     sys.path.insert(0, str(Path(__file__).parent))
     from _repro import Graph, Step, glob_base, glob_could_hold, glob_regex, is_glob, overlaps
     from _task_validate import OUTPUT_CAP
+    import _repro_layout as layout
 
 try:  # Python 3.11+
     import tomllib
@@ -44,8 +49,8 @@ except ModuleNotFoundError:  # pragma: no cover - 3.10 re-execs to read a legacy
 
 TOML_AVAILABLE = tomllib is not None
 
-STATE_DIRNAME = ".superra-repro"
-LOCK_FILENAME = "repro-lock.json"
+STATE_DIRNAME = layout.ROOT_STATE_DIRNAME  # also the fixed prefix of a check stamp's lock id (`stamp_ref`)
+LOCK_FILENAME = layout.ROOT_LOCK_FILENAME
 LOCK_VERSION = 2  # 2: one line per step entry; 1 (indented entries) still reads
 LEGACY_LOCK_FILENAME = "pytask.lock"
 LEGACY_BUILDS_FILENAME = "repro-builds.json"
@@ -74,10 +79,12 @@ class ReproStateError(RuntimeError):
 
 @dataclass(frozen=True)
 class RunnerPaths:
-    """Where the runner keeps its per-machine state and its committed lock."""
+    """Where the runner keeps its per-machine state and its committed records."""
 
     project_root: Path
     state_dir: Path
+    records_dir: Path | None = None  # `<task root>/.repro`; None while the records sit at the project root
+    home: Path | None = None  # `<task root>/.repro` whichever layout is in use; unset on a hand-built instance
 
     @property
     def logs_dir(self) -> Path:
@@ -97,7 +104,46 @@ class RunnerPaths:
 
     @property
     def lock_file(self) -> Path:
+        if self.records_dir is not None:
+            return self.records_dir / layout.TREE_LOCK_FILENAME
         return self.project_root / LOCK_FILENAME
+
+    @property
+    def acceptance_dir(self) -> Path:
+        """One committed acceptance record per step."""
+        if self.records_dir is not None:
+            return self.records_dir / layout.TREE_ACCEPTANCE_DIRNAME
+        return self.project_root / layout.ROOT_ACCEPTANCE_DIRNAME
+
+    @property
+    def tree_lock_file(self) -> Path:
+        """Where the lock sits once the records are in the task root, whichever layout is in use now."""
+        return (self.home or layout.repro_home(self.project_root)) / layout.TREE_LOCK_FILENAME
+
+    def current(self) -> bool:
+        """Whether the records and state still sit where these paths say; a `migrate` may have moved them."""
+        if self.home is None:
+            return True
+        plan_root = self.home.parent
+        return (layout.records_dir(self.project_root, plan_root) == self.records_dir
+                and layout.state_dir(self.project_root, plan_root) == self.state_dir)
+
+    def migrating(self) -> None:
+        """Raise while a `migrate` is moving the records, or after one was interrupted."""
+        if self.home is not None and layout.staging_dir(self.project_root, self.home.parent).exists():
+            raise ReproStateError("`superra repro migrate` is moving the reproduction records; run this again when it "
+                                  "has finished. If none is running, one was interrupted: run `superra repro "
+                                  "migrate` to finish it.")
+
+    def settled(self) -> None:
+        """Raise when a `migrate` is moving the records, or has moved them since these paths were resolved."""
+        self.migrating()
+        if not self.current():
+            raise ReproStateError("the reproduction records moved while this command was running; run it again")
+
+    def ref(self, path: Path) -> str:
+        """*path* relative to the project root — what reports and records carry."""
+        return layout.project_ref(self.project_root, path)
 
     @property
     def legacy_lock_file(self) -> Path:
@@ -109,46 +155,48 @@ class RunnerPaths:
 
     @property
     def reads_legacy_lock(self) -> bool:
-        """No ``repro-lock.json`` yet, but a ``pytask.lock`` to convert."""
-        return not self.lock_file.is_file() and self.legacy_lock_file.is_file()
+        """Root-level records with no ``repro-lock.json`` yet, but a ``pytask.lock`` to convert."""
+        return self.records_dir is None and not self.lock_file.is_file() and self.legacy_lock_file.is_file()
 
     def log_file(self, step: str) -> Path:
         return self.logs_dir / f"{step}.log"
 
     def log_ref(self, step: str) -> str:
         """Project-relative log path — what reports and records carry."""
-        return f"{STATE_DIRNAME}/logs/{step}.log"
+        return f"{self.ref(self.state_dir)}/logs/{step}.log"
 
     def run_file(self, step: str) -> Path:
         return self.runs_dir / f"{step}.json"
 
 
-def runner_paths(project_root: Path) -> RunnerPaths:
+def runner_paths(project_root: Path, plan_root: Path | None = None) -> RunnerPaths:
+    """The project's records and state where `_repro_layout` finds them; *plan_root* defaults to `superRA/`."""
     root = Path(project_root)
-    return RunnerPaths(project_root=root, state_dir=root / STATE_DIRNAME)
+    return RunnerPaths(project_root=root, state_dir=layout.state_dir(root, plan_root),
+                       records_dir=layout.records_dir(root, plan_root), home=layout.repro_home(root, plan_root))
 
 
-def dropbox_ignore(path: Path) -> None:
-    """Set Dropbox's ignore flag, so each machine keeps its own copy; inert outside Dropbox."""
+def adopt_root_state(project_root: Path, plan_root: Path | None = None) -> None:
+    """Move a root-level state directory into the task root once the records live there.
+
+    A checkout receives migrated records through git while its own state still
+    sits at the project root; a build running from that state keeps it there.
+    """
+    root = Path(project_root)
+    home = layout.records_dir(root, plan_root)
+    legacy = root / layout.ROOT_STATE_DIRNAME
+    if home is None or not legacy.is_dir() or (home / layout.LOCAL_DIRNAME).exists():
+        return
+    from _repro_acceptance import mutation_lock  # deferred: _repro_acceptance imports this module
     try:
-        if hasattr(os, "setxattr"):  # Linux
-            try:
-                if os.getxattr(path, "user.com.dropbox.ignored") == b"1":
-                    return
-            except OSError:
-                pass
-            os.setxattr(path, "user.com.dropbox.ignored", b"1")
-        elif sys.platform == "darwin":
-            import ctypes
-            libc = ctypes.CDLL(None, use_errno=True)
-            args = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint32, ctypes.c_int]
-            libc.getxattr.argtypes, libc.getxattr.restype = args, ctypes.c_ssize_t
-            libc.setxattr.argtypes, libc.setxattr.restype = args, ctypes.c_int
-            name, raw = b"com.dropbox.ignored", os.fsencode(path)
-            if libc.getxattr(raw, name, None, 0, 0, 0) < 0:
-                libc.setxattr(raw, name, b"1", 1, 0, 0)
-    except (OSError, AttributeError):  # no xattr support: nothing to sync away from
+        with mutation_lock(RunnerPaths(project_root=root, state_dir=legacy)):  # hand-built: no layout check; no build starts in it meanwhile
+            home.mkdir(parents=True, exist_ok=True)
+            os.rename(legacy, home / layout.LOCAL_DIRNAME)
+    except (ReproStateError, OSError):  # a running build, or a read-only checkout, keeps using it where it is
         pass
+
+
+dropbox_ignore = layout.dropbox_ignore
 
 
 def ensure_state_dir(paths: RunnerPaths) -> None:
@@ -156,6 +204,9 @@ def ensure_state_dir(paths: RunnerPaths) -> None:
     for directory in (paths.state_dir, paths.logs_dir, paths.runs_dir, paths.stamps_dir):
         directory.mkdir(parents=True, exist_ok=True)
     dropbox_ignore(paths.state_dir)
+    if paths.state_dir.name != STATE_DIRNAME:  # in the task root: the folder ignores itself
+        layout.self_ignore(paths.state_dir)
+        return
     gitignore = paths.project_root / ".gitignore"
     entry = f"{STATE_DIRNAME}/"
     try:
@@ -170,7 +221,10 @@ def ensure_state_dir(paths: RunnerPaths) -> None:
 
 
 def stamp_ref(step_name: str) -> str:
-    """Logical path of a check step's stamp — its product, so a passed check can skip."""
+    """Lock id of a check step's stamp — its product, so a passed check can skip.
+
+    Fixed wherever the state directory sits, so moving it stales no check; `Step.stamp` is the file.
+    """
     return f"{STATE_DIRNAME}/stamps/{step_name}.stamp"
 
 
@@ -241,6 +295,7 @@ HASH_THREADS_ENV = "SUPERRA_HASH_THREADS"
 MAX_HASH_THREADS = 8
 PARALLEL_BYTES = 16 << 20  # below this much uncached content, a thread pool costs more than it saves
 _MISS = object()
+_PEEK = "not-read"  # a readable file a `HashCache.peeker` did not read
 
 
 def hash_threads() -> int:
@@ -274,6 +329,16 @@ class HashCache:
         self._dirty = False
         self._fresh: set[str] = set()  # stored here since the file was last read or written
         self._saved: tuple | None = None  # the file's (size, mtime_ns) when last read or written
+        self._peek = False  # a `peeker` view: answers without reading a byte
+        self._peeked: dict[tuple, object] = {}  # a peeker's answers, by (path, glob)
+        # superRA's own records and state, which every build rewrites, are never part of a dependency.
+        # The cache sits in the state folder, which is `<task root>/.repro/local` or `<project>/.superra-repro`;
+        # either way the task root's `.repro` is left out, since a branch switch can leave one beside root-level records.
+        self._own = None
+        if path is not None:
+            state = path.parent
+            in_tree = state.name == layout.LOCAL_DIRNAME and state.parent.name == layout.REPRO_DIRNAME
+            self._own = os.path.realpath(state.parent if in_tree else layout.repro_home(state.parent))
         self._flush_lock = threading.Lock()
         self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
         if path is not None:
@@ -341,13 +406,30 @@ class HashCache:
 
     def _hashed(self, path: Path, info: os.stat_result) -> str | Unread | None:
         value = self._known(path, info)
+        if value is _MISS and self._peek:
+            return _PEEK if os.access(path, os.R_OK) else Unread("unreadable")
         return self._store(path, info, self._digest(path)) if value is _MISS else value
+
+    def peeker(self) -> "HashCache":
+        """A view that answers what hashing would find without reading a byte, and stores nothing.
+
+        A file whose hash is not cached answers a placeholder when it may be read. Every other
+        answer (absent, online-only, unreadable, a broken link in a folder or a glob) comes from
+        the code that hashes, so it cannot disagree with a build.
+        """
+        view = HashCache()
+        view._entries = self._entries
+        view._own = self._own
+        view._peek = True
+        return view
 
     def warm(self, files: Iterable[tuple[Path, os.stat_result]]) -> None:
         """Hash the uncached files among *files* on several threads, ahead of the reads that follow.
 
         A batch too small to gain is left to those reads.
         """
+        if self._peek:
+            return
         misses = {str(path): (path, info) for path, info in files if self._known(path, info) is _MISS}
         threads = min(hash_threads(), len(misses))
         if threads < 2 or sum(info.st_size for _, info in misses.values()) < PARALLEL_BYTES:
@@ -398,7 +480,7 @@ class HashCache:
         # The loop below returns at the first file it cannot hash, so the walk ends there too:
         # nothing past it is listed or read, and the first problem met wins.
         files = []
-        for found in _tree_files(path, unreadable, glob):
+        for found in _tree_files(path, unreadable, glob, self._own):
             files.append(found)
             state = found if unread(found) else self._known(*found)
             if unread(state) or (state is _MISS and not os.access(found[0], os.R_OK)):
@@ -430,8 +512,17 @@ class HashCache:
 
         One ``stat`` decides both the branch and, for a file, the cache key.
         *glob* is the declared path's glob-ness; None judges a missing path by
-        its own characters.
+        its own characters. A `peeker` answers each path once: steps that share
+        an input share its scan.
         """
+        if not self._peek:
+            return self._path_state(path, glob)
+        key = (str(path), glob)
+        if key not in self._peeked:
+            self._peeked[key] = self._path_state(path, glob)
+        return self._peeked[key]
+
+    def _path_state(self, path: Path, glob: bool | None = None) -> str | Unread | None:
         split = glob_split(path) if glob is not False else None
         if split:
             return self.tree_hash(*split) if split[0].is_dir() else None
@@ -457,7 +548,7 @@ class HashCache:
         if split:
             key = f"{split[0]}/{split[1]}"
             if walk and key not in self._online and split[0].is_dir():
-                self._online[key] = _holds_online_only(*split)
+                self._online[key] = _holds_online_only(*split, skip=self._own)
             return self._online.get(key, False), None
         try:
             info = path.stat()
@@ -467,7 +558,7 @@ class HashCache:
             if file_flags(info) & SF_DATALESS:
                 return True, None
             if walk and str(path) not in self._online:
-                self._online[str(path)] = _holds_online_only(path)
+                self._online[str(path)] = _holds_online_only(path, skip=self._own)
             return self._online.get(str(path), False), None
         if not stat.S_ISREG(info.st_mode):
             return False, None
@@ -608,13 +699,14 @@ def _save_lock(path: Path):
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
+def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None, skip: str | None = None):
     """Each regular file under a directory with its `stat`, in hashing order.
 
     A walk that cannot continue ends with the `Unread` saying why: an
     online-only subdirectory, which is never listed, or a broken link. With
     *glob* (a pattern relative to *path*), only matching files are yielded and
-    only directories a match could lie in are entered.
+    only directories a match could lie in are entered. *skip* is the real path
+    of the one directory never entered: the project's own `.repro`.
     """
     visited: set[tuple[int, int]] = set()
     enter, keep = glob_filters(str(path), glob) if glob else (None, None)
@@ -624,6 +716,9 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None):
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
+        if skip:  # the project's `.repro`, and the staging folder a migration keeps beside it
+            dirnames[:] = [d for d in dirnames if not d.startswith(layout.REPRO_DIRNAME)
+                           or os.path.realpath(os.path.join(parent, d)) not in (skip, skip + ".migrating")]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]
@@ -678,7 +773,7 @@ def glob_filters(root: str, glob: str):
             lambda parent, name: match(rel(parent, name)) is not None)
 
 
-def _holds_online_only(path: Path, glob: str | None = None) -> bool:
+def _holds_online_only(path: Path, glob: str | None = None, skip: str | None = None) -> bool:
     """Whether a directory or anything under it is online-only, from `stat` alone.
 
     Each directory's flag is checked before it is listed. With *glob*, only
@@ -697,6 +792,9 @@ def _holds_online_only(path: Path, glob: str | None = None) -> bool:
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
+        if skip:
+            dirnames[:] = [d for d in dirnames if not d.startswith(layout.REPRO_DIRNAME)
+                           or os.path.realpath(os.path.join(parent, d)) not in (skip, skip + ".migrating")]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]
@@ -741,8 +839,60 @@ def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[N
     deps = [outputs.get(d.resolved, (d.logical, d.resolved, None)) for d in step.deps]
     if step.kind == "check":
         stamp = stamp_ref(step.name)
-        return deps, [(stamp, stamp, None)]
+        return deps, [(stamp, step.stamp or stamp, None)]
     return deps, [outputs[o.path.resolved] for o in step.outs]
+
+
+def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths",
+                      cache: "HashCache") -> list[tuple[str, str, int | None]]:
+    """(node, why, size) per input the step cannot read here without a download.
+
+    Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
+    Given a cache's `peeker`, nothing is read: it answers from metadata through the same code, cheap
+    enough for every step of a status payload.
+    """
+    root = paths.project_root
+    deps, _ = step_nodes(step, output_nodes(graph))
+    deps += directory_dep_nodes(graph, step)
+    externals = {e.path.logical for e in graph.external_inputs}
+    rows = []
+    for node in deps:
+        path = absolute(root, node[2] or node[1])
+        online, size = cache.probe(path, walk=True, glob=node_glob(node))
+        value = Unread("online-only") if online else dependency_state(cache, root, node)
+        if value is None:
+            rows.append((node[0], "missing" if node[0] not in externals else unread_phrase(value), size))
+        elif unread(value):
+            rows.append((node[0], unread_phrase(value), size))
+    return rows
+
+
+def input_writers(graph: Graph, step: Step):
+    """node -> the steps that write that input of *step*, by the graph's own edges; empty when no step does.
+
+    A glob or a folder is written by every step the graph links it to, and a file
+    under a directory out by that out's step, however either side spells the path.
+    """
+    outputs = output_nodes(graph)
+    dep_of = {outputs.get(dep.resolved, (dep.logical,))[0]: dep.logical for dep in step.deps}
+    owner = {out.path.logical: producer.name for producer in graph.steps for out in producer.outs}
+    by_dep: dict[str, set[str]] = {}
+    for source, consumer, via in graph.step_edges:
+        if consumer == step.name:
+            by_dep.setdefault(via, set()).add(source)
+
+    def writers(node: str) -> set[str]:
+        return by_dep.get(dep_of.get(node), set()) | ({owner[node]} if node in owner else set())
+    return writers
+
+
+def _unavailable(graph: Graph, step: Step, paths: "RunnerPaths", peek: "HashCache") -> list[dict]:
+    """Per input of *step* not on this machine: why, and the steps that write it. The dashboard's Build estimate reads it."""
+    rows = unreadable_inputs(graph, step, paths, peek)
+    if not rows:
+        return []
+    writers = input_writers(graph, step)
+    return [{"node": node, "why": why, "size": size, "producers": sorted(writers(node))} for node, why, size in rows]
 
 
 def directory_dep_nodes(graph: Graph, step: Step) -> list[Node]:
@@ -1189,6 +1339,7 @@ class StepStatus:
     started_at: float | None = None
     files: list[dict] = field(default_factory=list)  # per dep and out: node, role, outcome, online_only, size
     origin: str | None = None  # a lifted step: the furthest-upstream producer whose own state is blocking
+    unavailable: list[dict] = field(default_factory=list)  # per input not on this machine: node, why, producers
 
     def to_dict(self) -> dict:
         return {
@@ -1202,6 +1353,7 @@ class StepStatus:
             "local_reason": self.local_reason or self.reason,
             "origin": self.origin,
             "files": self.files,
+            "unavailable": self.unavailable,
             "boundary_inputs": self.boundary_inputs,
             "external_consumers": self.external_consumers,
             "changes": [c.to_dict() for c in self.changes],
@@ -1327,6 +1479,7 @@ def compute_status(
         raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
     needed = set(names)
     selected = set(select_steps(graph, targets)[0]) if upstream else needed
+    paths.settled()  # a status read across a migration would mix two layouts
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
     lock.update(completed_locks or {})
@@ -1340,6 +1493,9 @@ def compute_status(
 
     cache.warm_paths(path for step in graph.steps if step.name in needed
                      for path in _compared_paths(step, lock.get(step.name), paths, outputs))
+    # A build decides one step at a time and makes this check itself as each starts; a status payload
+    # carries it for every step, from one peeker so that steps sharing an input share its scan.
+    peek = cache.peeker() if completed_locks is None else None
     for step in graph.steps:
         if step.name not in needed:
             continue
@@ -1347,6 +1503,8 @@ def compute_status(
             step, lock.get(step.name), paths, cache, outputs, externals, memo, live_build
         )
         entry.external_consumers = external_consumers(graph, step)
+        if peek is not None:
+            entry.unavailable = _unavailable(graph, step, paths, peek)
         report.entries.append(entry)
     from _repro_acceptance import apply_to_status, read_ledger
     from _repro_scope import boundary_inputs, check_boundary_receipt
@@ -1358,6 +1516,7 @@ def compute_status(
         entry.boundary_inputs = current_boundary or entry.boundary_inputs
     apply_to_status(report, paths, cache, ledger, lock)
     cache.flush()
+    paths.settled()  # again: one may have started while this hashed
     return report
 
 
@@ -1394,7 +1553,7 @@ def _classify(
     result.duration = record.get("duration")
     result.last_run = record.get("ended_at")
     if record.get("log"):
-        result.log = record["log"]
+        result.log = paths.log_ref(step.name)  # where the log is now; the record may predate a move
 
     outcomes: dict[str, str] = {}
     elsewhere = False
@@ -1947,6 +2106,7 @@ __all__ = [
     "STATE_DIRNAME",
     "STATUSES",
     "absolute",
+    "adopt_root_state",
     "StatusReport",
     "StepStatus",
     "TOML_AVAILABLE",
@@ -1983,6 +2143,8 @@ __all__ = [
     "step_nodes",
     "stamp_ref",
     "unread",
+    "unreadable_inputs",
+    "input_writers",
     "unread_phrase",
     "write_run_record",
 ]

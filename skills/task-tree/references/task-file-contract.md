@@ -233,11 +233,12 @@ An out that has never been built is runner state, reported as `missing` by `repr
 
 | Path | Git | Holds |
 |---|---|---|
-| `repro-lock.json` | committed | Each step's last successful build: definition, dep, and out hashes and file sizes by variable-form path, and the platform it ran on. |
-| `repro-acceptance/<step>.json` | committed | The step's reviewed acceptance: reviewed hashes, saved-input digests, reason, optional per-node notes. |
-| `.superra-repro/` | gitignored and Dropbox-ignored, one per checkout | Hash cache, logs, successful-build receipts, check stamps, `explain`'s history index. |
+| `superRA/.repro/lock.json` | committed | Each step's last successful build: definition, dep, and out hashes and file sizes by variable-form path, and the platform it ran on. |
+| `superRA/.repro/acceptance/<step>.json` | committed | The step's reviewed acceptance: reviewed hashes, saved-input digests, reason, optional per-node notes. |
+| `superRA/.repro/local/` | ignored by git and Dropbox, one per checkout | Hash cache, logs, successful-build receipts, check stamps, `explain`'s history index. |
 
 **A reviewed acceptance makes its step `fresh`** until anything it recorded changes: an input, a saved input's bytes included, the definition, or an output. While a file it recorded cannot be checked here, the step reads `unverified`, not invalid. It can precede the step's first build. It changes no task status, lock entry, or check stamp; a check is accepted only over its previous successful run with an unchanged stamp.
 
 - **A bad record disables only itself.** An acceptance record that does not parse or validate — a merge conflict, a hand edit — is set aside with a warning; its step reads as not accepted until `accept` or `revoke` replaces it.
+- **Records at the project root still work:** `repro-lock.json`, `repro-acceptance/`, and `.superra-repro/` are used in place until `superra repro migrate` ([commands.md §Reproduction](commands.md#reproduction)).
 - **A legacy `repro-acceptance.json` ledger still validates.** The first `accept` converts it into per-step files and removes it; commit both changes.

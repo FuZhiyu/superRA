@@ -35,7 +35,7 @@ A **step** is one command that reads files (its inputs) and writes files (its ou
 - **Any byte change makes the step stale, even an edited comment.** Whether it needs a rerun is your call or the agent's (see *Accepting a result* below).
 - **Staleness flows downstream** until the producer is rebuilt. A rerun that writes byte-identical output stops the cascade.
 - **An external input is a file no step produces,** such as a vendor download or a frozen data release. Replacing it makes every step that reads it stale.
-- **Your coauthors see the same states.** The content hashes live in `repro-lock.json` at the repo root, committed with the work. Outputs kept out of git read `missing` in a fresh clone until built.
+- **Your coauthors see the same states.** The content hashes live in `superRA/.repro/lock.json`, committed with the work. Outputs kept out of git read `missing` in a fresh clone until built.
 
 The full list of what invalidates a step, including how Julia `include`s are followed, is in [the task-file contract](skills/task-tree/references/task-file-contract.md#what-invalidates-a-step).
 
@@ -69,11 +69,11 @@ Had the edit only fixed a comment, the same three steps would read `stale`. Two 
 - **Name the result you want; the build brings its inputs current first.** `build <target>` runs the steps that are not fresh among the target and the steps producing its inputs, back to the external inputs. A target is a task path (with its subtasks), one step as `task#step`, or `.` for the whole tree.
   - `--only` keeps the build to the target and uses upstream files as they sit on disk.
 - **See the cost first.** `build --dry-run` lists what would run with each step's last run time; `impact <file>` lists the steps a change to that file would make stale.
-- **Nothing is downloaded.** superRA never opens an online-only file (Dropbox, Google Drive, Box, OneDrive, iCloud). A build that needs one runs nothing and names it, and the agent asks you before downloading.
+- **Nothing is downloaded.** superRA never opens an online-only file (Dropbox, Google Drive, Box, OneDrive, iCloud). A step that needs one is named and left as it is, the rest of the build runs on its existing outputs, and the agent asks you before downloading.
 
 ## Accepting a result instead of rerunning it
 
-`accept` marks steps `fresh` at their current files without running them. It requires a reason and writes one committed record per step under `repro-acceptance/`.
+`accept` marks steps `fresh` at their current files without running them. It requires a reason and writes one committed record per step under `superRA/.repro/acceptance/`.
 
 - **Use it** for an expensive result already produced from the same committed code, such as in an interactive session, or for a change you have read and know cannot move the result.
 - **It never claims a run.** `status` shows "reviewed baseline" and keeps the last actual run on record.

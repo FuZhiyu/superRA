@@ -171,9 +171,9 @@ def test_archived_producer_with_missing_output_is_reported(tmp_path):
     assert "archived producer" in item["reason"]
     dry = run(root, "repro", "build", "m", "--dry-run")
     assert dry.returncode == 1
-    plan, _, gate = dry.stdout.partition("so the build would run nothing:")
-    assert re.search(r"Would execute 1 step\(s\):\n  m  unknown", plan)
-    assert re.search(r"old.txt\s+-\s+not on disk, and no step produces it  \(read by m\)", gate)
+    assert "Would execute" not in dry.stdout
+    assert "1 step(s) cannot run here: 1 file(s) they read are not on this machine." in dry.stdout
+    assert re.search(r"old.txt\s+-\s+not on disk, and no step produces it  \(read by m\)", dry.stdout)
     assert "every selected step is fresh" not in dry.stdout
     (tmp_path / "old.txt").write_text("kept")
     assert frontier(root)["m"]["inputs"] == []

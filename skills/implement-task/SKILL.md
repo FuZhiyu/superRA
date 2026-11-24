@@ -54,7 +54,7 @@ Before commit:
 Set `status: implemented` in each task's frontmatter — you own transitions up to `implemented`, including `revise → implemented`. Then code + assigned task.md files in one atomic commit, per `superRA:using-superra` §Commits:
 
 ```bash
-git add [code, tracked outputs, changed repro-lock.json and repro-acceptance/] superRA/<task-path>/task.md
+git add [code, tracked outputs, changed superRA/.repro/ records] superRA/<task-path>/task.md
 git commit -m "implement(<task-path>): <STATE> — <delta>"   # STATE = DONE | CONCERNS | BLOCKED
 ```
 

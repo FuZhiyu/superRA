@@ -1,6 +1,6 @@
 """`repro explain` provenance: the two-clone staleness case from the 2026-09-23 report.
 
-Clone A is the coauthor who builds and commits `repro-lock.json`; clone B shares
+Clone A is the coauthor who builds and commits the lock; clone B shares
 `output/` through a simulated Dropbox that lags. Each stale step in B has a
 different true cause, and `explain` must name it with a runnable next command.
 """
@@ -95,7 +95,7 @@ def clones(tmp_path):
     git(a.root, "add", "-A")
     git(a.root, "commit", "-qm", "code")
     assert a.run("build", ".") == 0
-    git(a.root, "add", "repro-lock.json")
+    git(a.root, "add", "superRA/.repro/lock.json")
     git(a.root, "commit", "-qm", "first build")
     first = head(a.root)
 
@@ -161,7 +161,7 @@ def test_explain_names_each_cause_across_two_clones(clones, capsys):
     assert f"next: git show --stat {first}" in out
     body = out.split("searched:")[0]
     assert "synced" not in body and "branch" not in body
-    assert "searched: receipts in .superra-repro/baselines; acceptance ledger repro-acceptance/; the lock at 4 revision(s) on local and remote-tracking branches and HEAD" in out
+    assert "searched: receipts in superRA/.repro/local/baselines; acceptance ledger superRA/.repro/acceptance/; the lock at 4 revision(s) on local and remote-tracking branches and HEAD" in out
 
     # The consumer's dependency is an input; its output and the check's input follow the same roles.
     out = explain(b, capsys, "02-paper")

@@ -17,7 +17,7 @@ import pytest
 import _repro_state
 from _repro_acceptance import accept, inspect_baseline
 from _repro_scope import _bytes_verified
-from _repro_state import DOWNLOAD_NOTES, SF_DATALESS, HashCache, ReproStateError, Unread, read_lock, stamp_ref
+from _repro_state import DOWNLOAD_NOTES, SF_DATALESS, HashCache, ReproStateError, Unread, read_lock
 from test_repro_acceptance import review
 from test_repro_runner import CHAIN, TASK_A, Project, _use_a_sidecar, project  # noqa: F401
 
@@ -149,11 +149,11 @@ def test_an_uncached_online_only_file_whose_size_differs_from_the_lock_reads_cha
 
 def test_a_version_2_lock_without_sizes_still_reads(project, offline):
     assert project.run("build", *CHAIN) == 0
-    document = json.loads(project.read("repro-lock.json"))
+    document = json.loads(project.read("superRA/.repro/lock.json"))
     assert document["version"] == 2
     for raw in document["steps"].values():
         raw.pop("sizes")
-    project.write("repro-lock.json", json.dumps(document))
+    project.write("superRA/.repro/lock.json", json.dumps(document))
     assert project.states(*CHAIN) == {"build-a": "fresh", "build-b": "fresh", "check-b": "fresh"}
     project.write("output/a.txt", "a longer replacement\n")  # no recorded size: unknown, not changed
     offline.evict("output/a.txt")
@@ -256,7 +256,7 @@ def test_an_absent_output_makes_its_producer_missing(project):
 def test_failed_never_built_and_passed_elsewhere_outrank_an_online_only_input(project, offline):
     from _repro_state import write_run_record
     assert project.run("build", *CHAIN) == 0
-    (project.root / stamp_ref("check-b")).unlink()
+    (project.paths.stamps_dir / "check-b.stamp").unlink()
     offline.evict("output/b.txt")  # cached: check-b passed at these inputs on another machine
     assert project.status(*CHAIN).entry("check-b").status == "fresh"
 
@@ -318,16 +318,16 @@ def test_a_stale_step_never_starts_on_an_online_only_input_even_a_cached_one(pro
     before = project.run_times()
     capsys.readouterr()
     assert project.run("build", "02-b#build-b") == 1
-    err = capsys.readouterr().err
-    assert "1 file(s) the build reads are not on this machine, so nothing was run:" in err
-    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here  \(read by build-b\)", err)
-    assert DOWNLOAD_NOTES in err
+    out = capsys.readouterr().out
+    assert "⊘ 1 step(s) cannot run here: 1 file(s) they read are not on this machine." in out
+    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here  \(read by build-b\)", out)
+    assert DOWNLOAD_NOTES in out
     assert project.run_times()["build-b"] == before["build-b"]
     from _repro_state import read_run_record
     assert read_run_record(project.paths, "build-b").get("outcome") == "success"  # no failed run recorded
 
 
-def test_forcing_an_unverified_step_refuses_and_runs_nothing(project, offline, capsys):
+def test_forcing_an_unverified_step_is_blocked_and_runs_nothing(project, offline, capsys):
     assert project.run("build", *CHAIN) == 0
     before = project.run_times()
     offline.evict("Code/a.sh")
@@ -335,7 +335,7 @@ def test_forcing_an_unverified_step_refuses_and_runs_nothing(project, offline, c
     assert project.status("01-a").entry("build-a").status == "unverified"
     capsys.readouterr()
     assert project.run("build", "01-a#build-a", "--force") == 1
-    assert re.search(r"Code/a.sh\s+\S+ B\s+online-only here  \(read by build-a\)", capsys.readouterr().err)
+    assert re.search(r"Code/a.sh\s+\S+ B\s+online-only here  \(read by build-a\)", capsys.readouterr().out)
     assert project.run_times() == before
 
 
@@ -352,7 +352,7 @@ def test_edit_detection_never_opens_an_online_only_file_or_lists_an_online_only_
     watch = task_hook._repro_watch(proj.plan_root)
     assert _edit_detect.detect(proj.plan_root, "s1", lambda: watch[0], lambda: watch[1]) == []
     assert os.path.realpath(proj.root / "Data/panel/y2021") not in offline.listed
-    baseline = json.loads(next((proj.root / ".superra-repro/hook-baseline").glob("s1.json")).read_text())
+    baseline = json.loads(next((proj.root / "superRA/.repro/local/hook-baseline").glob("s1.json")).read_text())
     assert baseline["files"][str(proj.root / "Data/panel/y2020/p.csv")][2] is None  # kept, never hashed
 
 
@@ -364,7 +364,7 @@ def test_a_stale_step_never_starts_on_an_input_it_cannot_hash(project, offline, 
     assert project.status(*CHAIN).entry("build-b").local_status == "stale"
     capsys.readouterr()
     assert project.run("build", "02-b#build-b") == 1
-    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here", capsys.readouterr().err)
+    assert re.search(r"\$\{OUT\}/a.txt\s+6 B\s+online-only here", capsys.readouterr().out)
 
 
 # ---------------------------------------------------------------------------
@@ -429,3 +429,88 @@ def test_a_sidecar_read_never_opens_an_online_only_sidecar(project, offline):
     item = {"digest": HashCache().file_hash(project.root / "output/a.txt"), "provenance": "",
             "resolved": "output/a.txt"}
     assert _bytes_verified(project.graph(), project.paths, item) is False
+
+
+# ---------------------------------------------------------------------------
+# The status payload's inputs not on this machine
+# ---------------------------------------------------------------------------
+
+GLOB_TASK = """\
+---
+title: "Agg"
+status: not-started
+depends_on: []
+---
+
+## Objective
+
+Aggregate.
+
+## Reproduction
+
+```yaml
+steps:
+  - name: agg
+    cmd: cat Data/**/*.csv > output/agg.csv
+    deps:
+      - Data/**/*.csv
+    outs:
+      - output/agg.csv
+```
+"""
+
+
+def _glob_project(tmp_path) -> Project:
+    proj = Project(tmp_path / "glob")
+    proj.write("superRA/01-agg/task.md", GLOB_TASK)
+    return proj
+
+
+def test_a_never_built_glob_with_local_matches_lists_no_unavailable_input(tmp_path):
+    """Matches reached through a symlinked folder count, as they do for the runner."""
+    proj = _glob_project(tmp_path)
+    proj.write("store/a.csv", "1\n")
+    (proj.root / "Data").mkdir()
+    os.symlink(proj.root / "store", proj.root / "Data" / "linked")
+    assert proj.status(".").entry("agg").unavailable == []
+
+
+def test_an_online_only_match_of_a_never_built_glob_is_listed_unavailable(tmp_path, monkeypatch):
+    proj = _glob_project(tmp_path)
+    proj.write("Data/y2020/a.csv", "1\n")
+    Offline(monkeypatch, proj.root).evict("Data/y2020/a.csv")
+    [row] = proj.status(".").entry("agg").unavailable
+    assert (row["node"], row["why"], row["producers"]) == ("Data/**/*.csv", "online-only here", [])
+
+
+def test_a_glob_with_a_dangling_match_is_listed_unavailable_as_the_build_reads_it(tmp_path):
+    proj = _glob_project(tmp_path)
+    proj.write("Data/a.csv", "1\n")
+    os.symlink(proj.root / "Data" / "gone.csv", proj.root / "Data" / "b.csv")
+    [row] = proj.status(".").entry("agg").unavailable
+    assert (row["node"], row["why"]) == ("Data/**/*.csv", "unreadable here")
+    assert proj.run("build", ".") == 1  # the build blocks the step on the same file
+
+
+def test_the_unavailable_list_reads_no_file(tmp_path, monkeypatch):
+    """Status hashes nothing for a step never built; its inputs are judged from metadata."""
+    proj = _glob_project(tmp_path)
+    proj.write("Data/a.csv", "1\n")
+    opened = []
+    real = Path.open
+    monkeypatch.setattr(Path, "open", lambda self, *a, **k: (opened.append(self.name), real(self, *a, **k))[1])
+    assert proj.status(".").entry("agg").unavailable == []
+    assert "a.csv" not in opened
+
+
+def test_steps_that_share_a_glob_scan_it_once_per_status(tmp_path, monkeypatch):
+    proj = Project(tmp_path / "shared")
+    for i in range(3):
+        proj.write(f"superRA/0{i}-agg/task.md", GLOB_TASK.replace("name: agg", f"name: agg{i}").replace("agg.csv", f"agg{i}.csv"))
+    proj.write("Data/y2020/a.csv", "1\n")
+    walks = []
+    real = _repro_state._tree_files
+    monkeypatch.setattr(_repro_state, "_tree_files", lambda path, *a, **k: (walks.append(str(path)), real(path, *a, **k))[1])
+    report = proj.status(".")
+    assert [e.unavailable for e in report.entries] == [[], [], []]
+    assert len(walks) == 1

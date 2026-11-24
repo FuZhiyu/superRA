@@ -21,7 +21,7 @@ from pathlib import Path
 
 from _repro import is_glob
 from _repro_state import (
-    LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, LOCK_FILENAME, STATE_DIRNAME, ReproStateError,
+    LEGACY_BUILDS_FILENAME, LEGACY_LOCK_FILENAME, LOCK_FILENAME, ReproStateError,
     absolute, convert_legacy, dependency_state, directory_dep_nodes, node_state, output_nodes,
     parse_lock, path_online_only, spec_hash, stamp_ref, step_nodes, tomllib, unread, unread_phrase, _stamp,
 )
@@ -141,7 +141,7 @@ def lock_commit(paths, memo) -> str | None:
         commit = known.get(digest) if digest else None
         if commit is None and digest:
             git = Git(paths.project_root)
-            spec = './' + lock_file.name
+            spec = './' + paths.ref(lock_file)
             clean = git.ok and git.raw('diff', '--quiet', 'HEAD', '--', spec) is not None
             commit = (git.text('log', '-1', '--format=%h', '--', spec) or None) if clean else None
             if commit and paths.state_dir.is_dir():  # committed bytes keep their commit
@@ -166,7 +166,7 @@ def check_elsewhere_reason(paths, memo, name, entry) -> str:
 # Lock history
 # ---------------------------------------------------------------------------
 
-LOCK_INDEX_VERSION = 3
+LOCK_INDEX_VERSION = 4  # 4: a revision's lock may sit in the task root
 
 
 def _parse_revision(lock_text, legacy_text, builds_text) -> dict | None:
@@ -193,7 +193,15 @@ def _parse_revision(lock_text, legacy_text, builds_text) -> dict | None:
 
 
 HISTORY_VERSION = 1
-LOCK_FILES = (LOCK_FILENAME, LEGACY_LOCK_FILENAME)
+
+
+def lock_refs(paths) -> tuple[str, ...]:
+    """Project-relative paths a lock revision may sit at: the task-root lock, then the root-level ones.
+
+    Both layouts, whichever the checkout uses: another branch may have built on the other.
+    """
+    return (paths.ref(paths.tree_lock_file), LOCK_FILENAME, LEGACY_LOCK_FILENAME)
+
 _HEAD_WALK, _OTHER_WALK = ['HEAD'], ['--branches', '--remotes', '--not', 'HEAD']
 
 
@@ -216,7 +224,7 @@ class History:
             return
         head = git.text('rev-parse', 'HEAD') or ''
         refs = git.text('for-each-ref', '--format=%(objectname) %(refname)', 'refs/heads', 'refs/remotes') or ''
-        key = hashlib.sha256(f'{head}\n{refs}'.encode()).hexdigest()
+        key = hashlib.sha256(f'{head}\n{refs}\n{" ".join(lock_refs(paths))}'.encode()).hexdigest()
         try:
             cached = json.loads(self.file.read_text(encoding='utf-8'))
         except (OSError, ValueError):
@@ -235,13 +243,14 @@ class History:
         if not self.git.ok or not (files or need_lock):
             return
         self.dirty = True
-        specs = [f'./{name}' for name in LOCK_FILES if need_lock] + [f'./{f}' for f in files]
+        lock_files = lock_refs(self.paths)
+        specs = [f'./{name}' for name in lock_files if need_lock] + [f'./{f}' for f in files]
         lock, capped, found = [], False, {f: [] for f in files}
         for on_head, ranges in ((True, _HEAD_WALK), (False, _OTHER_WALK)):
             lock_n, path_n = 0, dict.fromkeys(files, 0)
             for rev, names in self.git.walk(ranges, specs):
                 self.data['revs'].setdefault(rev['sha'], dict(rev, on_head=on_head))
-                if need_lock and names & set(LOCK_FILES):
+                if need_lock and names & set(lock_files):
                     lock_n += 1
                     if lock_n <= LOCK_REV_CAP:
                         lock.append(rev['sha'])
@@ -353,11 +362,13 @@ class LockHistory:
 
     def _read(self, shas) -> dict[str, dict | None]:
         """Each revision's lock, read from git in one batch; None for a legacy lock without tomllib."""
-        names = (LOCK_FILENAME, LEGACY_LOCK_FILENAME, LEGACY_BUILDS_FILENAME)
+        *locks, legacy = lock_refs(self.paths)
+        names = (*locks, legacy, LEGACY_BUILDS_FILENAME)
         blobs = self.git.blobs([f'{sha}:./{name}' for sha in shas for name in names])
         text = lambda sha, name: (lambda raw: raw.decode('utf-8', 'replace') if raw is not None else None)(
             blobs.get(f'{sha}:./{name}'))
-        return {sha: _parse_revision(*(text(sha, name) for name in names)) for sha in shas}
+        lock = lambda sha: next((found for found in (text(sha, name) for name in locks) if found is not None), None)
+        return {sha: _parse_revision(lock(sha), text(sha, legacy), text(sha, LEGACY_BUILDS_FILENAME)) for sha in shas}
 
     def _load(self):
         cache_dir = self.paths.state_dir / 'lock-index'
@@ -439,7 +450,7 @@ class Resolver:
 
     def inside(self, resolved) -> Path | None:
         """The path, when it lies in this checkout and outside the runner's own state."""
-        if not resolved or resolved.startswith(STATE_DIRNAME + '/'):
+        if not resolved or resolved.startswith(self.paths.ref(self.paths.state_dir) + '/'):
             return None
         path = absolute(self.paths.project_root, resolved)
         try:
@@ -668,8 +679,8 @@ class Resolver:
 
     def searched(self) -> dict:
         return {
-            'receipts': f'{STATE_DIRNAME}/baselines',
-            'ledger': 'repro-acceptance/',
+            'receipts': f'{self.paths.ref(self.paths.state_dir)}/baselines',
+            'ledger': f'{self.paths.ref(self.paths.acceptance_dir)}/',
             'lock_revisions': [r['rev'] for r in self.history.revs],
             'lock_history_capped': self.history.capped,
             'git_available': self.git.ok,
@@ -892,6 +903,7 @@ def explain(report, paths, cache, kind, value, *, full_diff=False, plan_name='su
     result['graph_errors'] = sum(f.severity == 'error' for f in report.graph.findings)
     result['searched'] = resolver.searched()
     resolver.store.save()
+    paths.settled()  # the resolver read the lock and the ledger again: a migration may have moved them since
     return result
 
 
