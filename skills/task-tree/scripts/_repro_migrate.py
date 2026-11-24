@@ -3,9 +3,11 @@
 
 The layouts are `_repro_layout`'s. Everything that can refuse is checked
 before anything changes. The records are staged as copies and published in one
-rename, and the state follows at once, so a reader sees the old layout or the
-new one whole. An interrupted run leaves root-level originals that equal what
-is published; running it again removes them. Nothing here touches git: the moves are plain
+rename, then the state moves, then the root-level originals go. The staging
+folder stays from the first change to the last, and a status computed while
+it exists refuses (`RunnerPaths.settled`), so no reader mixes two layouts. An
+interrupted run keeps the marker and leaves root-level originals that equal
+what is published; running it again finishes the move. Nothing here touches git: the moves are plain
 renames, and the closing lines name the commands that stage them.
 """
 
@@ -113,8 +115,9 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
                 f"one belongs to the records being moved. {ref(new.state_dir)}/ holds the run records, logs, and check "
                 "stamps of the branches whose records are already in the task root: move it aside, rerun, and put it "
                 "back only to return to one of those branches unmigrated. Nothing was moved."], 1
-    lock_same = (lock == old.lock_file and new.lock_file.is_file()
-                 and new.lock_file.read_bytes() == old.lock_file.read_bytes())  # a move that was interrupted
+    # A task-root lock equal to the root-level one, or to its conversion, is what an interrupted run left.
+    lock_same = (lock is not None and new.lock_file.is_file() and new.lock_file.read_text(encoding="utf-8")
+                 == (lock_text(document) if converted else old.lock_file.read_text(encoding="utf-8")))
     clash = [ref(new.lock_file)] if lock is not None and new.lock_file.exists() and not lock_same else []
     same = [record for record in records if (new.acceptance_dir / record.name).is_file()
             and (new.acceptance_dir / record.name).read_bytes() == record.read_bytes()]
@@ -157,38 +160,43 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     if dry_run:
         return lines, 0
 
-    # 1. Stage copies of the records beside their destination. Until they are published nothing has changed.
-    staging = home.with_name(home.name + ".migrating")
+    # 1. Stage copies of the records beside their destination. The staging folder is also the marker
+    #    readers refuse on (`RunnerPaths.settled`): it stays until the last change below is made.
+    staging = layout.staging_dir(root, home.parent)
+    staged = staging / "records"
     shutil.rmtree(staging, ignore_errors=True)
+    published = False
     try:
-        staging.mkdir(parents=True)
-        if converted:
-            atomic_text(staging / layout.TREE_LOCK_FILENAME, lock_text(document))
-        elif lock is not None and not lock_same:
-            shutil.copyfile(lock, staging / layout.TREE_LOCK_FILENAME)
+        staged.mkdir(parents=True)
+        if lock is not None and not lock_same:
+            if converted:
+                atomic_text(staged / layout.TREE_LOCK_FILENAME, lock_text(document))
+            else:
+                shutil.copyfile(lock, staged / layout.TREE_LOCK_FILENAME)
         moved_records = [record for record in records if record not in same]
         if moved_records or ledger_records:
-            (staging / layout.TREE_ACCEPTANCE_DIRNAME).mkdir()
+            (staged / layout.TREE_ACCEPTANCE_DIRNAME).mkdir()
         for record in moved_records:
-            shutil.copyfile(record, staging / layout.TREE_ACCEPTANCE_DIRNAME / record.name)
+            shutil.copyfile(record, staged / layout.TREE_ACCEPTANCE_DIRNAME / record.name)
         for name, record in ledger_records.items():
-            atomic_json(staging / layout.TREE_ACCEPTANCE_DIRNAME / f"{name}.json", record)
-        # 2. Publish them. With no `.repro` yet this is one rename, so a reader sees the whole set or none
-        #    of it; and it still reads the root-level state, which moves next.
+            atomic_json(staged / layout.TREE_ACCEPTANCE_DIRNAME / f"{name}.json", record)
+        # 2. Publish them: one rename when `.repro` does not exist yet, file by file into one that does.
         if not home.exists():
-            os.rename(staging, home)
+            os.rename(staged, home)
+            published = True
         else:
-            staged_lock = staging / layout.TREE_LOCK_FILENAME
-            if staged_lock.is_file():
-                os.rename(staged_lock, new.lock_file)
-            staged_records = staging / layout.TREE_ACCEPTANCE_DIRNAME
-            if staged_records.is_dir():
+            published = True  # from here a failure leaves some of them in place
+            if (staged / layout.TREE_LOCK_FILENAME).is_file():
+                os.rename(staged / layout.TREE_LOCK_FILENAME, new.lock_file)
+            if (staged / layout.TREE_ACCEPTANCE_DIRNAME).is_dir():
                 new.acceptance_dir.mkdir(exist_ok=True)
-                for record in sorted(staged_records.iterdir()):
+                for record in sorted((staged / layout.TREE_ACCEPTANCE_DIRNAME).iterdir()):
                     os.rename(record, new.acceptance_dir / record.name)
-    finally:
-        shutil.rmtree(staging, ignore_errors=True)
-    # 3. The state follows at once; a root-level folder made only to hold the lock goes instead.
+    except BaseException:
+        if not published:  # nothing changed: no reason to hold readers off
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
+    # 3. The state follows; a root-level folder made only to hold the lock goes instead.
     if old.state_dir.is_dir() and not new.state_dir.exists():
         os.rename(old.state_dir, new.state_dir)
     elif not had_root_state:
@@ -203,6 +211,7 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     ledger.unlink(missing_ok=True)
     if new.state_dir.is_dir():
         ensure_state_dir(new)
+    shutil.rmtree(staging, ignore_errors=True)  # the migration is whole: readers may read again
 
     gone = [name for name, moved in ((ref(old.lock_file), lock is not None and not converted),
                                      (ref(old.acceptance_dir), bool(records)),

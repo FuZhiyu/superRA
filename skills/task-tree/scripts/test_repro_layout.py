@@ -9,7 +9,9 @@ import pytest
 
 import _repro_layout
 from _repro_acceptance import mutation_lock
-from _repro_state import STATE_DIRNAME, ReproStateError, RunnerPaths, adopt_root_state, runner_paths
+from _repro_state import (
+    STATE_DIRNAME, HashCache, ReproStateError, RunnerPaths, adopt_root_state, compute_status, runner_paths,
+)
 from test_repro_runner import CHAIN, Project, project  # noqa: F401
 
 
@@ -253,7 +255,7 @@ def test_a_migration_that_fails_part_way_is_undone(project, monkeypatch, capsys)
     real = os.rename
 
     def rename(source, target):
-        if str(source).endswith(".repro.migrating"):
+        if str(source).endswith(os.path.join(".repro.migrating", "records")):
             raise OSError("disk full")
         real(source, target)
 
@@ -446,6 +448,54 @@ def test_a_reader_during_a_migration_sees_whole_records_and_the_state_that_goes_
     assert project.run("migrate") == 0
     monkeypatch.undo()
     # After each rename a reader finds a lock, the acceptance, and an existing state folder.
-    assert seen == [(".repro.migrating", True, False, True, True, True), (STATE_DIRNAME, False, False, True, True, True)]
+    assert seen == [("records", True, False, True, True, True), (STATE_DIRNAME, False, False, True, True, True)]
     project.paths = runner_paths(project.root)
     assert set(project.states(*CHAIN).values()) == {"fresh"}
+
+
+def test_status_refuses_during_a_migration_and_a_rerun_finishes_one_that_was_interrupted(project, capsys):
+    """The staging folder marks a migration from its first change to its last."""
+    assert project.run("build", *CHAIN) == 0
+    _to_root_layout(project)
+    marker = project.plan_root / ".repro.migrating"
+    marker.mkdir()
+    capsys.readouterr()
+    assert project.run("status", *CHAIN) == 1
+    assert "run `superra repro migrate` to finish it" in capsys.readouterr().err
+    assert project.run("build", *CHAIN) == 1  # nor does a build decide anything on half-moved records
+    assert project.run("migrate") == 0
+    assert not marker.exists()
+    assert project.run("status", *CHAIN) == 0
+
+
+def test_a_status_that_resolved_its_paths_before_a_migration_is_refused(project):
+    """It would read the lock from one layout and the run records from the other."""
+    assert project.run("build", *CHAIN) == 0
+    _to_root_layout(project)
+    graph, stale = project.graph(), project.paths
+    assert project.run("migrate") == 0
+    with pytest.raises(ReproStateError, match="moved while this command was running"):
+        compute_status(graph, stale, targets=CHAIN)
+
+
+def test_a_directory_dep_leaves_a_migrations_staging_folder_out(project):
+    assert project.run("build", *CHAIN) == 0
+    before = HashCache(project.paths.cache_file).path_state(project.plan_root)
+    project.write("superRA/.repro.migrating/records/lock.json", "{}\n")
+    assert HashCache(project.paths.cache_file).path_state(project.plan_root) == before
+
+
+def test_an_interrupted_conversion_of_a_legacy_lock_is_finished_by_a_rerun(tmp_path):
+    """The published lock equals the conversion of the unchanged `pytask.lock`, so it is no clash."""
+    from _repro_migrate import migrate
+    from _repro_state import lock_text, read_lock_document
+    root = tmp_path / "proj"
+    plan = root / "superRA"
+    plan.mkdir(parents=True)
+    (root / "repro-lock.json").write_text('{"version": 2, "steps": {}}\n')
+    published = lock_text(read_lock_document(root / "repro-lock.json"))
+    (plan / ".repro").mkdir()
+    (plan / ".repro" / "lock.json").write_text(published)
+    (root / "repro-lock.json").write_text(published)  # what an interrupted run leaves beside it
+    lines, code = migrate(root, plan)
+    assert code == 0 and not (root / "repro-lock.json").exists()

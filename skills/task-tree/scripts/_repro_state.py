@@ -128,6 +128,17 @@ class RunnerPaths:
         return (layout.records_dir(self.project_root, plan_root) == self.records_dir
                 and layout.state_dir(self.project_root, plan_root) == self.state_dir)
 
+    def settled(self) -> None:
+        """Raise when a `migrate` is moving the records, or has moved them since these paths were resolved."""
+        if self.home is None:
+            return
+        if layout.staging_dir(self.project_root, self.home.parent).exists():
+            raise ReproStateError("`superra repro migrate` is moving the reproduction records; run this again when it "
+                                  "has finished. If none is running, one was interrupted: run `superra repro "
+                                  "migrate` to finish it.")
+        if not self.current():
+            raise ReproStateError("the reproduction records moved while this command was running; run it again")
+
     def ref(self, path: Path) -> str:
         """*path* relative to the project root — what reports and records carry."""
         return layout.project_ref(self.project_root, path)
@@ -674,9 +685,9 @@ def _tree_files(path: Path, unreadable: list[OSError], glob: str | None = None, 
             dirnames[:] = []
             continue
         visited.add((info.st_dev, info.st_ino))
-        if skip:
-            dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME
-                           or os.path.realpath(os.path.join(parent, d)) != skip]
+        if skip:  # the project's `.repro`, and the staging folder a migration keeps beside it
+            dirnames[:] = [d for d in dirnames if not d.startswith(layout.REPRO_DIRNAME)
+                           or os.path.realpath(os.path.join(parent, d)) not in (skip, skip + ".migrating")]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]
@@ -751,8 +762,8 @@ def _holds_online_only(path: Path, glob: str | None = None, skip: str | None = N
             continue
         visited.add((info.st_dev, info.st_ino))
         if skip:
-            dirnames[:] = [d for d in dirnames if d != layout.REPRO_DIRNAME
-                           or os.path.realpath(os.path.join(parent, d)) != skip]
+            dirnames[:] = [d for d in dirnames if not d.startswith(layout.REPRO_DIRNAME)
+                           or os.path.realpath(os.path.join(parent, d)) not in (skip, skip + ".migrating")]
         if glob:
             dirnames[:] = [d for d in dirnames if enter(parent, d)]
             filenames = [f for f in filenames if keep(parent, f)]
@@ -1383,6 +1394,7 @@ def compute_status(
         raise ReproStateError(f"no step or task matches {', '.join(unknown)}")
     needed = set(names)
     selected = set(select_steps(graph, targets)[0]) if upstream else needed
+    paths.settled()  # a status read across a migration would mix two layouts
     cache = HashCache(paths.cache_file) if cache is None else cache
     lock = read_lock(paths.lock_file)
     lock.update(completed_locks or {})
@@ -1414,6 +1426,7 @@ def compute_status(
         entry.boundary_inputs = current_boundary or entry.boundary_inputs
     apply_to_status(report, paths, cache, ledger, lock)
     cache.flush()
+    paths.settled()  # again: one may have started while this hashed
     return report
 
 

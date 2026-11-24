@@ -70,6 +70,16 @@ def repro_home(project_root, plan_root=None) -> Path:
     return plan / REPRO_DIRNAME
 
 
+def staging_dir(project_root, plan_root=None) -> Path:
+    """`<task root>/.repro.migrating`: where `superra repro migrate` stages records, and its marker.
+
+    It exists from a migration's first change to its last. A status computed
+    meanwhile would mix two layouts, so readers refuse while it is there.
+    """
+    home = repro_home(project_root, plan_root)
+    return home.with_name(home.name + ".migrating")
+
+
 def records_dir(project_root, plan_root=None) -> Path | None:
     """`<task root>/.repro` when the committed records live in the task root; None while they sit at the project root."""
     home = repro_home(project_root, plan_root)
