@@ -11,6 +11,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+import _repro_layout as layout
 from _repro import is_glob
 from _repro_state import (
     BLOCKING, RECORD_LOCK, Change, HashCache, ReproStateError, absolute, compute_status, dependency_state,
@@ -63,9 +64,10 @@ def mutation_lock(paths):
     moved = 'the reproduction records moved while this command was starting; run it again'
     if not paths.current():  # before creating anything where the records were
         raise ReproStateError(moved)
-    paths.state_dir.mkdir(parents=True, exist_ok=True)
+    layout.self_ignore(paths.state_dir)  # the lock may be the first file in it
     dropbox_ignore(paths.state_dir)
-    with (paths.state_dir / 'mutation.lock').open('a+') as handle:
+    lock_path = paths.state_dir / 'mutation.lock'
+    with lock_path.open('a+') as handle:
         try:
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -76,7 +78,8 @@ def mutation_lock(paths):
             raise ReproStateError('another reproduction build or acceptance mutation is running'
                                   + (f' (process {pid})' if pid.isdigit() else '')) from None
         try:
-            if not paths.current():  # again under the lock: a migrate may have held it until now
+            # Again under the lock: a migrate may have held it until now, and moved or removed this very file.
+            if not paths.current() or not _same_file(handle, lock_path):
                 raise ReproStateError(moved)
             handle.truncate(0)
             handle.write(str(os.getpid()))
@@ -86,6 +89,14 @@ def mutation_lock(paths):
             handle.truncate(0)
             handle.flush()
             fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def _same_file(handle, path) -> bool:
+    """Whether the open lock file is still the one at *path*; a lock on a replaced file excludes no one."""
+    try:
+        return os.fstat(handle.fileno()).st_ino == os.stat(path).st_ino
+    except OSError:
+        return False
 
 
 def lock_holder(paths) -> int | None:

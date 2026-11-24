@@ -376,16 +376,44 @@ def test_migrate_takes_the_lock_of_the_layout_in_use_even_on_a_fresh_checkout(pr
     seen = []
     real = _repro_migrate._migrate
 
-    def watched(*args):
+    def watched(*args, **kwargs):
         from _repro_acceptance import lock_holder
-        seen.append(lock_holder(runner_paths(project.root)))
-        return real(*args)
+        root_state = RunnerPaths(project_root=project.root, state_dir=project.root / STATE_DIRNAME)
+        seen.append((lock_holder(runner_paths(project.root)), lock_holder(root_state)))
+        return real(*args, **kwargs)
 
     _repro_migrate._migrate = watched
     try:
         assert project.run("migrate") == 0
     finally:
         _repro_migrate._migrate = real
-    assert seen == [os.getpid()]  # held while the records are read, checked, and moved
+    assert seen == [(os.getpid(), os.getpid())]  # both layouts' locks, while the records are read, checked, and moved
     assert (project.plan_root / ".repro" / "acceptance" / "build-a.json").is_file()
     assert not (project.root / STATE_DIRNAME).exists()
+
+
+def test_a_migration_with_nothing_to_move_leaves_nothing_behind(project, capsys):
+    capsys.readouterr()
+    assert project.run("migrate") == 0
+    assert "Nothing to migrate" in capsys.readouterr().out
+    assert not (project.plan_root / ".repro").exists() and not (project.root / STATE_DIRNAME).exists()
+
+
+def test_a_lock_on_a_file_no_longer_at_its_path_is_refused(project, monkeypatch):
+    """A migration removes or moves the lock file; whoever opened it first must not go on as its holder."""
+    import fcntl
+    assert project.run("build", *CHAIN) == 0
+    paths = runner_paths(project.root)
+    lock_path = paths.state_dir / "mutation.lock"
+    real = fcntl.flock
+
+    def flock(handle, operation):
+        if operation & fcntl.LOCK_EX:
+            lock_path.unlink()
+            lock_path.touch()
+        return real(handle, operation)
+
+    monkeypatch.setattr(fcntl, "flock", flock)
+    with pytest.raises(ReproStateError, match="moved while this command was starting"):
+        with mutation_lock(paths):
+            pass

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import _repro_layout as layout
 from _repro_acceptance import LEGACY_LEDGER, _normalize, atomic_json, atomic_text, mutation_lock, portable_record
-from _repro_state import ReproStateError, RunnerPaths, ensure_state_dir, lock_text, read_lock_document, runner_paths
+from _repro_state import ReproStateError, RunnerPaths, ensure_state_dir, lock_text, read_lock_document
 
 
 def _ledger_records(ledger: Path) -> dict[str, dict]:
@@ -47,36 +47,48 @@ def _ledger_records(ledger: Path) -> dict[str, dict]:
     return records
 
 
+def _discard_lock_only(directory: Path) -> None:
+    """Remove a state folder made only to hold its lock. Call it with that lock held.
+
+    A process that opened the lock file before this removes it then finds, on taking
+    the lock, that it holds a file no longer at that path, and stops (`mutation_lock`).
+    """
+    try:
+        names = set(os.listdir(directory))
+    except OSError:
+        return
+    if names <= {"mutation.lock", ".gitignore"}:
+        for name in names:
+            (directory / name).unlink(missing_ok=True)
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
+
+
 def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple[list[str], int]:
     """Move the lock, the acceptance records, and this machine's state; the lines to print and the exit code."""
     root = Path(project_root)
     home = layout.repro_home(root, plan_root)
     old = RunnerPaths(project_root=root, state_dir=root / layout.ROOT_STATE_DIRNAME)
     new = RunnerPaths(project_root=root, state_dir=home / layout.LOCAL_DIRNAME, records_dir=home)
-    active = runner_paths(root, plan_root)
-    had_root_state = old.state_dir.is_dir()
-    # The lock of the layout in use, taken even when its state folder does not exist yet, so an acceptance
-    # or a build that starts meanwhile waits; and the root-level one, which a root-level build would hold.
-    held = {active.state_dir: active}
-    if had_root_state:
-        held.setdefault(old.state_dir, old)
-    try:
-        with ExitStack() as locks:
-            if not dry_run:
-                for paths in held.values():
-                    locks.enter_context(mutation_lock(paths))  # refuses while a build or an acceptance runs
-            return _migrate(root, home, old, new, active.records_dir is None, had_root_state, dry_run)
-    finally:
-        if not had_root_state and old.state_dir.is_dir():  # made only to hold the lock
-            for leftover in (old.state_dir / "mutation.lock", old.state_dir):
-                try:
-                    leftover.unlink() if leftover.is_file() else leftover.rmdir()
-                except OSError:
-                    pass
+    root_layout = layout.records_dir(root, plan_root) is None
+    had = [paths.state_dir.is_dir() for paths in (old, new)]
+    if dry_run:
+        return _migrate(root, home, old, new, root_layout, *had, dry_run=True)
+    # A writer locks the state folder of the layout it resolved, and the layout changes under a migration.
+    # So both folders' locks are held from before the first check to after the last move, made if need be.
+    with ExitStack() as locks:
+        locks.callback(lambda: home.is_dir() and not any(home.iterdir()) and home.rmdir())
+        for paths, existed in zip((old, new), had):
+            locks.enter_context(mutation_lock(paths))  # refuses while a build or an acceptance runs
+            if not existed:
+                locks.callback(_discard_lock_only, paths.state_dir)  # runs before that lock is released
+        return _migrate(root, home, old, new, root_layout, *had, dry_run=False)
 
 
 def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_layout: bool, had_root_state: bool,
-             dry_run: bool) -> tuple[list[str], int]:
+             had_local_state: bool, *, dry_run: bool) -> tuple[list[str], int]:
     """`migrate` under its locks: what to move is read, checked, and moved with nothing else writing records."""
     ledger = root / LEGACY_LEDGER
     ref = new.ref
@@ -84,7 +96,7 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     lock = old.lock_file if old.lock_file.is_file() else old.legacy_lock_file if old.legacy_lock_file.is_file() else None
     converted = lock is not None and lock != old.lock_file
     records = sorted(old.acceptance_dir.glob("*.json")) if old.acceptance_dir.is_dir() else []
-    both_states = had_root_state and new.state_dir.exists()
+    both_states = had_root_state and had_local_state
     state = had_root_state and not both_states
 
     # Everything that can refuse, before the first move.
@@ -159,6 +171,7 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
         for name, record in ledger_records.items():
             create(new.acceptance_dir / f"{name}.json", lambda target, record=record: atomic_json(target, record))
         if state:
+            _discard_lock_only(new.state_dir)  # made to hold its lock; the root-level folder brings its own
             move(old.state_dir, new.state_dir)
     except BaseException:
         for step in reversed(undo):
