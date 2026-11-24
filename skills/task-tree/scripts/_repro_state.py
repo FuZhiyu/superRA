@@ -419,6 +419,7 @@ class HashCache:
         """
         view = HashCache()
         view._entries = self._entries
+        view._own = self._own
         view._peek = True
         return view
 

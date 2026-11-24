@@ -160,6 +160,15 @@ def test_a_directory_dep_covering_the_task_root_leaves_the_records_and_state_out
     assert project.states("04-all") == {"tree": "fresh"}
 
 
+def test_the_unavailable_list_leaves_the_records_and_state_out_as_the_build_does(project):
+    """Status lists a step's missing inputs from a view of the hash cache; it skips the same folder."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("superRA/04-all/task.md", WHOLE_TREE)
+    os.symlink(project.root / "gone", project.paths.state_dir / "dangling")
+    assert project.status("04-all").entry("tree").unavailable == []
+    assert project.run("build", "04-all") == 0
+
+
 def test_hooks_and_runner_agree_on_the_task_root_that_holds_tasks(tmp_path):
     """A valid `.plan/` beside an empty `superRA/`: the runner picks `.plan/`, so the hooks must too."""
     import task_hook
