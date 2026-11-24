@@ -276,6 +276,7 @@ class HashCache:
         self._fresh: set[str] = set()  # stored here since the file was last read or written
         self._saved: tuple | None = None  # the file's (size, mtime_ns) when last read or written
         self._peek = False  # a `peeker` view: answers without reading a byte
+        self._peeked: dict[tuple, object] = {}  # a peeker's answers, by (path, glob)
         self._flush_lock = threading.Lock()
         self._read_lock = threading.Lock()  # hashing threads share the byte count and the tick
         if path is not None:
@@ -448,8 +449,17 @@ class HashCache:
 
         One ``stat`` decides both the branch and, for a file, the cache key.
         *glob* is the declared path's glob-ness; None judges a missing path by
-        its own characters.
+        its own characters. A `peeker` answers each path once: steps that share
+        an input share its scan.
         """
+        if not self._peek:
+            return self._path_state(path, glob)
+        key = (str(path), glob)
+        if key not in self._peeked:
+            self._peeked[key] = self._path_state(path, glob)
+        return self._peeked[key]
+
+    def _path_state(self, path: Path, glob: bool | None = None) -> str | Unread | None:
         split = glob_split(path) if glob is not False else None
         if split:
             return self.tree_hash(*split) if split[0].is_dir() else None
@@ -763,16 +773,14 @@ def step_nodes(step: Step, outputs: dict[str, Node]) -> tuple[list[Node], list[N
     return deps, [outputs[o.path.resolved] for o in step.outs]
 
 
-def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths", cache: "HashCache", *,
-                      read: bool = True) -> list[tuple[str, str, int | None]]:
+def unreadable_inputs(graph: Graph, step: Step, paths: "RunnerPaths",
+                      cache: "HashCache") -> list[tuple[str, str, int | None]]:
     """(node, why, size) per input the step cannot read here without a download.
 
     Not on disk, online-only even if cached, or unreadable; an absent file a step produces reads `missing`.
-    With *read* off nothing is read: the cache's `peeker` answers from metadata through the same code,
-    cheap enough for every step of a status payload.
+    Given a cache's `peeker`, nothing is read: it answers from metadata through the same code, cheap
+    enough for every step of a status payload.
     """
-    if not read:
-        cache = cache.peeker()
     root = paths.project_root
     deps, _ = step_nodes(step, output_nodes(graph))
     deps += directory_dep_nodes(graph, step)
@@ -808,9 +816,9 @@ def input_writers(graph: Graph, step: Step):
     return writers
 
 
-def _unavailable(graph: Graph, step: Step, paths: "RunnerPaths", cache: "HashCache") -> list[dict]:
+def _unavailable(graph: Graph, step: Step, paths: "RunnerPaths", peek: "HashCache") -> list[dict]:
     """Per input of *step* not on this machine: why, and the steps that write it. The dashboard's Build estimate reads it."""
-    rows = unreadable_inputs(graph, step, paths, cache, read=False)
+    rows = unreadable_inputs(graph, step, paths, peek)
     if not rows:
         return []
     writers = input_writers(graph, step)
@@ -1414,6 +1422,9 @@ def compute_status(
 
     cache.warm_paths(path for step in graph.steps if step.name in needed
                      for path in _compared_paths(step, lock.get(step.name), paths, outputs))
+    # A build decides one step at a time and makes this check itself as each starts; a status payload
+    # carries it for every step, from one peeker so that steps sharing an input share its scan.
+    peek = cache.peeker() if completed_locks is None else None
     for step in graph.steps:
         if step.name not in needed:
             continue
@@ -1421,7 +1432,8 @@ def compute_status(
             step, lock.get(step.name), paths, cache, outputs, externals, memo, live_build
         )
         entry.external_consumers = external_consumers(graph, step)
-        entry.unavailable = _unavailable(graph, step, paths, cache)
+        if peek is not None:
+            entry.unavailable = _unavailable(graph, step, paths, peek)
         report.entries.append(entry)
     from _repro_acceptance import apply_to_status, read_ledger
     from _repro_scope import boundary_inputs, check_boundary_receipt

@@ -501,3 +501,16 @@ def test_the_unavailable_list_reads_no_file(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "open", lambda self, *a, **k: (opened.append(self.name), real(self, *a, **k))[1])
     assert proj.status(".").entry("agg").unavailable == []
     assert "a.csv" not in opened
+
+
+def test_steps_that_share_a_glob_scan_it_once_per_status(tmp_path, monkeypatch):
+    proj = Project(tmp_path / "shared")
+    for i in range(3):
+        proj.write(f"superRA/0{i}-agg/task.md", GLOB_TASK.replace("name: agg", f"name: agg{i}").replace("agg.csv", f"agg{i}.csv"))
+    proj.write("Data/y2020/a.csv", "1\n")
+    walks = []
+    real = _repro_state._tree_files
+    monkeypatch.setattr(_repro_state, "_tree_files", lambda path, *a, **k: (walks.append(str(path)), real(path, *a, **k))[1])
+    report = proj.status(".")
+    assert [e.unavailable for e in report.entries] == [[], [], []]
+    assert len(walks) == 1
