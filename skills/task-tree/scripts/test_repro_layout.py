@@ -72,13 +72,18 @@ def test_migrate_moves_records_and_state_and_stales_nothing(project, capsys):
 
 def test_a_root_level_lock_beside_task_root_records_warns_and_is_never_overwritten(project, capsys):
     assert project.run("build", *CHAIN) == 0
-    project.write("repro-lock.json", project.read("superRA/.repro/lock.json"))
+    project.write("repro-lock.json", project.read("superRA/.repro/lock.json") + "\n")  # a different lock
     capsys.readouterr()
     assert project.run("status", *CHAIN) == 0
     assert "Warning: repro-lock.json at the project root: not read" in capsys.readouterr().err
     assert project.run("migrate") == 1
     assert "superRA/.repro/lock.json already exists" in capsys.readouterr().err
     assert (project.root / "repro-lock.json").is_file()
+    # A root-level copy equal to the task-root lock is what an interrupted migration leaves: a rerun removes it.
+    project.write("repro-lock.json", project.read("superRA/.repro/lock.json"))
+    assert project.run("migrate") == 0
+    assert not (project.root / "repro-lock.json").exists()
+    assert set(project.states(*CHAIN).values()) == {"fresh"}
 
 
 def test_root_level_state_moves_into_the_task_root_once_the_records_are_there(project):
@@ -248,17 +253,17 @@ def test_a_migration_that_fails_part_way_is_undone(project, monkeypatch, capsys)
     real = os.rename
 
     def rename(source, target):
-        if str(source).endswith("build-a.json"):
+        if str(source).endswith(".repro.migrating"):
             raise OSError("disk full")
         real(source, target)
 
     monkeypatch.setattr(_repro_migrate.os, "rename", rename)
     capsys.readouterr()
-    assert project.run("migrate") == 1  # the lock had already moved when the record's move failed
+    assert project.run("migrate") == 1  # the staged records could not be published
     assert "disk full" in capsys.readouterr().err
     monkeypatch.undo()
     assert (project.root / "repro-lock.json").is_file() and (project.root / "repro-acceptance" / "build-a.json").is_file()
-    assert not (project.plan_root / ".repro").exists()
+    assert not (project.plan_root / ".repro").exists() and not (project.plan_root / ".repro.migrating").exists()
     project.paths = runner_paths(project.root)
     assert set(project.states(*CHAIN).values()) == {"fresh"}
 
@@ -387,7 +392,8 @@ def test_migrate_takes_the_lock_of_the_layout_in_use_even_on_a_fresh_checkout(pr
         assert project.run("migrate") == 0
     finally:
         _repro_migrate._migrate = real
-    assert seen == [(os.getpid(), os.getpid())]  # both layouts' locks, while the records are read, checked, and moved
+    # The task-root lock, which a writer in this layout takes; no root-level folder is made for a lock nobody needs.
+    assert seen == [(os.getpid(), None)]
     assert (project.plan_root / ".repro" / "acceptance" / "build-a.json").is_file()
     assert not (project.root / STATE_DIRNAME).exists()
 
@@ -417,3 +423,29 @@ def test_a_lock_on_a_file_no_longer_at_its_path_is_refused(project, monkeypatch)
     with pytest.raises(ReproStateError, match="moved while this command was starting"):
         with mutation_lock(paths):
             pass
+
+
+def test_a_reader_during_a_migration_sees_whole_records_and_the_state_that_goes_with_them(project, monkeypatch):
+    """The records are published in one rename while the state is still at the root; the state follows at once."""
+    assert project.run("build", *CHAIN) == 0
+    project.write("Code/a.sh", project.read("Code/a.sh") + "# harmless\n")
+    assert project.run("accept", "01-a", "--reason", "Comment-only edit") == 0
+    _to_root_layout(project)
+    import _repro_migrate
+    real, seen = os.rename, []
+
+    def rename(source, target):
+        before = runner_paths(project.root)
+        real(source, target)
+        after = runner_paths(project.root)
+        seen.append((os.path.basename(str(source)), before.records_dir is None, after.records_dir is None,
+                     after.state_dir.is_dir(), after.lock_file.is_file(),
+                     (after.acceptance_dir / "build-a.json").is_file()))
+
+    monkeypatch.setattr(_repro_migrate.os, "rename", rename)
+    assert project.run("migrate") == 0
+    monkeypatch.undo()
+    # After each rename a reader finds a lock, the acceptance, and an existing state folder.
+    assert seen == [(".repro.migrating", True, False, True, True, True), (STATE_DIRNAME, False, False, True, True, True)]
+    project.paths = runner_paths(project.root)
+    assert set(project.states(*CHAIN).values()) == {"fresh"}

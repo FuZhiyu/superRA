@@ -2,8 +2,10 @@
 """`superra repro migrate`: move root-level reproduction records and state into the task root.
 
 The layouts are `_repro_layout`'s. Everything that can refuse is checked
-before the first move, and a move that fails part-way is undone, so readers
-never stay on half a record set. Nothing here touches git: the moves are plain
+before anything changes. The records are staged as copies and published in one
+rename, and the state follows at once, so a reader sees the old layout or the
+new one whole. An interrupted run leaves root-level originals that equal what
+is published; running it again removes them. Nothing here touches git: the moves are plain
 renames, and the closing lines name the commands that stage them.
 """
 
@@ -12,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import shutil
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -48,7 +51,7 @@ def _ledger_records(ledger: Path) -> dict[str, dict]:
 
 
 def _discard_lock_only(directory: Path) -> None:
-    """Remove a state folder made only to hold its lock. Call it with that lock held.
+    """Remove a state folder that holds nothing but its lock. Call it with that lock held.
 
     A process that opened the lock file before this removes it then finds, on taking
     the lock, that it holds a file no longer at that path, and stops (`mutation_lock`).
@@ -73,17 +76,20 @@ def migrate(project_root: Path, plan_root: Path, dry_run: bool = False) -> tuple
     old = RunnerPaths(project_root=root, state_dir=root / layout.ROOT_STATE_DIRNAME)
     new = RunnerPaths(project_root=root, state_dir=home / layout.LOCAL_DIRNAME, records_dir=home)
     root_layout = layout.records_dir(root, plan_root) is None
-    had = [paths.state_dir.is_dir() for paths in (old, new)]
+    had = (old.state_dir.is_dir(), new.state_dir.is_dir())
+    if not had[0] and not any(os.path.lexists(root / name) for name in layout.ROOT_RECORDS):
+        return ["Nothing to migrate: no reproduction records or state at the project root."], 0
     if dry_run:
         return _migrate(root, home, old, new, root_layout, *had, dry_run=True)
-    # A writer locks the state folder of the layout it resolved, and the layout changes under a migration.
-    # So both folders' locks are held from before the first check to after the last move, made if need be.
+    # A writer locks the state folder its layout resolves to; that folder is locked first, made if need be,
+    # so a writer starting now waits. The other one is locked when it exists. Neither is made only for its
+    # lock in a place a reader would then take for the state.
+    active = old if layout.state_dir(root, plan_root) == old.state_dir else new
+    other = new if active is old else old
     with ExitStack() as locks:
-        locks.callback(lambda: home.is_dir() and not any(home.iterdir()) and home.rmdir())
-        for paths, existed in zip((old, new), had):
-            locks.enter_context(mutation_lock(paths))  # refuses while a build or an acceptance runs
-            if not existed:
-                locks.callback(_discard_lock_only, paths.state_dir)  # runs before that lock is released
+        locks.enter_context(mutation_lock(active))  # refuses while a build or an acceptance runs
+        if other.state_dir.is_dir():
+            locks.enter_context(mutation_lock(other))
         return _migrate(root, home, old, new, root_layout, *had, dry_run=False)
 
 
@@ -97,9 +103,9 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     converted = lock is not None and lock != old.lock_file
     records = sorted(old.acceptance_dir.glob("*.json")) if old.acceptance_dir.is_dir() else []
     both_states = had_root_state and had_local_state
-    state = had_root_state and not both_states
+    moves_state = had_root_state and not had_local_state
 
-    # Everything that can refuse, before the first move.
+    # Everything that can refuse, before anything changes.
     document = read_lock_document(old.lock_file) if converted else None
     ledger_records = _ledger_records(ledger)
     if both_states and root_layout:
@@ -107,7 +113,9 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
                 f"one belongs to the records being moved. {ref(new.state_dir)}/ holds the run records, logs, and check "
                 "stamps of the branches whose records are already in the task root: move it aside, rerun, and put it "
                 "back only to return to one of those branches unmigrated. Nothing was moved."], 1
-    clash = [ref(new.lock_file)] if lock is not None and new.lock_file.exists() else []
+    lock_same = (lock == old.lock_file and new.lock_file.is_file()
+                 and new.lock_file.read_bytes() == old.lock_file.read_bytes())  # a move that was interrupted
+    clash = [ref(new.lock_file)] if lock is not None and new.lock_file.exists() and not lock_same else []
     same = [record for record in records if (new.acceptance_dir / record.name).is_file()
             and (new.acceptance_dir / record.name).read_bytes() == record.read_bytes()]
     clash += [ref(new.acceptance_dir / record.name) for record in records
@@ -136,7 +144,7 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
         rows.append((ref(old.acceptance_dir) + "/", ref(new.acceptance_dir) + "/", f"{len(records)} record(s)"))
     if ledger.is_file():
         rows.append((ref(ledger), ref(new.acceptance_dir) + "/", "converted to one record per step"))
-    if state:
+    if moves_state:
         rows.append((ref(old.state_dir) + "/", ref(new.state_dir) + "/", "this machine only; git ignores it"))
     if not rows and not both_states:
         return ["Nothing to migrate: no reproduction records or state at the project root."], 0
@@ -149,44 +157,46 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
     if dry_run:
         return lines, 0
 
-    undo: list = []  # run in reverse when a move fails, so the root-level layout reads whole again
-
-    def move(source: Path, target: Path) -> None:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        os.rename(source, target)
-        undo.append(lambda: os.rename(target, source))
-
-    def create(target: Path, write) -> None:
-        write(target)
-        undo.append(lambda: target.unlink(missing_ok=True))
-
+    # 1. Stage copies of the records beside their destination. Until they are published nothing has changed.
+    staging = home.with_name(home.name + ".migrating")
+    shutil.rmtree(staging, ignore_errors=True)
     try:
+        staging.mkdir(parents=True)
         if converted:
-            create(new.lock_file, lambda target: atomic_text(target, lock_text(document)))
-        elif lock is not None:
-            move(lock, new.lock_file)
-        for record in records:
-            if record not in same:
-                move(record, new.acceptance_dir / record.name)
+            atomic_text(staging / layout.TREE_LOCK_FILENAME, lock_text(document))
+        elif lock is not None and not lock_same:
+            shutil.copyfile(lock, staging / layout.TREE_LOCK_FILENAME)
+        moved_records = [record for record in records if record not in same]
+        if moved_records or ledger_records:
+            (staging / layout.TREE_ACCEPTANCE_DIRNAME).mkdir()
+        for record in moved_records:
+            shutil.copyfile(record, staging / layout.TREE_ACCEPTANCE_DIRNAME / record.name)
         for name, record in ledger_records.items():
-            create(new.acceptance_dir / f"{name}.json", lambda target, record=record: atomic_json(target, record))
-        if state:
-            _discard_lock_only(new.state_dir)  # made to hold its lock; the root-level folder brings its own
-            move(old.state_dir, new.state_dir)
-    except BaseException:
-        for step in reversed(undo):
-            try:
-                step()
-            except OSError:
-                pass
-        for emptied in (new.acceptance_dir, home):
-            try:
-                emptied.rmdir()
-            except OSError:
-                pass
-        raise
-    # Every move held: drop what they superseded.
-    for record in same:
+            atomic_json(staging / layout.TREE_ACCEPTANCE_DIRNAME / f"{name}.json", record)
+        # 2. Publish them. With no `.repro` yet this is one rename, so a reader sees the whole set or none
+        #    of it; and it still reads the root-level state, which moves next.
+        if not home.exists():
+            os.rename(staging, home)
+        else:
+            staged_lock = staging / layout.TREE_LOCK_FILENAME
+            if staged_lock.is_file():
+                os.rename(staged_lock, new.lock_file)
+            staged_records = staging / layout.TREE_ACCEPTANCE_DIRNAME
+            if staged_records.is_dir():
+                new.acceptance_dir.mkdir(exist_ok=True)
+                for record in sorted(staged_records.iterdir()):
+                    os.rename(record, new.acceptance_dir / record.name)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+    # 3. The state follows at once; a root-level folder made only to hold the lock goes instead.
+    if old.state_dir.is_dir() and not new.state_dir.exists():
+        os.rename(old.state_dir, new.state_dir)
+    elif not had_root_state:
+        _discard_lock_only(old.state_dir)
+    # 4. The root-level originals, now copies of what is published.
+    if lock == old.lock_file:
+        old.lock_file.unlink(missing_ok=True)
+    for record in records:
         record.unlink(missing_ok=True)
     if old.acceptance_dir.is_dir() and not any(old.acceptance_dir.iterdir()):
         old.acceptance_dir.rmdir()
@@ -198,11 +208,11 @@ def _migrate(root: Path, home: Path, old: RunnerPaths, new: RunnerPaths, root_la
                                      (ref(old.acceptance_dir), bool(records)),
                                      (ref(ledger), any(row[0] == ref(ledger) for row in rows))) if moved]
     if gone or converted:
-        staging = f"git add -- {shlex.quote(ref(home))}"
+        staging_command = f"git add -- {shlex.quote(ref(home))}"
         if gone:
-            staging = (f"git rm -r -q --cached --ignore-unmatch -- {' '.join(shlex.quote(name) for name in gone)} "
-                       f"&& {staging}")
-        lines.append(f"Commit the move: `{staging}`.")
+            staging_command = (f"git rm -r -q --cached --ignore-unmatch -- "
+                               f"{' '.join(shlex.quote(name) for name in gone)} && {staging_command}")
+        lines.append(f"Commit the move: `{staging_command}`.")
         lines.append(f"Every checkout and coauthor then needs a superRA that reads {ref(home)}/; "
                      "an older one finds no records there.")
     if converted:
