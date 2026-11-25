@@ -18,6 +18,8 @@ Quick extract:
 
 ### Gate 3 — Voice preserved across the full diff
 
+Check the cumulative prose diff against each edit's mode using [Audit your diff](../SKILL.md#audit-your-diff) and check additions against the [handbook](handbook.md).
+
 Sample three hunks at random from the cumulative branch diff and read the edited prose against the original (`git diff`). Voice-drift signals: formality shift (formal ↔ casual), diction substitution at scale, sentence-shape homogenization, hedging-style shift (`may` vs `might`), transition-word substitution. Consistent drift across the sampled hunks is blocking; isolated single-word drift is advisory.
 
 ### Gate 4 — Scope respected
@@ -32,7 +34,7 @@ The writing vertical has no numerical drift tests of its own. When the task also
 
 - `[BLOCKING]` Gate 1: build clean on merged state — error list empty.
 - `[BLOCKING]` Gate 2: outline changes traced to a task or decision.
-- `[BLOCKING]` Gate 3: voice preserved (three-hunk sample).
+- `[BLOCKING]` Gate 3: prose diff clears each edit mode's bar, additions clear the handbook check, and voice is preserved in the three-hunk sample.
 - `[BLOCKING]` Gate 4: every hunk traceable to a task, decision, or chat request.
 - `[BLOCKING]` If the task also produced numbers: data-analysis integration discipline applied per `econ-data-analysis/references/integration.md`.
 - `[ADVISORY]` Build warnings enumerated (new vs pre-existing) with one-line triage.

@@ -1,30 +1,30 @@
 # Style — Sentence + Paragraph Rules
 
-> Load when Polish or Draft mode applies sentence-level rules (polish, proofread, tighten, sentence-level clarity pass; draft self-check).
+> Load for sentence-level work in Polish and Draft (polish, tighten, sentence-level clarity pass, draft self-check) and for language/style review. Each rule fires on a reading problem; under Proofread a style rule is not a reason to edit ([Proofread bar](proofread.md)).
 
 Sources: Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions/nominalization (LRS 1-1a), information flow (LRS 3-4). Chaubey, *The Little Book on Research Writing* (2018) — reader-model, paragraph construction, key-idea-first.
 
-The rules below are **heuristics in service of the reader**, not must-rewrite mandates; each carries its own non-firing cases. Apply them only inside the request's scope and only where they fix a real readability problem (substance and intent are sovereign per `SKILL.md §Preserve substance, polish prose`).
+The rules below are **heuristics in service of the reader**, not must-rewrite mandates; each carries its own non-firing cases. Apply them only inside the request's scope and only where they fix a real readability problem (substance and intent are sovereign per [Substance is the author's](../SKILL.md#substance-is-the-authors)).
 
 ## How-To
 
 ### Audience: write to the reader, not the conversation
 
-**Principle.** Stated in `SKILL.md §Write to the reader, not the conversation`. Build the audience model and their information set before editing; the markers below are the safety net for leaks that check missed. Examples use academic papers; the marker families read on any audience-bound document.
+**Principle.** Stated in [The reader test](../SKILL.md#the-reader-test). Build the audience model and their information set before editing; the markers below are the safety net for leaks that check missed. Examples use academic papers; the marker families read on any audience-bound document.
 
 **Detection trick — four marker families.** Walk the families in order on every line in scope; on a match, classify by family and rewrite per the replacement pattern. The rule is line-level — one marker does not license a paragraph-level rewrite.
 
 1. **Editing-history temporal markers.** `now`, `currently`, `at this point`, `previously`, `the new`, `the updated`, `the revised`, `as discussed`, `as we mentioned`. The audience has no "before". (Exception: section transitions like *we now turn to …* are conventional discourse — see §Do NOT.)
 2. **Audience self-references.** `paper-facing`, `internal table`, `for the paper`, `internally`, `behind the scenes`, `the version shown to readers`, `the public version`. Naming an audience implies a second audience — a distinction internal to the editing process.
 3. **Process-internal artifacts.** Repo paths (`input/country_information.csv`), input-file column names (`the AE column`), branch names, script names, variable names absent from the document, internal classification labels. The audience has no repo. Published replication packages are referenced in the data/code availability section by public identifier, not inline by file path.
-4. **Conversation jargon used as document vocabulary.** Working terms the author and agent use to communicate but the document never defines — project nicknames, draft-stage shorthand, glossary terms living in chat or a working doc rather than the manuscript / deck / README. Test against the audience's info set (`SKILL.md §Write to the reader, not the conversation`): not in the set and not defined at first use → conversation vocabulary.
+4. **Conversation jargon used as document vocabulary.** Working terms the author and agent use to communicate but the document never defines — project nicknames, draft-stage shorthand, glossary terms living in chat or a working doc rather than the manuscript / deck / README. Test against the audience's info set ([The reader test](../SKILL.md#the-reader-test)): not in the set and not defined at first use → conversation vocabulary.
 
 **Replacement patterns.**
 
 - *Editing-history temporal marker.* Before: *The table now defines coreAE as …* → After: *Table 2 defines coreAE as …*
 - *Audience self-reference.* Before: *In the paper-facing table, we define …* → After: *Table 2 defines …*
 - *Process-internal artifact.* Before: *Throughout, AE refers to the IMF World Economic Outlook "Advanced Economies" classification, applied via the `AE` column of `input/country_information.csv`.* → After: *Throughout, AE refers to the IMF World Economic Outlook "Advanced Economies" classification.*
-- *Conversation jargon.* Define the term once in the document's own voice at first use, or replace with the standard term the audience knows. If neither fits (no document-side equivalent, not worth defining), the surrounding argument needs rewriting, not patching — surface as `authorial` per §Triage.
+- *Conversation jargon.* Define the term once in the document's own voice at first use, or replace with the standard term the audience knows. If neither fits (no document-side equivalent, not worth defining), the surrounding argument needs rewriting, not patching — surface as `authorial` per [Fix tiers](review.md#fix-tiers).
 
 **Do NOT rewrite when:**
 
@@ -68,14 +68,14 @@ The rules below are **heuristics in service of the reader**, not must-rewrite ma
 
 ### Single-hedge-per-claim
 
-**Principle.** Hedging ("may", "might", "possibly", "suggests", "appears to", "could", "in some cases") calibrates claims to evidence strength. One hedge per claim is calibration; two or more is **epistemic cowardice** — the claim is either in the evidence or it is not.
+**Principle.** Hedging ("may", "might", "possibly", "suggests", "appears to", "could", "in some cases") calibrates claims to evidence strength. Removing a hedge changes the claim's strength, which is the author's decision.
 
-**Detection trick.** Count hedging words in each claim-bearing sentence. More than one is usually one too many.
+**Detection trick.** Count hedging words in each claim-bearing sentence. Surface a stacked hedge as `authorial`.
 
 **Before / after:**
 
 - Before: *The results may possibly suggest that returns could tentatively be somewhat higher for treated firms.*
-- After: *The results suggest that returns are higher for treated firms.*  — weak evidence: keep *one* hedge (`suggest`). Strong evidence: drop the hedge entirely.
+- After: `authorial` finding — "may possibly suggest" and "could tentatively" obscure how strongly the author means to state the result.
 
 **Do NOT de-hedge when:**
 
@@ -88,8 +88,8 @@ The rules below are **heuristics in service of the reader**, not must-rewrite ma
 
 **Before / after:**
 
-- Before: *The sample was constructed.* (By whom? When?)
-- After: *We constructed the sample by matching firms on industry and size.*
+- Before: *The fee was waived.* (By whom?)
+- After: *The lender waived the fee.*
 - Passive OK: *The paper was rejected.* (Agent obvious from context — the journal.)
 
 ### Parallel structure
@@ -139,7 +139,7 @@ The rules below are **heuristics in service of the reader**, not must-rewrite ma
 
 **Topic sentence first.** Every paragraph carries its main message in its first sentence, which should (1) state that message, (2) be recognizably linked to the overall story, (3) provoke follow-up questions the rest of the paragraph answers. (Chaubey p. 137, 141.) *No exceptions — structural norm for academic prose.*
 
-**One idea per paragraph.** RAP paragraphs run 5–6 sentences (Chaubey p. 158). An idea needing more is probably two ideas — split. An idea buried at the bottom means the paragraph is backward — move it up. *Do NOT split a single claim plus its immediate qualification.*
+**One idea per paragraph.** RAP paragraphs run 5–6 sentences (Chaubey p. 158). An idea needing more is probably two ideas — split. An idea buried at the bottom means the paragraph is backward — surface the reorder as `authorial` per [Fix tiers](review.md#fix-tiers). *Do NOT split a single claim plus its immediate qualification.*
 
 **Transitions at paragraph start.** Place transition words (`however`, `moreover`, `in contrast`, `consequently`) near the start of the paragraph or of the pivoting sentence, not buried mid-sentence. *No exceptions — structural norm.*
 
@@ -155,11 +155,11 @@ Ambiguous pronouns — `this`, `it`, `that`, `these`, `those` — without a clea
 
 **Nested-clause run-ons.** A sentence with 3+ embedded clauses, or one needing a backtrack to recover the main verb's subject, is harder than it needs to be — consider splitting at the clause boundary carrying the most logical weight.
 
-**Vague quantifiers.** `various`, `some`, `several`, `a number of` read as filler the reader cannot calibrate — consider quantifying (`three`, `roughly half`, `the four cases listed in Table 2`) or naming the set. Skip when the vagueness is deliberate (the count genuinely does not matter, or naming would mislead).
+**Vague quantifiers.** `various`, `some`, `several`, `a number of` read as filler the reader cannot calibrate. Quantify (`three`, `roughly half`, `the four cases listed in Table 2`) or name the set only when vagueness hides which cases matter. Keep an approximation that still holds. Skip when the vagueness is deliberate (the count genuinely does not matter, or naming would mislead).
 
 ## Gated Checklist
 
-Walked top to bottom for every sentence-level edit. Heuristics, not verdict-determining items — apply where they fix a real problem in the text being edited.
+This checklist names candidate problems. Apply a rule only where it fixes a reading problem in scope.
 
 ### Sentence-level rules
 
@@ -172,12 +172,12 @@ Walked top to bottom for every sentence-level edit. Heuristics, not verdict-dete
 - Sentences over ~40 words split unless the length is deliberate.
 - No dangling modifiers.
 - Ambiguous pronouns (`this`, `it`) given an explicit antecedent noun.
-- Audience awareness: line scanned against the four marker families (editing-history temporal, audience self-reference, process-internal artifact, conversation jargon) per §Audience. Term-level check references the audience's information set per `SKILL.md §Write to the reader, not the conversation`.
+- Audience awareness: line scanned against the four marker families (editing-history temporal, audience self-reference, process-internal artifact, conversation jargon) per §Audience. Term-level check references the audience's information set per [The reader test](../SKILL.md#the-reader-test).
 
 ### Paragraph-level rules
 
 - Each paragraph's first sentence carries the main message (Chaubey p. 137).
-- One idea per paragraph; paragraphs that bury the idea at the bottom are re-ordered (Chaubey p. 160).
+- One idea per paragraph; a buried idea surfaced per §One idea per paragraph (Chaubey p. 160).
 - Transitions placed near paragraph start.
 - First-sentence link test: first sentences of consecutive paragraphs form a coherent storyline (Chaubey p. 128).
 

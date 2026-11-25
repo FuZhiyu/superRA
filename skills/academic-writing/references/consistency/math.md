@@ -6,7 +6,7 @@
 
 Covers **correctness and stability of math content**: derivations step by step, proof integrity, statistical-model correctness, notation stability on the *meaning* side (typographic side in `consistency/notation.md`). Out of scope: prose terminology (`consistency/terminology.md`), table numbers matching prose (`consistency/numerical.md`).
 
-The author owns the math (`SKILL.md §Preserve substance, polish prose`). *Flag* derivations that don't follow; do not rewrite them. Escalate genuinely broken steps.
+The author owns the math ([Substance is the author's](../../SKILL.md#substance-is-the-authors)). *Flag* derivations that don't follow; do not rewrite them. Escalate genuinely broken steps.
 
 ## How-To
 
@@ -76,7 +76,7 @@ Per proof:
 ## Gated Checklist
 
 - `[BLOCKING]` **Every derivation step walked** in the edited sections — each step either verifies or is flagged broken / unclear with location.
-- `[BLOCKING]` **Broken steps flagged, not fixed** — escalated to the researcher, never silently rewritten (`SKILL.md §Preserve substance, polish prose`).
+- `[BLOCKING]` **Broken steps flagged, not fixed** — escalated to the researcher, never silently rewritten ([Substance is the author's](../../SKILL.md#substance-is-the-authors)).
 - `[BLOCKING]` **Definitions stable across the paper** — one meaning per defined object; drift reported.
 - `[BLOCKING]` **Model assumptions stated where used.** Error structure, exogeneity, clustering, distributional assumptions.
 - `[BLOCKING]` **Proofs' assumptions match theorem statements.**
